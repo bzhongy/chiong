@@ -1,145 +1,64 @@
 /**
- * CHIONG UNIFIED WALLET MODULE
+ * CHIONG APPLICATION MODULE MAP
  * 
- * Manages external wallets via Web3Modal.
- * Exposes an emulated WagmiCore interface for compatibility with app.js and ui_interactions.js.
+ * This map provides a quick reference to locate key functionality across files:
+ * 
+ * config.js:
+ * - Global state object and constants
+ * - optionCalculator - All mathematical calculations for options
+ * - CONFIG - Asset mappings and token information
+ * 
+ * wallet.js:
+ * - setupWeb3Modal() - Initialize wallet connection interface
+ * - connectWallet() - Handle user wallet connection
+ * - Web3 client configuration and chain setup
+ * 
+ * ui_interactions.js:
+ * - setupEventListeners() - Initialize all UI event handlers
+ * - showSection(), switchView() - Navigation and view management
+ * - selectAsset(), selectOption() - Asset and option selection
+ * - updatePositionSize(), setupConvictionSlider() - Position sizing
+ * - updateOptionPreview(), showTradeConfirmation() - Order preview
+ * - executeTrade() - Submit transactions to blockchain
+ * 
+ * app.js:
+ * - initialize() - Application startup sequence
+ * - refreshData() - Fetch market data, orders, positions
+ * - populateOptionsTable() - Render advanced view options
+ * - createPositionCard(), refreshPositions() - Position management
+ * - updateCountdowns() - Time management for option expiry
+ * - loadTradeHistory() - Historical trade data
+ * 
+ * Loading order: config.js → wallet.js → ui_interactions.js → app.js
+ * 
+ * State management: 
+ * The global 'state' object in config.js maintains application-wide state
+ * and is accessed by all modules.
  */
 
-// --- Constants ---
-const BASE_CHAIN_ID = 8453;
-const BASE_RPC_URL = 'https://base-rpc.thetanuts.finance';
-const WALLETCONNECT_PROJECT_ID = 'c0c838fac0cbe5b43ad76ea8652e3029';
-const LOCALSTORAGE_KEYS = {
-    PREFERRED_WALLET_TYPE: 'chiong_preferred_wallet_type'
-};
+let web3modal;
+let ethereumClient;
+let wagmiConfig;
+let WagmiCore;
 
-// --- State Variables ---
-let activeWalletType = null;
-let ethersProvider = null;
-let ethersSigner = null;
-let web3modalInstance = null;
-let ethereumClientInstance = null;
-let _WagmiCore = null;
-
-// --- Globals for compatibility ---
-window.WagmiCore = {};
-let WagmiCore = window.WagmiCore;
-
-// --- Utility Functions ---
+// Utility function to shorten wallet addresses
 function shortenAddress(address) {
     return address ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : "";
 }
 
-async function _updateWalletUI() {
-    const walletStatusEl = document.getElementById('wallet-status');
-    const connectWeb3ModalBtn = document.getElementById('connect-web3modal-btn');
-    const connectedDetailsEl = document.querySelector('.connected-details');
-    const addressDisplayEl = document.getElementById('address-display');
-    const disconnectBtn = document.getElementById('disconnect-wallet-btn');
-    const connectWalletBtn = document.getElementById('connect-wallet');
-    const saveKeyBtn = document.getElementById('save-private-key');
-    const helpIconBtn = document.getElementById('wallet-help-icon');
+async function setupWeb3Modal() {
+    // Setup for Web3Modal with WalletConnect
+    window.process = { env: { NODE_ENV: "development" } };
     
-    if (activeWalletType && ethereumClientInstance && ethereumClientInstance.getAccount().isConnected) {
-        walletStatusEl.classList.remove('not-connected');
-        walletStatusEl.classList.add('connected');
-        connectWeb3ModalBtn.style.display = 'none';
-        if (connectWalletBtn) connectWalletBtn.style.display = 'none';
-        connectedDetailsEl.style.display = 'flex';
-        disconnectBtn.style.display = 'block';
-        
-        let currentAddress;
-        if (activeWalletType === 'external') {
-            try {
-                currentAddress = await ethersSigner.getAddress();
-            } catch (error) {
-                currentAddress = ethereumClientInstance?.getAccount()?.address || null;
-            }
-        }
-        
-        if (currentAddress) {
-            addressDisplayEl.textContent = shortenAddress(currentAddress);
-            state.connectedAddress = currentAddress;
-        }
-        document.getElementById('connection-alert').style.display = 'none';
-        
-        if (activeWalletType === 'external') {
-            if (saveKeyBtn) saveKeyBtn.style.display = 'none';
-            if (helpIconBtn) helpIconBtn.style.display = 'none';
-            
-            const txHistoryBtn = document.getElementById('tx-history-btn');
-            if (txHistoryBtn) txHistoryBtn.style.display = 'inline-block';
-            
-            $('#address-display').off('click').on('click', function() {
-                if (web3modalInstance) {
-                    web3modalInstance.openModal();
-                }
-            });
-        }
-        
-        if (typeof refreshData === 'function') {
-            refreshData();
-        }
-        
-        if (window.txNotifications && window.txNotifications.createTransactionDropdown) {
-            setTimeout(() => {
-                window.txNotifications.createTransactionDropdown();
-            }, 100);
-        }
-        
-        const network = WagmiCore.getNetwork();
-        if (network.chain?.id !== BASE_CHAIN_ID) {
-            if (activeWalletType === 'external' && ethereumClientInstance) {
-                 try {
-                    await ethereumClientInstance.switchChain(BASE_CHAIN_ID);
-                 } catch {
-                    $('#connection-alert').text("Please switch to Base network in your wallet.").show();
-                 }
-            } else {
-                 $('#connection-alert').text("Wrong network. Please connect to Base network.").show();
-            }
-        }
-
-    } else {
-        walletStatusEl.classList.add('not-connected');
-        walletStatusEl.classList.remove('connected');
-        connectWeb3ModalBtn.style.display = 'inline-block';
-        if (connectWalletBtn) connectWalletBtn.style.display = 'block';
-        
-        connectedDetailsEl.style.setProperty('display', 'none', 'important');
-        disconnectBtn.style.display = 'none';
-        
-        if (saveKeyBtn) saveKeyBtn.style.display = 'none';
-        if (helpIconBtn) helpIconBtn.style.display = 'none';
-        
-        const txHistoryBtn = document.getElementById('tx-history-btn');
-        if (txHistoryBtn) txHistoryBtn.style.display = 'none';
-        
-        addressDisplayEl.textContent = '';
-        state.connectedAddress = null;
-    }
-}
-
-// --- External Wallet (Web3Modal) Logic ---
-async function _setupWeb3Modal() {
-    if (web3modalInstance) return true; // Already setup
-
-    try {
-        // Setup necessary process env for web3modal imports
-        window.process = window.process || { env: { NODE_ENV: "development" } };
-
-        // Import required libraries from CDN (using the exact code from wallet.js)
-        const { EthereumClient, w3mConnectors, w3mProvider, WagmiCore: wagmiCore, WagmiCoreChains } = 
-            await import('https://unpkg.com/@web3modal/ethereum@2.7.1');
+    // Import required libraries from CDN
+    const { EthereumClient, w3mConnectors, w3mProvider, WagmiCore: wagmiCore, WagmiCoreChains } = await import('https://unpkg.com/@web3modal/ethereum@2.7.1');
         const { Web3Modal } = await import('https://unpkg.com/@web3modal/html@2.7.1');
         const { configureChains, createConfig, Chain } = wagmiCore;
         
-        // Store the original WagmiCore for later use
-        _WagmiCore = wagmiCore;
-        
-        // Define Base chain
+    WagmiCore = wagmiCore;  
+    // Manually define Base chain if not available in WagmiCoreChains
         const base = {
-            id: BASE_CHAIN_ID,
+      id: 8453,
             name: 'Base',
             network: 'base',
             nativeCurrency: {
@@ -149,7 +68,7 @@ async function _setupWeb3Modal() {
             },
             rpcUrls: {
                 public: { http: ['https://mainnet.base.org'] },
-                default: { http: [BASE_RPC_URL] },
+        default: { http: ['https://base-mainnet.infura.io/v3/31b32a8cde404894ab67544e011510b9'] },
             },
             blockExplorers: {
                 etherscan: { name: 'BaseScan', url: 'https://basescan.org' },
@@ -157,450 +76,170 @@ async function _setupWeb3Modal() {
             }
         };
 
-        // Configure chains
+    // Configure WalletConnect with Base chain
+    const walletConnectProjectId = 'c0c838fac0cbe5b43ad76ea8652e3029';
+    
+    // Use only the Base chain in the chains array
         const chains = [base];
-        const { publicClient } = configureChains(chains, [w3mProvider({ projectId: WALLETCONNECT_PROJECT_ID })]);
+    
+    const { publicClient } = configureChains(chains, [w3mProvider({ projectId: walletConnectProjectId })]);
         
-        // Create wagmi config
-        const wagmiConfig = createConfig({
+    wagmiConfig = createConfig({
             autoConnect: true,
-            connectors: w3mConnectors({ projectId: WALLETCONNECT_PROJECT_ID, chains }),
+      connectors: w3mConnectors({ projectId: walletConnectProjectId, chains }),
             publicClient,
+      // Add this defaultChain config
             defaultChain: base
         });
         
-        // Create ethereum client
-        ethereumClientInstance = new EthereumClient(wagmiConfig, chains);
-        
-        // Make it globally available
-        window.ethereumClient = ethereumClientInstance;
-        
-        // Create Web3Modal instance
-        web3modalInstance = new Web3Modal({
-            projectId: WALLETCONNECT_PROJECT_ID,
-            defaultChain: base,
-            themeMode: 'dark',
+    ethereumClient = new EthereumClient(wagmiConfig, chains);
+    
+    // Set more explicit options for Web3Modal
+    web3modal = new Web3Modal({ 
+      projectId: walletConnectProjectId,
+      defaultChain: base, // Specify default chain here
+      explorerRecommendedWalletIds: 'NONE', // Optional: customize shown wallets
+      themeMode: 'dark', // Optional: match your app's theme
             chainImages: {
-                [BASE_CHAIN_ID]: 'https://raw.githubusercontent.com/base/brand-kit/refs/heads/main/logo/in-product/Base_Network_Logo.svg'
-            }
-        }, ethereumClientInstance);
+        // Custom chain image
+        [base.id]: 'https://raw.githubusercontent.com/base/brand-kit/refs/heads/main/logo/in-product/Base_Network_Logo.svg'
+      }
+    }, ethereumClient);
+    
+    // Setup account change listener
+    ethereumClient.watchAccount((account) => {
+      if (account.isConnected) {
+        // Update UI for connected state
+        document.getElementById('wallet-status').classList.remove('not-connected');
+        document.getElementById('wallet-status').classList.add('connected');
+        document.getElementById('connect-web3modal-btn').style.display = 'none';
         
-        // Watch for account changes
-        ethereumClientInstance.watchAccount(async (account) => {
-            if (account.address && account.isConnected) {
-                if (activeWalletType !== 'external' || (ethersSigner && await ethersSigner.getAddress() !== account.address)) {
-                    // Switched to external or account changed
-                    activeWalletType = 'external';
-                    window.activeWalletType = activeWalletType; // Export to global for trollbox
-                    localStorage.setItem(LOCALSTORAGE_KEYS.PREFERRED_WALLET_TYPE, 'external');
-                    
-                    // Set up providers 
-                    try {
-                        ethersProvider = new ethers.providers.JsonRpcProvider(BASE_RPC_URL);
-                        window.ethersProvider = ethersProvider;
-                        
-                        ethersSigner = null; // Clear this to indicate we should use wagmi
-                        
-                        localStorage.setItem(LOCALSTORAGE_KEYS.PREFERRED_WALLET_TYPE, 'external');
-                        await _updateWalletUI();
-                    } catch (error) {
-                        console.error("Error setting up providers during connect:", error);
-                    }
-                }
-            } else if (!account.isConnected && activeWalletType === 'external') {
-                // Disconnected via external wallet's UI
-                await disconnectExternalWallet();
-            }
-            await _updateWalletUI();
+        // Show disconnect button when connected
+        const disconnectBtn = document.getElementById('disconnect-wallet-btn');
+        if (disconnectBtn) disconnectBtn.style.display = 'inline-block';
+        
+        // Show address in UI
+        const shortAddress = shortenAddress(account.address);
+        document.getElementById('address-display').textContent = shortAddress;
+        document.getElementById('address-display').style.display = 'inline-block';
+  
+         
+        // Make address display clickable to open modal
+        $('#address-display').on('click', function() {
+          if (web3modal) {
+            web3modal.openModal();
+          }
         });
         
-        // Watch for network changes  
-        ethereumClientInstance.watchNetwork(async (network) => {
-            if (network && network.chain && activeWalletType === 'external') {
-                if (network.chain.id !== BASE_CHAIN_ID) {
-                    $('#connection-alert').text("Please switch to Base network in your wallet.").show();
-                } else {
-                    $('#connection-alert').hide();
-                    // Keep read provider as Infura, refresh signing provider if needed
-                    try {
-                        ethersProvider = new ethers.providers.JsonRpcProvider(BASE_RPC_URL);
-                        window.ethersProvider = ethersProvider; // Make available to other modules
-                        
-                        if (window.ethereum && ethersSigner) {
-                            // Refresh the signer with the current ethereum provider
-                            const signingProvider = new ethers.providers.Web3Provider(window.ethereum);
-                            ethersSigner = signingProvider.getSigner();
-                        }
-                    } catch (error) {
-                        console.error("Error refreshing provider after network change:", error);
-                    }
-                }
-            }
-            await _updateWalletUI();
-        });
+        state.connectedAddress = account.address;
+        document.getElementById('connection-alert').style.display = 'none';
+  
+        refreshData();
         
-        return true;
-    } catch (error) {
-        console.error("Error setting up Web3Modal:", error);
-        alert("Could not initialize WalletConnect: " + error.message);
-        return false;
-    }
-}
+        // Check if we're on the correct network
+        const { getNetwork, switchNetwork } = WagmiCore;      
+        network = getNetwork();
 
-
-
-async function connectExternalWallet(isAutoConnectAttempt = false) {
-    // Always ensure Web3Modal is set up before attempting connection
-    if (web3modalInstance == null) {
-        const setupResult = await _setupWeb3Modal();
-        if (!setupResult) {
-            if (!isAutoConnectAttempt) alert("Failed to setup Web3Modal.");
-            return;
-        }
-    }
-
-    try {
-        // If auto-connecting and already connected, EthereumClient might handle it.
-        // For manual connection, always open modal.
-        if (!isAutoConnectAttempt || !ethereumClientInstance.getAccount().isConnected) {
-            web3modalInstance.openModal();
-        }
-    } catch (error) {
-        console.error("Error opening Web3Modal or connecting:", error);
-        if (!isAutoConnectAttempt) alert("Could not connect wallet: " + error.message);
-        await _updateWalletUI(); // Ensure UI reflects disconnected state
-    }
-}
-
-async function disconnectExternalWallet() {
-    if (ethereumClientInstance) {
-        try {
-            await ethereumClientInstance.disconnect();
-        } catch (e) {
-            console.error("Error during Web3Modal disconnect:", e);
-        }
-    }
-    activeWalletType = null;
-    window.activeWalletType = activeWalletType;
-    localStorage.removeItem(LOCALSTORAGE_KEYS.PREFERRED_WALLET_TYPE);
-    ethersProvider = null;
-    window.ethersProvider = null;
-    ethersSigner = null;
-    await _updateWalletUI();
-}
-
-// --- Emulated WagmiCore Functions ---
-WagmiCore.getAccount = () => {
-    if (activeWalletType === 'external' && ethereumClientInstance) {
-        const acc = ethereumClientInstance.getAccount();
-        return { address: acc.address, isConnected: acc.isConnected, connector: { id: 'external' } };
-    }
-    return { address: null, isConnected: false };
-};
-
-WagmiCore.getNetwork = () => {
-    return { chain: { id: BASE_CHAIN_ID, name: 'Base', unsupported: false } };
-};
-
-WagmiCore.switchNetwork = async (config) => {
-    if (config.chainId !== BASE_CHAIN_ID) {
-        throw new Error("Only Base network (8453) is supported.");
-    }
-    if (activeWalletType === 'external' && ethereumClientInstance) {
-        try {
-            await ethereumClientInstance.switchChain(BASE_CHAIN_ID);
-            return WagmiCore.getNetwork().chain;
-        } catch (error) {
-            console.error("Failed to switch network via Web3Modal:", error);
-            throw error;
-        }
-    }
-    return WagmiCore.getNetwork().chain;
-};
-
-WagmiCore.readContract = async (config) => {
-    if (_WagmiCore && _WagmiCore.readContract) {
-        return await _WagmiCore.readContract(config);
-    } else {
-        // Fallback using ethers
-        try {
-            const provider = ethersProvider || new ethers.providers.JsonRpcProvider(BASE_RPC_URL);
-            const contract = new ethers.Contract(config.address, config.abi, provider);
-            return await contract[config.functionName](...(config.args || []));
-        } catch (error) {
-            console.error("Error reading contract:", error);
-            throw error;
-        }
-    }
-};
-
-WagmiCore.readContracts = async (config) => {
-    if (_WagmiCore && _WagmiCore.readContracts) {
-        return await _WagmiCore.readContracts(config);
-    } else {
-        // Fallback implementation
-        const provider = ethersProvider || new ethers.providers.JsonRpcProvider(BASE_RPC_URL);
-        const results = await Promise.all(
-            config.contracts.map(async (call) => {
-                try {
-                    const contract = new ethers.Contract(call.address, call.abi, provider);
-                    const result = await contract[call.functionName](...(call.args || []));
-                    return { result, status: 'success' };
-                } catch (error) {
-                    return { status: 'failure', error };
-                }
-            })
-        );
-        return results;
-    }
-};
-
-WagmiCore.writeContract = async (config) => {
-    if (activeWalletType === 'external') {
-        // Use wagmi's native writeContract for external wallets
-        try {
-            if (!_WagmiCore) throw new Error("WagmiCore not available");
-            
-            // Use the original wagmi writeContract function
-            const result = await _WagmiCore.writeContract({
-                address: config.address,
-                abi: config.abi,
-                functionName: config.functionName,
-                args: config.args || [],
-                gas: config.gas,
-                ...config.overrides
+        if (network.chain?.id !== 8453) {
+            console.log("Wrong network detected, switching to Base...");
+            switchNetwork({ chainId: 8453 }).catch(error => {
+                console.error("Failed to switch network:", error);
+                // Show a friendly error message
+                $('#connection-alert').text("Please switch to Base network in your wallet.").show();
             });
-            
-            // Track transaction with notification system
-            if (window.txNotifications) {
-                window.txNotifications.trackTransaction(
-                    result.hash, 
-                    config.functionName, 
-                    config.args, 
-                    config.address
-                );
-            }
-            
-            return result;
-        } catch (error) {
-            console.error("Error in external wallet writeContract:", error);
-            throw error;
         }
-    }
-    
-    throw new Error("No wallet connected");
-};
-
-WagmiCore.waitForTransaction = async (config) => {
-    if (activeWalletType === 'external') {
-        // Use wagmi's native waitForTransaction for external wallets
-        try {
-            if (!_WagmiCore) throw new Error("WagmiCore not available");
-            
-            const receipt = await _WagmiCore.waitForTransaction({
-                hash: config.hash,
-                confirmations: config.confirmations || 1
-            });
-            
-            // Update transaction status using robust status checker
-            if (window.txNotifications) {
-                const isSuccess = window.txNotifications.isTransactionSuccessful(receipt);
-                const status = isSuccess ? window.txNotifications.TX_STATUS.CONFIRMED : window.txNotifications.TX_STATUS.FAILED;
-                window.txNotifications.updateTransactionStatus(config.hash, status, receipt);
-            }
-            
-            return receipt;
-        } catch (error) {
-            console.error("❌ Error waiting for transaction with wagmi:", error);
-            
-            // Try to get receipt directly as fallback for RPC issues
-            if (window.txNotifications) {
-                const fallbackSuccess = await window.txNotifications.checkTransactionStatusFromBlockchain(config.hash);
-                if (!fallbackSuccess) {
-                    // Only mark as failed if we couldn't get blockchain status
-                    window.txNotifications.updateTransactionStatus(config.hash, window.txNotifications.TX_STATUS.FAILED);
-                }
-            }
-            
-            throw error;
+      } else {
+        // Update UI for disconnected state
+        document.getElementById('wallet-status').classList.add('not-connected');
+        document.getElementById('wallet-status').classList.remove('connected');
+        document.getElementById('connect-web3modal-btn').style.display = 'block';
+        
+        // Hide disconnect button when disconnected
+        const disconnectBtn = document.getElementById('disconnect-wallet-btn');
+        if (disconnectBtn) disconnectBtn.style.display = 'none';
+        
+        // Hide the address display
+        const addressDisplay = document.getElementById('address-display');
+        if (addressDisplay) {
+            addressDisplay.textContent = '';
+            addressDisplay.style.display = 'none';
         }
-    }
-    
-    throw new Error("No wallet connected");
-};
-
-WagmiCore.prepareSendTransaction = async (txData) => {
-    return {
-        mode: 'prepared',
-        sendTransaction: async () => {
-            if (activeWalletType === 'external' && _WagmiCore && _WagmiCore.sendTransaction) {
-                return await _WagmiCore.sendTransaction(txData);
-            } else {
-                throw new Error("No external wallet connected for transaction sending.");
-            }
-        }
-    };
-};
-
-WagmiCore.sendTransaction = async (txData) => {
-    if (activeWalletType === 'external' && _WagmiCore && _WagmiCore.sendTransaction) {
-        return await _WagmiCore.sendTransaction(txData);
-    } else {
-        throw new Error("No external wallet connected for transaction sending.");
-    }
-};
-
-// Add ETH to WETH wrapping function
-WagmiCore.wrapETH = async (ethAmount) => {
-    const WETH_ADDRESS = '0x4200000000000000000000000000000000000006'; // Base WETH address
-    const WETH_ABI = [
-        {
-            "inputs": [],
-            "name": "deposit",
-            "outputs": [],
-            "stateMutability": "payable",
-            "type": "function"
-        },
-        {
-            "inputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "wad",
-                    "type": "uint256"
-                }
-            ],
-            "name": "withdraw",
-            "outputs": [],
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "",
-                    "type": "address"
-                }
-            ],
-            "name": "balanceOf",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "stateMutability": "view",
-            "type": "function"
-        }
-    ];
-    
-    if (!ethAmount || parseFloat(ethAmount) <= 0) {
-        throw new Error("Invalid ETH amount");
-    }
-
-    const ethAmountWei = ethers.utils.parseEther(ethAmount.toString());
-
-    if (activeWalletType === 'external') {
-        try {
-            if (!_WagmiCore) throw new Error("WagmiCore not available");
-            
-            // Use wagmi's writeContract for external wallets
-            const result = await _WagmiCore.writeContract({
-                address: WETH_ADDRESS,
-                abi: WETH_ABI,
-                functionName: 'deposit',
-                value: ethAmountWei,
-                gas: 50000
-            });
-                    
-            // Track transaction with notification system
-            if (window.txNotifications) {
-                window.txNotifications.trackTransaction(
-                    result.hash, 
-                    'deposit', 
-                    [], 
-                    WETH_ADDRESS
-                );
-            }
-            
-            return result;
-        } catch (error) {
-            console.error("Error wrapping ETH with external wallet:", error);
-            throw error;
-        }
-    }
-    
-    throw new Error("No wallet connected");
-};
-
-// Add helper function to get ETH balance
-WagmiCore.getETHBalance = async (address) => {
-    if (!ethersProvider) throw new Error("Provider not available");
-    
-    try {
-        const balance = await ethersProvider.getBalance(address || state.connectedAddress);
-        return balance;
-    } catch (error) {
-        console.error("Error getting ETH balance:", error);
-        throw error;
-    }
-};
-
-// --- Main Initialization ---
-async function initializeWalletSystem() {
-    window.ethereumClient = null;
-    
-    // Attach event listeners to the connect button
-    $('#connect-web3modal-btn').on('click', () => connectExternalWallet(false));
-    $('#disconnect-wallet-btn').on('click', async () => {
-        if (activeWalletType === 'external') {
-            await disconnectExternalWallet();
-        }
+        
+        // Reset state
+        state.connectedAddress = null;
+        
+        // Hide any connection alerts
+        const connectionAlert = document.getElementById('connection-alert');
+        if (connectionAlert) connectionAlert.style.display = 'none';
+      }
     });
+  }
 
-    // Show the button immediately instead of keeping it hidden
-    $('#connect-web3modal-btn').show();
-
-    const preferredType = localStorage.getItem(LOCALSTORAGE_KEYS.PREFERRED_WALLET_TYPE);
-    
-    if (preferredType === 'external') {
-        await _setupWeb3Modal();
-        await connectExternalWallet(true);
-    }
-
-    if (!activeWalletType) {
-      await _updateWalletUI();
-    }
-    
-    if (window.txNotifications) {
-        window.txNotifications.initializeTransactionNotifications();
-    }
-}
-
-// Add a connectWallet function to maintain compatibility with ui_interactions.js
+  // Connect to the wallet
 async function connectWallet() {
-    return await connectExternalWallet(false);
-}
-
-// Initialize when the script loads
-$(document).ready(async () => {
-    // Ensure ethers is loaded
-    if (typeof ethers === 'undefined') {
-        console.error("Ethers.js not loaded. Wallet functionality will be impaired.");
-        $('#connection-alert').text("Critical error: Ethers.js library not found.").show();
-        return;
+  try {
+    if (!web3modal) {
+      await setupWeb3Modal();
     }
     
-    // Initialize WagmiCore immediately to ensure it's available
-    window.WagmiCore = WagmiCore;
-    
-    // Export wallet state variables to global window for trollbox integration
-    window.activeWalletType = activeWalletType;
-    window.ethereumClientInstance = ethereumClientInstance;
-    
-    await initializeWalletSystem();
+    if (ethereumClient && !ethereumClient.getAccount().isConnected) {
+      // Open modal with Base chain pre-selected
+      web3modal.openModal({
+        route: 'ConnectWallet',
+        params: {
+          chainId: 8453
+        }
+      });
+    }
+  } catch (error) {
+    console.error("Error connecting wallet:", error);
+    document.getElementById('connection-alert').style.display = 'block';
+  }
+}
 
-    // Add this to your document.ready function
-    $('#connect-wallet').on('click', () => connectWallet());
+// Disconnect wallet function
+async function disconnectWallet() {
+  try {
+    if (ethereumClient && ethereumClient.disconnect) {
+      await ethereumClient.disconnect();
+    }
+    
+    // Force UI update to disconnected state
+    document.getElementById('wallet-status').classList.add('not-connected');
+    document.getElementById('wallet-status').classList.remove('connected');
+    document.getElementById('connect-web3modal-btn').style.display = 'block';
+    
+    // Hide address display
+    const addressDisplay = document.getElementById('address-display');
+    if (addressDisplay) {
+        addressDisplay.textContent = '';
+        addressDisplay.style.display = 'none';
+    }
+    
+    // Reset state
+    state.connectedAddress = null;
+    
+    // Hide connection alerts
+    const connectionAlert = document.getElementById('connection-alert');
+    if (connectionAlert) connectionAlert.style.display = 'none';
+    
+    console.log('Wallet disconnected successfully');
+  } catch (error) {
+    console.error('Error disconnecting wallet:', error);
+  }
+}
+
+// Initialize wallet system when page loads
+$(document).ready(function() {
+  // Show the connect button
+  $('#connect-web3modal-btn').show();
+  
+  // Hook up click events
+  $('#connect-web3modal-btn').on('click', connectWallet);
+  
+  // Hook up disconnect button if it exists
+  $('#disconnect-wallet-btn').on('click', disconnectWallet);
+  
+  // Try to auto-connect if previously connected
+  setupWeb3Modal().catch(console.error);
 });
