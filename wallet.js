@@ -9,9 +9,9 @@
  * - CONFIG - Asset mappings and token information
  * 
  * wallet.js:
- * - setupWeb3Modal() - Initialize wallet connection interface
+ * - setupWeb3Onboard() - Initialize Web3Onboard bridge
  * - connectWallet() - Handle user wallet connection
- * - Web3 client configuration and chain setup
+ * - Web3Onboard bridge configuration and chain setup
  * 
  * ui_interactions.js:
  * - setupEventListeners() - Initialize all UI event handlers
@@ -36,30 +36,46 @@
  * and is accessed by all modules.
  */
 
-// Migrated: use Web3OnboardBridge if available
-let web3modal;
+// Web3Onboard bridge variables
+let web3OnboardBridge;
 let ethereumClient;
-let wagmiConfig;
 let WagmiCore;
 
 // Dynamically load web3-onboard bridge bundle if not already present
 function loadWeb3OnboardBridge() {
     return new Promise((resolve, reject) => {
         if (window.Web3OnboardBridge) {
+            console.log('Web3OnboardBridge already available');
             return resolve();
         }
+        
+        console.log('Loading Web3OnboardBridge script...');
         const existing = document.querySelector('script[data-web3onboard-bridge]');
         if (existing) {
-            existing.addEventListener('load', () => resolve());
-            existing.addEventListener('error', () => reject(new Error('Failed to load web3onboard bridge script')));
+            console.log('Script already loading, waiting...');
+            existing.addEventListener('load', () => {
+                console.log('Existing script loaded');
+                resolve();
+            });
+            existing.addEventListener('error', () => {
+                console.error('Existing script failed to load');
+                reject(new Error('Failed to load web3onboard bridge script'));
+            });
             return;
         }
+        
         const script = document.createElement('script');
         script.src = 'dist/web3onboard-bridge.js';
         script.async = true;
         script.setAttribute('data-web3onboard-bridge', 'true');
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error('Failed to load web3onboard bridge script'));
+        script.onload = () => {
+            console.log('Web3OnboardBridge script loaded successfully');
+            resolve();
+        };
+        script.onerror = () => {
+            console.error('Failed to load Web3OnboardBridge script');
+            reject(new Error('Failed to load web3onboard bridge script'));
+        };
         document.head.appendChild(script);
     });
 }
@@ -262,308 +278,259 @@ function shortenAddress(address) {
     return address ? `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : "";
 }
 
-async function setupWeb3Modal(force = false) {
-    // If web3-onboard bridge is available, prefer it and skip web3modal setup
+async function setupWeb3Onboard() {
     try {
+        console.log('Setting up Web3Onboard...');
         await loadWeb3OnboardBridge();
-    } catch (e) {
-        console.warn('Could not load Web3OnboardBridge, will fall back to Web3Modal.', e);
-    }
-    if (window.Web3OnboardBridge && !force) {
-        try {
+        
+        // Wait a bit for the script to fully initialize
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        if (window.Web3OnboardBridge && typeof window.Web3OnboardBridge.init === 'function') {
+            console.log('Web3OnboardBridge found, initializing...');
             window.Web3OnboardBridge.init();
             setupOnboardCompatibility();
-            try { ethereumClient = window.ethereumClient; WagmiCore = window.WagmiCore; } catch (e) {}
-            // Hook account change via polling bridge address
+            
+            // Set up global references
+            try { 
+                ethereumClient = window.ethereumClient; 
+                WagmiCore = window.WagmiCore; 
+            } catch (e) {}
+            
+            // Check if already connected
             const address = window.Web3OnboardBridge.getAddress && window.Web3OnboardBridge.getAddress();
             if (address) {
-                // Minimal UI sync when already connected
-                document.getElementById('wallet-status').classList.remove('not-connected');
-                document.getElementById('wallet-status').classList.add('connected');
-                const shortAddress = shortenAddress(address);
-                const addrEl = document.getElementById('address-display');
-                if (addrEl) {
-                    addrEl.textContent = shortAddress;
-                    addrEl.style.display = 'inline-block';
-                }
-                const disconnectBtn = document.getElementById('disconnect-wallet-btn');
-                if (disconnectBtn) disconnectBtn.style.display = 'inline-block';
-                const connectBtn = document.getElementById('connect-web3modal-btn');
-                if (connectBtn) connectBtn.style.display = 'none';
+                updateUIForConnectedState(address);
                 state.connectedAddress = address;
             }
-            return; // do not initialize web3modal
-        } catch (e) {
-            console.warn('Web3OnboardBridge init failed, falling back to Web3Modal', e);
+            
+            // Set up account change monitoring
+            setupAccountMonitoring();
+            
+            console.log('Web3Onboard bridge initialized successfully');
+            return true;
+        } else {
+            console.warn('Web3OnboardBridge not properly available after loading');
+            return false;
         }
+    } catch (error) {
+        console.error('Failed to initialize Web3Onboard:', error);
+        return false;
     }
-    // Setup for Web3Modal with WalletConnect
-    window.process = { env: { NODE_ENV: "development" } };
-    
-    // Import required libraries from CDN
-    const { EthereumClient, w3mConnectors, w3mProvider, WagmiCore: wagmiCore, WagmiCoreChains } = await import('https://unpkg.com/@web3modal/ethereum@2.7.1');
-        const { Web3Modal } = await import('https://unpkg.com/@web3modal/html@2.7.1');
-        const { configureChains, createConfig, Chain } = wagmiCore;
-        
-    WagmiCore = wagmiCore;  
-    // Polyfill missing helpers expected by the rest of the app
-    if (!WagmiCore.readContracts) {
-        WagmiCore.readContracts = async ({ contracts = [] }) => {
-            // Use existing readContract if available
-            if (WagmiCore.readContract) {
-                const results = [];
-                for (const c of contracts) {
-                    const value = await WagmiCore.readContract(c);
-                    results.push({ result: value });
-                }
-                return results;
-            }
-            // Fallback via ethers provider
-            const provider = (window.ethereum && new ethers.providers.Web3Provider(window.ethereum)) || null;
-            if (!provider) throw new Error('No provider available');
-            const results = [];
-            for (const c of contracts) {
-                const { address, abi, functionName, args = [] } = c;
-                const contract = new ethers.Contract(address, abi, provider);
-                const value = await contract[functionName](...(args || []));
-                results.push({ result: value });
-            }
-            return results;
-        };
-    }
-    if (!WagmiCore.getETHBalance) {
-        WagmiCore.getETHBalance = async (address) => {
-            try {
-                // Prefer injected provider
-                if (window.ethereum) {
-                    const provider = new ethers.providers.Web3Provider(window.ethereum);
-                    return await provider.getBalance(address);
-                }
-                // Try Web3OnboardBridge provider if present
-                const b = __getBridge();
-                const provider = b && b.getProvider ? b.getProvider() : null;
-                if (provider) return await provider.getBalance(address);
-                throw new Error('No provider available');
-            } catch (e) {
-                throw e;
-            }
-        };
-    }
-    // Manually define Base chain if not available in WagmiCoreChains
-        const base = {
-      id: 8453,
-            name: 'Base',
-            network: 'base',
-            nativeCurrency: {
-                decimals: 18,
-                name: 'Ether',
-                symbol: 'ETH',
-            },
-            rpcUrls: {
-                public: { http: ['https://mainnet.base.org'] },
-        default: { http: ['https://base-rpc.thetanuts.finance'] },
-            },
-            blockExplorers: {
-                etherscan: { name: 'BaseScan', url: 'https://basescan.org' },
-                default: { name: 'BaseScan', url: 'https://basescan.org' },
-            }
-        };
-
-    // Configure WalletConnect with Base chain
-    const walletConnectProjectId = 'c0c838fac0cbe5b43ad76ea8652e3029';
-    
-    // Use only the Base chain in the chains array
-        const chains = [base];
-    
-    const { publicClient } = configureChains(chains, [w3mProvider({ projectId: walletConnectProjectId })]);
-        
-    wagmiConfig = createConfig({
-            autoConnect: true,
-      connectors: w3mConnectors({ projectId: walletConnectProjectId, chains }),
-            publicClient,
-      // Add this defaultChain config
-            defaultChain: base
-        });
-        
-    ethereumClient = new EthereumClient(wagmiConfig, chains);
-    
-    // Set more explicit options for Web3Modal
-    web3modal = new Web3Modal({ 
-      projectId: walletConnectProjectId,
-      defaultChain: base, // Specify default chain here
-      explorerRecommendedWalletIds: 'NONE', // Optional: customize shown wallets
-      themeMode: 'dark', // Optional: match your app's theme
-            chainImages: {
-        // Custom chain image
-        [base.id]: 'https://raw.githubusercontent.com/base/brand-kit/refs/heads/main/logo/in-product/Base_Network_Logo.svg'
-      }
-    }, ethereumClient);
-    
-    // Setup account change listener
-    ethereumClient.watchAccount((account) => {
-      if (account.isConnected) {
-        // Update UI for connected state
-        document.getElementById('wallet-status').classList.remove('not-connected');
-        document.getElementById('wallet-status').classList.add('connected');
-        document.getElementById('connect-web3modal-btn').style.display = 'none';
-        
-        // Show disconnect button when connected
-        const disconnectBtn = document.getElementById('disconnect-wallet-btn');
-        if (disconnectBtn) disconnectBtn.style.display = 'inline-block';
-        
-        // Show address in UI
-        const shortAddress = shortenAddress(account.address);
-        document.getElementById('address-display').textContent = shortAddress;
-        document.getElementById('address-display').style.display = 'inline-block';
-  
-         
-        // Make address display clickable to open modal
-        $('#address-display').on('click', function() {
-          if (web3modal) {
-            web3modal.openModal();
-          }
-        });
-        
-        state.connectedAddress = account.address;
-        document.getElementById('connection-alert').style.display = 'none';
-  
-        refreshData();
-        
-        // Check if we're on the correct network
-        (async () => {
-            try {
-                const { getNetwork, switchNetwork } = WagmiCore;
-                const net = await getNetwork();
-                if (net?.chain?.id !== 8453) {
-                    console.log("Wrong network detected, switching to Base...");
-                    await switchNetwork({ chainId: 8453 });
-                }
-            } catch (error) {
-                console.error("Failed to verify/switch network:", error);
-                // Show a friendly error message
-                $('#connection-alert').text("Please switch to Base network in your wallet.").show();
-            }
-        })();
-      } else {
-        // Update UI for disconnected state
-        document.getElementById('wallet-status').classList.add('not-connected');
-        document.getElementById('wallet-status').classList.remove('connected');
-        document.getElementById('connect-web3modal-btn').style.display = 'block';
-        
-        // Hide disconnect button when disconnected
-        const disconnectBtn = document.getElementById('disconnect-wallet-btn');
-        if (disconnectBtn) disconnectBtn.style.display = 'none';
-        
-        // Hide the address display
-        const addressDisplay = document.getElementById('address-display');
-        if (addressDisplay) {
-            addressDisplay.textContent = '';
-            addressDisplay.style.display = 'none';
-        }
-        
-        // Reset state
-        state.connectedAddress = null;
-        
-        // Hide any connection alerts
-        const connectionAlert = document.getElementById('connection-alert');
-        if (connectionAlert) connectionAlert.style.display = 'none';
-      }
-    });
-  }
-
-  // Connect to the wallet
-async function connectWallet() {
-  try {
-    // If web3-onboard bridge exists, use it
-    if (window.Web3OnboardBridge) {
-      await setupWeb3Modal();
-      const result = await window.Web3OnboardBridge.connect();
-      if (result && result.address) {
-        setupOnboardCompatibility();
-        try { ethereumClient = window.ethereumClient; WagmiCore = window.WagmiCore; } catch (e) {}
-        // Update UI for connected state
-        document.getElementById('wallet-status').classList.remove('not-connected');
-        document.getElementById('wallet-status').classList.add('connected');
-        const shortAddress = shortenAddress(result.address);
-        document.getElementById('address-display').textContent = shortAddress;
-        document.getElementById('address-display').style.display = 'inline-block';
-        const disconnectBtn = document.getElementById('disconnect-wallet-btn');
-        if (disconnectBtn) disconnectBtn.style.display = 'inline-block';
-        const connectBtn = document.getElementById('connect-web3modal-btn');
-        if (connectBtn) connectBtn.style.display = 'none';
-        state.connectedAddress = result.address;
-        document.getElementById('connection-alert').style.display = 'none';
-        refreshData();
-        return;
-      }
-    }
-
-    // Fallback to existing Web3Modal flow
-    if (!web3modal) {
-      await setupWeb3Modal(true);
-    }
-    const accountInfo = (ethereumClient && typeof ethereumClient.getAccount === 'function') ? ethereumClient.getAccount() : { isConnected: false };
-    if (!accountInfo.isConnected && web3modal && typeof web3modal.openModal === 'function') {
-      web3modal.openModal({ route: 'ConnectWallet', params: { chainId: 8453 } });
-    }
-  } catch (error) {
-    console.error("Error connecting wallet:", error);
-    document.getElementById('connection-alert').style.display = 'block';
-  }
 }
 
-// Disconnect wallet function
-async function disconnectWallet() {
-  try {
-    if (window.Web3OnboardBridge) {
-      await window.Web3OnboardBridge.disconnect();
-    }
-    if (ethereumClient && ethereumClient.disconnect) {
-      await ethereumClient.disconnect();
+function setupAccountMonitoring() {
+    // Monitor for account changes via polling
+    let lastAddress = null;
+    const interval = setInterval(() => {
+        const currentAddress = window.Web3OnboardBridge.getAddress && window.Web3OnboardBridge.getAddress();
+        
+        if (currentAddress !== lastAddress) {
+            if (currentAddress) {
+                // New connection
+                updateUIForConnectedState(currentAddress);
+                state.connectedAddress = currentAddress;
+                refreshData();
+                
+                // Verify network
+                verifyAndSwitchNetwork();
+            } else {
+                // Disconnection
+                updateUIForDisconnectedState();
+                state.connectedAddress = null;
+            }
+            lastAddress = currentAddress;
+        }
+    }, 1000);
+    
+    // Store interval reference for cleanup if needed
+    window.accountMonitoringInterval = interval;
+}
+
+function updateUIForConnectedState(address) {
+    document.getElementById('wallet-status').classList.remove('not-connected');
+    document.getElementById('wallet-status').classList.add('connected');
+    
+    const shortAddress = shortenAddress(address);
+    const addrEl = document.getElementById('address-display');
+    if (addrEl) {
+        addrEl.textContent = shortAddress;
+        addrEl.style.display = 'inline-block';
     }
     
-    // Force UI update to disconnected state
+    const disconnectBtn = document.getElementById('disconnect-wallet-btn');
+    if (disconnectBtn) disconnectBtn.style.display = 'inline-block';
+    
+    const connectBtn = document.getElementById('connect-web3modal-btn');
+    if (connectBtn) connectBtn.style.display = 'none';
+    
+    const connectionAlert = document.getElementById('connection-alert');
+    if (connectionAlert) connectionAlert.style.display = 'none';
+}
+
+function updateUIForDisconnectedState() {
     document.getElementById('wallet-status').classList.add('not-connected');
     document.getElementById('wallet-status').classList.remove('connected');
-    document.getElementById('connect-web3modal-btn').style.display = 'block';
     
-    // Hide address display
+    const connectBtn = document.getElementById('connect-web3modal-btn');
+    if (connectBtn) connectBtn.style.display = 'block';
+    
+    const disconnectBtn = document.getElementById('disconnect-wallet-btn');
+    if (disconnectBtn) disconnectBtn.style.display = 'none';
+    
     const addressDisplay = document.getElementById('address-display');
     if (addressDisplay) {
         addressDisplay.textContent = '';
         addressDisplay.style.display = 'none';
     }
     
-    // Reset state
-    state.connectedAddress = null;
-    
-    // Hide connection alerts
     const connectionAlert = document.getElementById('connection-alert');
     if (connectionAlert) connectionAlert.style.display = 'none';
-    
-    console.log('Wallet disconnected successfully');
-  } catch (error) {
-    console.error('Error disconnecting wallet:', error);
-  }
+}
+
+async function verifyAndSwitchNetwork() {
+    try {
+        const { getNetwork, switchNetwork } = WagmiCore;
+        const net = await getNetwork();
+        if (net?.chain?.id !== 8453) {
+            console.log("Wrong network detected, switching to Base...");
+            await switchNetwork({ chainId: 8453 });
+        }
+    } catch (error) {
+        console.error("Failed to verify/switch network:", error);
+        $('#connection-alert').text("Please switch to Base network in your wallet.").show();
+    }
+}
+
+// Connect to the wallet
+async function connectWallet() {
+    try {
+        // Try to initialize if not already done
+        if (!window.Web3OnboardBridge) {
+            console.log('Web3Onboard bridge not found, attempting to initialize...');
+            const initialized = await setupWeb3Onboard();
+            if (!initialized) {
+                // Fallback to direct ethereum connection
+                console.log('Falling back to direct ethereum connection...');
+                return await connectWithDirectEthereum();
+            }
+        }
+        
+        if (!window.Web3OnboardBridge || typeof window.Web3OnboardBridge.connect !== 'function') {
+            throw new Error('Web3Onboard bridge not properly initialized');
+        }
+        
+        console.log('Connecting wallet via Web3Onboard...');
+        const result = await window.Web3OnboardBridge.connect();
+        if (result && result.address) {
+            updateUIForConnectedState(result.address);
+            state.connectedAddress = result.address;
+            refreshData();
+            console.log('Wallet connected successfully:', result.address);
+        } else {
+            throw new Error('Failed to connect wallet - no address returned');
+        }
+    } catch (error) {
+        console.error("Error connecting wallet:", error);
+        
+        // Show user-friendly error message
+        const alertEl = document.getElementById('connection-alert');
+        if (alertEl) {
+            alertEl.textContent = `Connection failed: ${error.message}`;
+            alertEl.style.display = 'block';
+        }
+    }
+}
+
+// Fallback connection method using direct ethereum
+async function connectWithDirectEthereum() {
+    try {
+        if (!window.ethereum) {
+            throw new Error('No ethereum provider available');
+        }
+        
+        console.log('Connecting via direct ethereum...');
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        
+        if (accounts && accounts.length > 0) {
+            const address = accounts[0];
+            updateUIForConnectedState(address);
+            state.connectedAddress = address;
+            refreshData();
+            console.log('Wallet connected via direct ethereum:', address);
+            
+            // Set up basic compatibility
+            if (!window.ethereumClient) {
+                window.ethereumClient = {
+                    getAccount: () => ({ address, isConnected: true }),
+                    watchAccount: (callback) => {
+                        window.ethereum.on('accountsChanged', (accounts) => {
+                            if (accounts.length > 0) {
+                                callback({ address: accounts[0], isConnected: true });
+                            } else {
+                                callback({ address: null, isConnected: false });
+                            }
+                        });
+                    }
+                };
+                ethereumClient = window.ethereumClient;
+            }
+            
+            return true;
+        } else {
+            throw new Error('No accounts returned');
+        }
+    } catch (error) {
+        console.error('Direct ethereum connection failed:', error);
+        throw error;
+    }
+}
+
+// Disconnect wallet function
+async function disconnectWallet() {
+    try {
+        if (window.Web3OnboardBridge && window.Web3OnboardBridge.disconnect) {
+            await window.Web3OnboardBridge.disconnect();
+        }
+        
+        updateUIForDisconnectedState();
+        state.connectedAddress = null;
+        
+        console.log('Wallet disconnected successfully');
+    } catch (error) {
+        console.error('Error disconnecting wallet:', error);
+    }
 }
 
 // Initialize wallet system when page loads
 $(document).ready(function() {
-  // Show the connect button
-  $('#connect-web3modal-btn').show();
-  
-  // Hook up click events
-  $('#connect-web3modal-btn').on('click', connectWallet);
-  
-  // Hook up disconnect button if it exists
-  $('#disconnect-wallet-btn').on('click', disconnectWallet);
-  
-  // Try to auto-connect if previously connected
-  setupWeb3Modal().catch(console.error);
+    console.log('Initializing wallet system...');
+    
+    // Show the connect button
+    $('#connect-web3modal-btn').show();
+    
+    // Hook up click events
+    $('#connect-web3modal-btn').on('click', connectWallet);
+    
+    // Hook up disconnect button if it exists
+    $('#disconnect-wallet-btn').on('click', disconnectWallet);
+    
+    // Try to initialize Web3Onboard in background, but don't block UI
+    setupWeb3Onboard().then(success => {
+        if (success) {
+            console.log('Web3Onboard initialized successfully on page load');
+        } else {
+            console.log('Web3Onboard initialization failed on page load, will retry on connect');
+        }
+    }).catch(error => {
+        console.log('Web3Onboard initialization error on page load:', error);
+    });
 });
 
 // Ensure functions are accessible globally for other scripts
 try {
-  window.connectWallet = connectWallet;
-  window.disconnectWallet = disconnectWallet;
+    window.connectWallet = connectWallet;
+    window.disconnectWallet = disconnectWallet;
+    window.setupWeb3Onboard = setupWeb3Onboard;
+    window.connectWithDirectEthereum = connectWithDirectEthereum;
 } catch (e) {}
