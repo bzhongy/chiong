@@ -248,39 +248,7 @@
                 </div>
             </nav>
         </header>
-
-        <!-- Beta flag with liquidity information -->
-        <div class="beta-flag-container">
-            <div class="container">
-                <div class="beta-flag">
-                    <span class="beta-label">PUBLIC BETA</span>
-                    <span class="beta-info">Remaining maker liquidity for today:</span>
-                    <span class="liquidity-info">
-                        <span id="usdc-liquidity">--</span> USDC | 
-                        <span id="weth-liquidity">--</span> WETH | 
-                        <span id="cbbtc-liquidity">--</span> CBBTC
-                    </span>
-                    <span class="renewal-info">Liquidity renewed daily at 09:00 UTC</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Add this after the beta-flag-container -->
-        <div class="weekly-prizes-banner">
-            <div class="container">
-                <div class="prize-banner-content">
-                    <div class="prize-title">
-                        <i class="bi bi-trophy-fill"></i> WEEKLY COMPETITION <i class="bi bi-trophy-fill"></i>
-                    </div>
-                    <div class="prize-description">
-                        Top 3 weekly traders win rewards: <strong>$200 USDC</strong> (1st), <strong>$100 USDC</strong> (2nd), <strong>$50 USDC</strong> (3rd)
-                    </div>
-                    <div class="prize-info">
-                        Past week = previous 7 daily settlements. Winners announced after Sunday's settlement. Rewards sent directly to your wallet!
-                    </div>
-                </div>
-            </div>
-        </div>
+        
 
         <main>
             <!-- Connection status alert -->
@@ -1218,6 +1186,22 @@
         <i class="bi bi-chat-dots"></i>
         <span class="chat-notification" id="chat-notification" style="display: none;">0</span>
     </button>
+
+        <!-- Beta flag with liquidity information (moved to bottom) -->
+        <div class="beta-flag-container">
+            <div class="container">
+                <div class="beta-flag">
+                    <span class="beta-label">PUBLIC BETA</span>
+                    <span class="beta-info">Remaining maker liquidity for today:</span>
+                    <span class="liquidity-info">
+                        <span id="usdc-liquidity">--</span> USDC | 
+                        <span id="weth-liquidity">--</span> WETH | 
+                        <span id="cbbtc-liquidity">--</span> CBBTC
+                    </span>
+                    <span class="renewal-info">Liquidity renewed daily at 09:00 UTC</span>
+                </div>
+            </div>
+        </div>
 
 </body>
 </html> 
