@@ -1287,7 +1287,29 @@ async function initialize() {
         helpText.text('Up to $1000 worth of tokens will be approved to reduce future approval transactions. When checked, approves only the exact amount needed for this trade.');
     }
     
-    await connectWallet(); // Connect to the wallet
+    // Wait for wallet system to be ready and attempt auto-connect
+    console.log('Waiting for wallet system to initialize...');
+    let walletReady = false;
+    let attempts = 0;
+    const maxAttempts = 10;
+    
+    while (!walletReady && attempts < maxAttempts) {
+        if (window.Web3OnboardBridge && typeof window.Web3OnboardBridge.init === 'function') {
+            console.log('Wallet system ready, attempting auto-connect...');
+            walletReady = true;
+            // Give the wallet system a moment to complete auto-connect
+            await new Promise(resolve => setTimeout(resolve, 1500));
+        } else {
+            console.log(`Waiting for wallet system... (attempt ${attempts + 1}/${maxAttempts})`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            attempts++;
+        }
+    }
+    
+    if (!walletReady) {
+        console.warn('Wallet system not ready after maximum attempts');
+    }
+    
     await refreshData(); // Start data refresh
     state.refreshTimer = setInterval(refreshData, REFRESH_INTERVAL); // Set a timer to refresh data periodically
     updateCountdowns(); // Start the countdown loop *once* after initial setup

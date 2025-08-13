@@ -302,6 +302,22 @@ async function setupWeb3Onboard() {
             if (address) {
                 updateUIForConnectedState(address);
                 state.connectedAddress = address;
+                console.log('Wallet already connected on initialization:', address);
+            } else {
+                // Try auto-connect if not already connected
+                console.log('Attempting auto-connect...');
+                try {
+                    const autoConnectResult = await window.Web3OnboardBridge.autoConnect();
+                    if (autoConnectResult && autoConnectResult.address) {
+                        console.log('Auto-connect successful:', autoConnectResult.address);
+                        updateUIForConnectedState(autoConnectResult.address);
+                        state.connectedAddress = autoConnectResult.address;
+                    } else {
+                        console.log('Auto-connect failed - no previous connection found');
+                    }
+                } catch (error) {
+                    console.log('Auto-connect error:', error);
+                }
             }
             
             // Set up account change monitoring
@@ -501,6 +517,41 @@ async function disconnectWallet() {
         console.error('Error disconnecting wallet:', error);
     }
 }
+
+// Add this function for manual auto-connect attempts
+async function attemptAutoConnect() {
+    try {
+        console.log('Attempting auto-connect...');
+        if (window.Web3OnboardBridge && window.Web3OnboardBridge.autoConnect) {
+            const autoConnectResult = await window.Web3OnboardBridge.autoConnect();
+            if (autoConnectResult && autoConnectResult.address) {
+                console.log('Auto-connect successful:', autoConnectResult.address);
+                updateUIForConnectedState(autoConnectResult.address);
+                state.connectedAddress = autoConnectResult.address;
+                return true;
+            } else {
+                console.log('Auto-connect failed or no previous connection');
+                return false;
+            }
+        }
+        return false;
+    } catch (error) {
+        console.log('Auto-connect error:', error);
+        return false;
+    }
+}
+
+// Make it available globally for testing
+window.attemptAutoConnect = attemptAutoConnect;
+
+// Add test function for debugging auto-connect
+window.testAutoConnect = function() {
+    if (window.Web3OnboardBridge && window.Web3OnboardBridge.testAutoConnect) {
+        window.Web3OnboardBridge.testAutoConnect();
+    } else {
+        console.log('Web3OnboardBridge.testAutoConnect not available');
+    }
+};
 
 // Initialize wallet system when page loads
 $(document).ready(function() {

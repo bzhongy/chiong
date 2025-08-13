@@ -12,6 +12,15 @@
     --text-primary: #E9ECEF;     /* Primary Text */
     --text-secondary: #ADB5BD;   /* Secondary Text */
     --border-color: #2A3A4A;     /* Border Color */
+
+    /* Web3-Onboard: force square corners */
+    --w3o-border-radius: 0px;
+    --onboard-modal-border-radius: 0px;
+    --onboard-wallet-button-border-radius: 0px;
+    --onboard-border-radius-1: 0px;
+    --onboard-border-radius-2: 0px;
+    --onboard-border-radius-3: 0px;
+    --onboard-border-radius-4: 0px;
 }
 
 /* Base Styles */

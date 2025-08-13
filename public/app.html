@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chiong.fi | Zero-Day Lightning Trades</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="app.css">
+    <!-- Trollbox CSS -->
+    <link rel="stylesheet" href="trollbox.css">
+    <!-- Tx Notifications CSS -->
+    <link rel="stylesheet" href="tx-notifications.css">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Icon library -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Ethers.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.6.9/ethers.umd.min.js"></script>
+    <!-- TradingView -->
+    <script src="https://s3.tradingview.com/tv.js"></script>
+    <!-- Chart.js for custom analytics charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@date-io/date-fns@2.16.1/build/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <!-- Add custom styles for PnL tooltips -->
+    <style>
+        /* Enhanced tooltip styling for PnL USD values */
+        .pnl-tooltip {
+            cursor: help;
+            position: relative;
+        }
+        
+        .pnl-tooltip:hover {
+            opacity: 0.8;
+        }
+        
+        /* Override default tooltip styling for better visibility */
+        .tooltip {
+            font-size: 0.875rem;
+        }
+        
+        .tooltip-inner {
+            background-color: #2c3e50;
+            color: #ffffff;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-weight: 500;
+        }
+        
+        .tooltip.bs-tooltip-top .tooltip-arrow::before {
+            border-top-color: #2c3e50;
+        }
+        
+        .tooltip.bs-tooltip-bottom .tooltip-arrow::before {
+            border-bottom-color: #2c3e50;
+        }
+        
+        /* Option Type Filter Styling - Compact Version */
+        .option-type-filter-compact {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .option-type-filter-compact .btn-group {
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .option-type-filter-compact .btn {
+            font-weight: 500;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            transition: all 0.2s ease;
+        }
+        
+        .option-type-filter-compact .btn-check:checked + .btn-outline-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+            color: white;
+        }
+        
+        .option-type-filter-compact .btn-check:checked + .btn-outline-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+            color: white;
+        }
+        
+        .option-type-filter-compact .btn-check:checked + .btn-outline-success {
+            background-color: #198754;
+            border-color: #198754;
+            color: white;
+        }
+        
+        .filter-description-compact {
+            text-align: center;
+            margin-top: 0.25rem;
+        }
+        
+        /* Conviction Slider Color Changes Based on Filter - High Specificity */
+        .conviction-slider-container {
+            transition: all 0.3s ease;
+        }
+        
+        /* Default ALL mode - gradient from red to green - Override existing styles */
+        .conviction-slider-container input[type="range"].form-range,
+        .conviction-slider-container .form-range {
+            background: linear-gradient(to right, #dc3545 0%, #ffc107 50%, #198754 100%) !important;
+            height: 8px;
+            border-radius: 4px;
+        }
+        
+        /* PUTS mode - red gradient - Higher specificity */
+        .conviction-slider-container.puts-mode input[type="range"].form-range,
+        .conviction-slider-container.puts-mode .form-range {
+            background: linear-gradient(to right, #dc3545 0%, #c82333 100%) !important;
+        }
+        
+        /* CALLS mode - green gradient - Higher specificity */
+        .conviction-slider-container.calls-mode input[type="range"].form-range,
+        .conviction-slider-container.calls-mode .form-range {
+            background: linear-gradient(to right, #198754 0%, #20c997 100%) !important;
+        }
+        
+        /* Slider thumb styling */
+        .form-range::-webkit-slider-thumb {
+            background: #ffffff;
+            border: 2px solid #dee2e6;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .puts-mode .form-range::-webkit-slider-thumb {
+            border-color: #dc3545;
+        }
+        
+        .calls-mode .form-range::-webkit-slider-thumb {
+            border-color: #198754;
+        }
+        
+        /* Modify conviction slider behavior when in filter mode */
+        .conviction-slider-container.filter-mode .conviction-labels {
+            opacity: 0.7;
+        }
+        
+        .conviction-slider-container.puts-mode .bullish-label {
+            opacity: 0.3;
+        }
+        
+        .conviction-slider-container.calls-mode .bearish-label {
+            opacity: 0.3;
+        }
+        
+        /* Combined USD and contract information display styling */
+        .combined-info {
+            font-size: 0.85em;
+            color: #6c757d;
+            font-weight: 400;
+            margin-left: 8px;
+        }
+        
+        .current-size-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        
+        .current-size-display .combined-info {
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <nav class="navbar navbar-expand-lg">
+                <div class="container-fluid">
+                    <!-- Brand -->
+                    <a class="navbar-brand" href="#">
+                        <div class="brand-container">
+                        <div class="brand-text">
+                            <h1>Chiong<span>.fi</span></h1>
+                            <p class="brand-tagline">Zero-Day Lightning Trades</p>
+                        </div>
+                        </div>
+                    </a>
+                    
+                    <!-- Toggle button for mobile -->
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+                            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    
+                    <!-- Navbar links -->
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item">
+                                <a class="nav-link active" href="#" id="nav-trade">Trade</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#" id="nav-positions">Positions</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#" id="nav-history">History</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#" id="nav-scoreboard">Scoreboard</a>
+                            </li>
+                            <!--<li class="nav-item">
+                                <a class="nav-link" href="https://docs.chiong.fi" target="_blank">Docs</a>
+                            </li>-->
+                        </ul>
+                        
+                        <!-- Wallet connection -->
+                        <div class="wallet-section">
+                            <div id="wallet-status" class="not-connected">
+                                <!-- Buttons for choosing connection type -->
+                                <button id="connect-web3modal-btn" class="btn btn-primary" style="display: none;">Connect Wallet</button>
+                                
+                                <span class="address-display" id="address-display" style="display: none;"></span>
+                                
+                                <button id="tx-history-btn" class="btn btn-sm btn-outline-secondary ms-1" style="display: none;" title="Transaction History">
+                                    <i class="bi bi-clock-history"></i>
+                                </button>
+                                
+                                <div id="tx-history-dropdown" class="tx-history-dropdown" style="display: none;"></div>
+                                
+                                <button id="save-private-key" class="btn btn-sm btn-outline-secondary ms-2" style="display: none;" title="Copy private key to clipboard">
+                                    <i class="bi bi-save"></i> Save Key
+                                </button>
+                                
+                                <button id="disconnect-wallet-btn" class="btn btn-sm btn-outline-danger ms-1" style="display: none; margin-top:1px">
+                                    <i class="bi bi-box-arrow-right"></i> Disconnect
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        </header>
+        
+
+        <main>
+            <!-- Connection status alert -->
+            <div id="connection-alert" class="alert alert-warning alert-dismissible fade show" role="alert" style="display: none;">
+                <strong>Not Connected!</strong> Please connect your wallet to start trading.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+
+            <!-- Trade Section -->
+            <section id="trade-section" class="content-section">
+                <div class="container">
+                    <div class="row">
+                        <!-- Asset selector and info -->
+                        <div class="col-12 mb-4">
+                            <div class="asset-header d-flex justify-content-between align-items-center">
+                                <div class="asset-selector">
+                                    <div class="btn-group" role="group" aria-label="Asset selection">
+                                        <input type="radio" class="btn-check" name="asset-selection" id="asset-eth" value="ETH" checked>
+                                        <label class="btn btn-outline-primary" for="asset-eth">ETH</label>
+                                        
+                                        <input type="radio" class="btn-check" name="asset-selection" id="asset-btc" value="BTC">
+                                        <label class="btn btn-outline-primary" for="asset-btc">BTC</label>
+                                    </div>
+                                    <span id="selected-asset" class="d-none">ETH</span>
+                                </div>
+                                <div class="asset-info">
+                                    <div class="price-display">
+                                        <span id="current-price">0.00</span> / <span id="asset-symbol">ETH</span>
+                                        <button id="price-alert-btn" class="btn btn-sm btn-outline-warning ms-2" title="Set Price Alert">
+                                            <i class="bi bi-bell"></i>
+                                        </button>
+                                        <span id="active-alerts-count" class="badge bg-warning text-dark ms-1" style="display: none;">0</span>
+                                    </div>
+                                    <div class="time-display">
+                                        <span id="expiry-time">08:00 UTC EXPIRY</span> | <span id="time-left" class="countdown">--:--:--</span>
+                                    </div>
+                                </div>
+                                <div class="view-toggle">
+                                    <button id="basic-view" class="btn btn-sm btn-outline-primary active">Basic View</button>
+                                    <button id="advanced-view" class="btn btn-sm btn-outline-primary">Advanced View</button>
+                                    
+                                    <!-- Option Type Filter - smaller and positioned here -->
+                                    <div class="option-type-filter-compact mt-2">
+                                        <div class="btn-group btn-group-sm" role="group" aria-label="Option type filter">
+                                            <input type="radio" class="btn-check" name="option-type-filter" id="filter-all" value="all" checked>
+                                            <label class="btn btn-outline-secondary" for="filter-all">ALL</label>
+                                            
+                                            <input type="radio" class="btn-check" name="option-type-filter" id="filter-puts" value="puts">
+                                            <label class="btn btn-outline-danger" for="filter-puts">PUTS</label>
+                                            
+                                            <input type="radio" class="btn-check" name="option-type-filter" id="filter-calls" value="calls">
+                                            <label class="btn btn-outline-success" for="filter-calls">CALLS</label>
+                                        </div>
+                                        <div class="filter-description-compact mt-1">
+                                            <small class="text-muted" id="filter-description">Showing all options</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Trading Interface - Basic View -->
+                        <div id="quote-status-message" class="alert alert-warning mt-3" style="display: none;" role="alert"></div>                         
+                        <div class="col-12" id="basic-view-container">
+                            <div class="trade-card card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Your Price Target:</h5>
+                                    <div class="conviction-slider-container">
+                                        <div class="leverage-indicator">
+                                            <span class="leverage-value">100x</span> LEVERAGE
+                                        </div>
+                                        
+                                        <div class="conviction-labels">
+                                            <span class="bearish-label">BEARISH</span>
+                                            <span class="bullish-label">BULLISH</span>
+                                        </div>
+                                        <input type="range" class="form-range" id="conviction-slider" min="0" max="100" value="50">
+                                        
+                                        <div class="price-targets">
+                                            <span class="price-target low" id="low-price">$---</span>
+                                            <span class="price-target current" id="current-target">$---</span>
+                                            <span class="price-target high" id="high-price">$---</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Analytics Dashboard -->
+                                    <div class="analytics-dashboard mt-4" id="analytics-dashboard">
+                                        <div class="analytics-header d-flex justify-content-between align-items-center">
+                                            <h6 class="analytics-title mb-0">
+                                                <i class="bi bi-graph-up"></i> Market Analytics
+                                            </h6>
+                                            <div class="analytics-controls">
+                                                <button class="btn btn-sm btn-outline-primary" id="toggle-analytics-section" title="Hide Market Analytics">
+                                                    <i class="bi bi-chevron-up"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-primary" id="refresh-analytics" title="Refresh Analytics">
+                                                    <i class="bi bi-arrow-clockwise"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-primary" id="toggle-analytics-view" title="Expand Chart View">
+                                                    <i class="bi bi-arrows-fullscreen"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Analytics Content (can be hidden/shown) -->
+                                        <div class="analytics-content" id="analytics-content">
+                                            <!-- Support/Resistance Levels Section -->
+                                            <div class="support-resistance-section mt-3">
+                                                <h6 class="section-subtitle">
+                                                    <i class="bi bi-layers"></i> Support / Resistance
+                                                </h6>
+                                                <div class="levels-display-container">
+                                                    <div class="price-range-bar">
+                                                        <div class="price-range-labels">
+                                                            <span class="range-label low" id="range-low-display">$---</span>
+                                                            <span class="range-label high" id="range-high-display">$---</span>
+                                                        </div>
+                                                        <div class="price-range-line"></div>
+                                                        <!-- Analytics Levels will be positioned here -->
+                                                        <div class="analytics-levels-overlay" id="analytics-levels-overlay">
+                                                            <!-- Support and resistance levels will be dynamically positioned here -->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- Put/Call Ratio Dials -->
+                                            <div class="pc-ratio-dials mt-3">
+                                                <h6 class="section-subtitle">
+                                                    <i class="bi bi-layers"></i> Put/Call Ratio
+                                                </h6>
+                                                <div class="row">
+                                                    <div class="col-3">
+                                                        <div class="ratio-dial" data-period="overall" 
+                                                             title="Overall Put/Call Ratio - Combined sentiment across all option expirations. Higher values indicate more bearish positioning.">
+                                                            <div class="dial-container">
+                                                                <div class="dial-circle">
+                                                                    <div class="dial-needle" id="dial-overall"></div>
+                                                                    <div class="dial-center"></div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="dial-label">
+                                                                Overall <span class="dial-value-inline" id="ratio-overall-inline">(--)</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-3">
+                                                        <div class="ratio-dial" data-period="0dte" 
+                                                             title="0DTE Put/Call Ratio - Same-day expiry options sentiment. Often shows extreme readings due to gamma hedging and day trading activity.">
+                                                            <div class="dial-container">
+                                                                <div class="dial-circle">
+                                                                    <div class="dial-needle" id="dial-0dte"></div>
+                                                                    <div class="dial-center"></div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="dial-label">
+                                                                0DTE <span class="dial-value-inline" id="ratio-0dte-inline">(--)</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-3">
+                                                        <div class="ratio-dial" data-period="1w" 
+                                                             title="1 Week Put/Call Ratio - Weekly expiry options sentiment. Reflects medium-term directional positioning and hedging activity.">
+                                                            <div class="dial-container">
+                                                                <div class="dial-circle">
+                                                                    <div class="dial-needle" id="dial-1w"></div>
+                                                                    <div class="dial-center"></div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="dial-label">
+                                                                1W <span class="dial-value-inline" id="ratio-1w-inline">(--)</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-3">
+                                                        <div class="ratio-dial" data-period="1m" 
+                                                             title="1 Month Put/Call Ratio - Monthly expiry options sentiment. Shows longer-term positioning and institutional hedging patterns.">
+                                                            <div class="dial-container">
+                                                                <div class="dial-circle">
+                                                                    <div class="dial-needle" id="dial-1m"></div>
+                                                                    <div class="dial-center"></div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="dial-label">
+                                                                1M <span class="dial-value-inline" id="ratio-1m-inline">(--)</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="ratio-legend mt-2">
+                                                    <small class="text-muted">
+                                                        <span class="legend-bear">● Bearish (&gt;1.2)</span> | 
+                                                        <span class="legend-neutral">● Neutral (0.8-1.2)</span> | 
+                                                        <span class="legend-bull">● Bullish (&lt;0.8)</span>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Analytics Status -->
+                                            <div class="analytics-status mt-2" id="analytics-status">
+                                                <small class="text-muted">Loading analytics...</small>
+                                            </div>
+                                            
+                                            <!-- Expandable Chart Section -->
+                                            <div class="analytics-chart-section mt-3" id="analytics-chart-section" style="display: none;">
+                                                <div class="chart-container">
+                                                    <div class="chart-wrapper" style="position: relative; height: 400px;">
+                                                        <canvas id="priceChart"></canvas>
+                                                    </div>
+                                                    <div class="levels-legend mt-2">
+                                                        <h6>Key Levels:</h6>
+                                                        <div class="levels-list" id="levels-list">
+                                                            <!-- Key levels will be populated here -->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <h5 class="card-title mt-4">Position Size:</h5>
+                                    <div class="position-size-container">
+                                        <input type="range" class="form-range" id="position-size-slider" min="0" max="1" value="1" step="0.1">
+                                        <div class="position-size-labels">
+                                            <span class="size-label min">$10</span>
+                                            <span class="size-label max">$1000</span>
+                                        </div>
+                                        <div class="current-size-display">
+                                            <span id="current-size">100</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="options-table-container">
+                                        <table class="table options-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Strike</th>
+                                                    <th>Type</th>
+                                                    <th>Premium</th>
+                                                    <th>Payout Ratio</th>
+                                                    <th>Break-even</th>
+                                                    <th>Delta</th>
+                                                    <th>IV</th>
+                                                    <th>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="options-table-body">
+                                                <!-- Options will be populated here dynamically -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    
+                                    <div class="payment-selection mt-4">
+                                        <label for="payment-asset">Pay With:</label>
+                                        <select class="form-select" id="payment-asset">
+                                            <option value="init" selected>Loading...</option>
+                                            <option value="USDC">USDC</option>
+                                            <option value="WETH">WETH</option>
+                                            <option value="CBBTC">CBBTC</option>
+                                        </select>
+                                        
+                                        <!-- Add Exact Approval Checkbox -->
+                                        <div class="form-check mt-3">
+                                            <input class="form-check-input" type="checkbox" id="exact-approval-checkbox">
+                                            <label class="form-check-label" for="exact-approval-checkbox">
+                                                Exact Approval
+                                            </label>
+                                            <div class="form-text">
+                                                <small class="text-muted">
+                                                    When unchecked, approves up to $1000 worth of tokens to reduce future approval transactions. 
+                                                    When checked, approves only the exact amount needed for this trade.
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                                        <!-- ETH to WETH Wrapping Interface -->
+                    <div class="eth-wrap-section mt-3" id="eth-wrap-section" style="display: none;">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="eth-wrap-header d-flex justify-content-between align-items-center">
+                                    <h6 class="eth-wrap-title mb-0">
+                                        <i class="bi bi-arrow-repeat"></i> Wrap ETH to WETH
+                                    </h6>
+                                    <button class="btn btn-sm btn-outline-primary" id="toggle-eth-wrap-section" title="Hide ETH Wrapping">
+                                        <i class="bi bi-chevron-up"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- ETH Wrap Content (can be hidden/shown) -->
+                                <div class="eth-wrap-content" id="eth-wrap-content">
+                                    <p class="card-text small text-muted mt-2">
+                                        Convert your ETH to WETH to use for trading.
+                                    </p>
+                                    <div class="row align-items-end">
+                                        <div class="col-md-6">
+                                            <label for="eth-wrap-amount" class="form-label">Amount (ETH)</label>
+                                            <input type="number" class="form-control" id="eth-wrap-amount" placeholder="0.1" step="0.001" min="0.001">
+                                            <div class="form-text">
+                                                Available: <span id="eth-balance-display">--</span> ETH
+                                            </div>
+                                            <!-- Quick amount buttons -->
+                                            <div class="quick-amounts mt-2">
+                                                <small class="text-muted">Quick amounts: </small>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-eth-amount="0.01">0.01</button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-eth-amount="0.1">0.1</button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" data-eth-amount="0.5">0.5</button>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <button type="button" class="btn btn-outline-primary w-100" id="wrap-eth-btn">
+                                                <i class="bi bi-arrow-repeat"></i> Wrap ETH
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div id="wrap-status" class="alert alert-info mt-2" style="display: none;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                                    
+                                    <div class="option-preview mt-4">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <h6 class="option-action">
+                                                    <span id="option-action-text">Select option...</span>
+                                                    @ $<span id="strike-price">---</span>
+                                                </h6>
+                                                <div class="option-details">
+                                                    <div class="detail-row">
+                                                        <span class="detail-label">Cost / Max Loss:</span>
+                                                        <span class="detail-value"><span id="option-cost">---</span></span>
+                                                    </div>
+                                                    <div class="detail-row">
+                                                        <span class="detail-label">Payout:</span>
+                                                        <span class="detail-value">$<span id="payout-ratio">---</span> for every $1 <span id="payout-direction">above</span> <span id="payout-threshold">---</span></span>
+                                                    </div>
+                                                    <div class="detail-row">
+                                                        <span class="detail-label">Expires in:</span>
+                                                        <span class="detail-value countdown" id="option-expiry">--:--:--</span>
+                                                    </div>
+                                                </div>
+                                                <div class="no-liquidation-badge">
+                                                    <i class="bi bi-lightning-charge-fill"></i> No liquidation risk - only time can stop you out <i class="bi bi-lightning-charge-fill"></i>
+                                                </div>
+                                                
+                                                <!-- Add batch capacity information -->
+                                                <div class="batch-capacity mt-3">
+                                                    <h6 class="detail-label">Batch Capacity:</h6>
+                                                    <div class="progress">
+                                                        <div id="fill-progress" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mt-1">
+                                                        <small id="fill-capacity">0% filled</small>
+                                                        <small id="available-capacity">0 available</small>
+                                                    </div>
+                                                    <div id="capacity-warning" class="text-warning mt-1" style="display: none;">
+                                                        <i class="bi bi-exclamation-triangle-fill"></i> This batch is almost full!
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Add tooltip explaining batches -->
+                                                <div class="batch-info mt-2">
+                                                    <i class="bi bi-info-circle"></i>
+                                                    <small>Market makers publish batches of orders with limited capacity. New batches will have renewed quotas.</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="trade-actions mt-4">
+                                        <button id="trade-now-btn" class="btn btn-secondary btn-lg w-100" disabled>LOADING...</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Positions Section -->
+            <section id="positions-section" class="content-section" style="display: none;">
+                <div class="container">
+                    
+                    <div id="positions-container">
+                        <!-- Active positions will be displayed here -->
+                        <div class="no-positions-message">
+                            <p>You have no active positions. <a href="#" id="go-to-trade">Start trading now</a>.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- History Section -->
+            <section id="history-section" class="content-section" style="display: none;">
+                <div class="container">
+                    <h2>Trade History</h2>
+                    <div class="filters mb-4">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="history-asset">Asset</label>
+                                    <select class="form-select" id="history-asset">
+                                        <option value="all" selected>All Assets</option>
+                                        <option value="ETH">ALL</option>
+                                        <option value="ETH">ETH</option>
+                                        <option value="BTC">BTC</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="history-type">Type</label>
+                                    <select class="form-select" id="history-type">
+                                        <option value="all" selected>All Types</option>
+                                        <option value="INVERSE_CALL">Calls</option>
+                                        <option value="PUT">Puts</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="history-status">Status</label>
+                                    <select class="form-select" id="history-status">
+                                        <option value="all" selected>All Statuses</option>
+                                        <option value="settled">Settled</option>
+                                        <option value="expired">Expired</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="history-date-range">Date Range</label>
+                                    <select class="form-select" id="history-date-range">
+                                        <option value="all" selected>All Time</option>
+                                        <option value="week">Last 7 Days</option>
+                                        <option value="month">Last 30 Days</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="history-table-container">
+                        <table class="table table-striped history-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Asset</th>
+                                    <th>Type</th>
+                                    <th>Strike</th>
+                                    <th>Size</th>
+                                    <th>Premium</th>
+                                    <th>Settlement Price</th>
+                                    <th>PnL</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body">
+                                <!-- Trade history will be populated here -->
+                            </tbody>
+                        </table>
+                        <div id="no-history-message" style="display: none;">
+                            <p>No trade history found. <a href="#" id="go-to-trade-from-history">Start trading now</a>.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Scoreboard Section -->
+            <section id="scoreboard-section" class="content-section" style="display: none;">
+                <div class="container">
+                    <h2>Trader Scoreboard</h2>
+                    <div class="scoreboard-info mb-4">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> 
+                            <strong>Scoring System:</strong> Scores are calculated based on premium paid (max 30 points), profit ratio (max 40 points), and number of trades (max 30 points). Scores are normalized against the pool and factor in relative activity compared to other traders.
+                        </div>
+                    </div>
+
+                    <!-- Add time period toggle buttons -->
+                    <div class="scoreboard-period-toggle mb-3">
+                        <div class="btn-group" role="group" aria-label="Scoreboard time period">
+                            <button type="button" class="btn btn-outline-secondary" id="scoreboard-period-all">All Time</button>
+                            <button type="button" class="btn btn-outline-secondary active" id="scoreboard-period-week">Past Week</button>
+                        </div>
+                    </div>
+
+                    <div class="scoreboard-table-container">
+                        <table class="table table-striped scoreboard-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Trader</th>
+                                    <th data-bs-toggle="tooltip" title="Total notional value traded. Higher volume means more significant trades. Volume is calculated as contracts × price, using settlement price when available.">Volume Traded <i class="bi bi-info-circle text-primary"></i></th>
+                                    <th data-bs-toggle="tooltip" title="Total amount of premium paid by the trader. Higher premium contributes to a higher premium score (max 30 points). Premium score uses square root scaling of premium relative to median to prevent excessive advantage for large traders.">Premium Paid <i class="bi bi-info-circle text-primary"></i></th>
+                                    <th data-bs-toggle="tooltip" title="Net profit or loss from trades. Profit ratio (profit/premium) determines profit score (max 40 points). Score is scaled based on number of trades (ramping up from 0.2 to 1) and premium relative to median (square root scaling).">Total Profit <i class="bi bi-info-circle text-primary"></i></th>
+                                    <th data-bs-toggle="tooltip" title="Number of trades executed. More trades contribute to a higher trade score (max 30 points through square root scaling). Trade score rewards consistency and diversity of trading activity.">Number of Trades <i class="bi bi-info-circle text-primary"></i></th>
+                                    <th data-bs-toggle="tooltip" title="Streak statistics: Days with Trades / Days with Wins / Longest Trading Streak / Longest Win Streak. Hover for detailed breakdown.">Streaks <i class="bi bi-info-circle text-primary"></i></th>
+                                    <th data-bs-toggle="tooltip" title="Overall score based on premium paid (max 30), profit ratio (max 40), and number of trades (max 30). Scores factor in relative activity through normalization and scaling factors. Profit score considers both ratio and trade consistency.">Score <i class="bi bi-info-circle text-primary"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody id="scoreboard-table-body">
+                                <!-- Scoreboard data will be populated here -->
+                            </tbody>
+                        </table>
+                        <div id="loading-scoreboard" class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p>Loading scoreboard data...</p>
+                        </div>
+                        <div id="no-scoreboard-data" style="display: none;">
+                            <p>No scoreboard data available yet.</p>
+                        </div>
+                    </div>
+
+                    <!-- Add Open Positions Leaderboard -->
+                    <h2 class="mt-5">Active Positions Leaderboard</h2>
+                    <div class="open-positions-info mb-4">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> 
+                            <strong>Live Positions:</strong> See all active positions currently on Chiong. This shows the real-time activity happening on the platform.
+                        </div>
+                    </div>
+
+                    <div class="sort-controls mb-3">
+                        <div class="btn-group" role="group" aria-label="Sort options">
+                            <button type="button" class="btn btn-outline-secondary active" id="sort-by-pnl">Sort by PnL</button>
+                            <button type="button" class="btn btn-outline-secondary" id="sort-by-size">Sort by Size</button>
+                            <button type="button" class="btn btn-outline-secondary" id="sort-by-time">Sort by Time Left</button>
+                        </div>
+                    </div>
+
+                    <div class="open-positions-table-container">
+                        <table class="table table-striped open-positions-table">
+                            <thead>
+                                <tr>
+                                    <th>Trader</th>
+                                    <th>Asset</th>
+                                    <th>Type</th>
+                                    <th>Strike</th>
+                                    <th>Size</th>
+                                    <th>Premium</th>
+                                    <th>Current PnL</th>
+                                    <th>Expires In</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="open-positions-table-body">
+                                <!-- Open positions data will be populated here -->
+                            </tbody>
+                        </table>
+                        <div id="loading-open-positions" class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p>Loading open positions data...</p>
+                        </div>
+                        <div id="no-open-positions-data" style="display: none;">
+                            <p>No open positions available right now. Be the first to create a position!</p>
+                        </div>
+                    </div>
+
+                    <!-- Add Top Profitable Trades Section -->
+                    <h2 class="mt-5">Top Profitable Trades</h2>
+                    <div class="profitable-trades-info mb-4">
+                        <div class="alert alert-success">
+                            <i class="bi bi-trophy-fill"></i> 
+                            <strong>Success Stories:</strong> These are the most profitable trades on Chiong. Real returns from real traders showing what's possible with options trading!
+                        </div>
+                    </div>
+
+                    <div class="profitable-trades-table-container">
+                        <table class="table table-striped profitable-trades-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Trader</th>
+                                    <th data-bs-toggle="tooltip" title="Trade description showing contract size, expiry date, asset, strike price, and option type (Call/Put)">Trade Description <i class="bi bi-info-circle text-primary"></i></th>
+                                    <th data-bs-toggle="tooltip" title="Total USD profit made on this trade">Profit <i class="bi bi-info-circle text-primary"></i></th>
+                                    <th data-bs-toggle="tooltip" title="Percentage return calculated as (Profit / Premium Paid) × 100">Return % <i class="bi bi-info-circle text-primary"></i></th>
+                                    <th data-bs-toggle="tooltip" title="Amount of premium paid for this trade in USD">Premium Paid <i class="bi bi-info-circle text-primary"></i></th>
+                                    <th data-bs-toggle="tooltip" title="Asset this option was based on">Asset <i class="bi bi-info-circle text-primary"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody id="profitable-trades-table-body">
+                                <!-- Profitable trades data will be populated here -->
+                            </tbody>
+                        </table>
+                        <div id="loading-profitable-trades" class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p>Loading profitable trades data...</p>
+                        </div>
+                        <div id="no-profitable-trades-data" style="display: none;">
+                            <p>No profitable trades data available yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <!-- Trade Confirmation Modal -->
+        <div class="modal fade" id="trade-confirm-modal" tabindex="-1" aria-labelledby="tradeConfirmModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="tradeConfirmModalLabel">Confirm Trade</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Add error alert at the top of modal body -->
+                        <div id="trade-error-alert" class="alert alert-danger mb-3" style="display: none;">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <span id="trade-error-message">Error executing trade</span>
+                        </div>
+                        
+                        <div id="modal-countdown" class="countdown-timer"></div>
+                        
+                        <h5 id="modal-option-type">Loading option details...</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="details-card">
+                                    <h6>Trade Details</h6>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Position Size:</span>
+                                        <span class="detail-value" id="modal-position-size">Loading...</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Effective Contracts:</span>
+                                        <span class="detail-value" id="modal-contracts">Loading...</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Leverage:</span>
+                                        <span class="detail-value" id="modal-leverage">Loading...</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Expires:</span>
+                                        <span class="detail-value" id="modal-expiry">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="details-card">
+                                    <h6>What This Means</h6>
+                                    <ul class="meaning-list">
+                                        <li>You believe the asset will go <span id="modal-direction">ABOVE</span> <span id="modal-strike">2,400</span> on expiry</li>
+                                        <li>Max loss: <span id="modal-max-loss">200</span> (cost of trade)</li>
+                                        <li>No liquidation risk!</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="profit-scenarios mt-3">
+                            <h6>Profit at expiry if asset price is:</h6>
+                            <ul>
+                                <li id="scenario-loss">$2,400 or below: Lose $200 (100% loss)</li>
+                                <li id="scenario-breakeven">$2,424: Break even</li>
+                                <li id="scenario-profit1">$2,450: Profit $221 (110% return)</li>
+                                <li id="scenario-profit2">$2,500: Profit $646 (323% return)</li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Add batch information -->
+                        <div id="modal-batch-info" class="mt-3">
+                            <h6><i class="bi bi-info-circle"></i> Batch Order Information</h6>
+                            <ul class="mb-0">
+                                <li id="modal-batch-capacity">Loading capacity information...</li>
+                                <li id="modal-remaining-capacity">Calculating remaining capacity...</li>
+                                <li>Market makers publish batches of orders with limited capacity.</li>
+                                <li>New batches will have renewed quotas.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
+                        <button type="button" class="btn btn-primary" id="confirm-trade-btn">Confirm Trade</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Position Detail Modal -->
+        <div class="modal fade" id="position-detail-modal" tabindex="-1" aria-labelledby="positionDetailModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="positionDetailModalLabel">Position Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div id="position-modal-countdown" class="countdown-timer"></div>
+                        
+                        <h5 id="position-modal-title">LONG ETH CALL @ $2,400</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="details-card">
+                                    <h6>Trade Details</h6>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Cost:</span>
+                                        <span class="detail-value" id="position-modal-cost">$200 USDC</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Payout:</span>
+                                        <span class="detail-value" id="position-modal-payout"><span id="payout-ratio">---</span> for every $1 above $2,400 in WETH</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Time of Trade:</span>
+                                        <span class="detail-value" id="position-modal-time">10:24:36 UTC</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="details-card">
+                                    <h6>Current Status</h6>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Price:</span>
+                                        <span class="detail-value" id="position-modal-current-price"><span id="current-price">---</span></span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Status:</span>
+                                        <span class="detail-value" id="position-modal-status">Needs +$37.55 to reach strike</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">P/L:</span>
+                                        <span class="detail-value" id="position-modal-pnl">-$47 (-23.5%)</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <span class="detail-label">Time Left:</span>
+                                        <span class="detail-value countdown" id="position-modal-time-left">01:41:23</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settlement-scenarios mt-4">
+                            <h6>If ETH price at 08:00 UTC is:</h6>
+                            <ul>
+                                <li id="position-scenario-loss">$2,400 or below: Option expires worthless, lose $200</li>
+                                <li id="position-scenario-breakeven">$2,424: Break even</li>
+                                <li id="position-scenario-profit1">$2,450: Profit $221 (110% return)</li>
+                                <li id="position-scenario-profit2">$2,500: Profit $646 (323% return)</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="settlement-info mt-3">
+                            <h6>Settlement Information:</h6>
+                            <ul>
+                                <li>Settlement Price: Chainlink Oracle at 08:00 UTC</li>
+                                <li>If above $2,400: Automatically settled to your wallet</li>
+                                <li>If at/below $2,400: Option expires worthless</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <!-- Add the new Settle Option button -->
+                        <button type="button" class="btn btn-primary" id="settle-option-btn" style="display: none;">Settle Option</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- Price Alert Modal -->
+        <div class="modal fade" id="price-alert-modal" tabindex="-1" aria-labelledby="priceAlertModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="priceAlertModalLabel">
+                            <i class="bi bi-bell-fill"></i> Price Alerts
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Notification Permission Status -->
+                        <div id="notification-status" class="alert alert-info mb-3">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            <span id="notification-status-text">Checking notification permissions...</span>
+                            <button id="enable-notifications-btn" class="btn btn-sm btn-primary ms-2" style="display: none;">
+                                Enable Notifications
+                            </button>
+                        </div>
+
+                        <!-- Test Notification -->
+                        <div class="test-notification-section mb-4">
+                            <h6><i class="bi bi-bell-fill"></i> Test Notifications</h6>
+                            <p class="text-muted">Send a test notification to see how it will appear:</p>
+                            <button id="test-notification-btn" class="btn btn-outline-primary">
+                                <i class="bi bi-send"></i> Send Test Notification
+                            </button>
+                        </div>
+
+                        <!-- Create New Alert -->
+                        <div class="create-alert-section mb-4">
+                            <h6><i class="bi bi-plus-circle-fill"></i> Create New Alert</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label for="alert-asset" class="form-label">Asset</label>
+                                    <select class="form-select" id="alert-asset">
+                                        <option value="ETH">ETH</option>
+                                        <option value="BTC">BTC</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="alert-direction" class="form-label">Alert When</label>
+                                    <select class="form-select" id="alert-direction">
+                                        <option value="above">Price Goes Above</option>
+                                        <option value="below">Price Goes Below</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="alert-price" class="form-label">Target Price ($)</label>
+                                    <input type="number" class="form-control" id="alert-price" placeholder="2500" step="0.01" min="0">
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-8">
+                                    <label for="alert-message" class="form-label">Custom Message (Optional)</label>
+                                    <input type="text" class="form-control" id="alert-message" placeholder="ETH hit your target price!">
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    <button id="create-alert-btn" class="btn btn-success w-100">
+                                        <i class="bi bi-plus"></i> Create Alert
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    Current <span id="current-asset-price-display">ETH</span> price: $<span id="current-price-in-modal">0.00</span>
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Active Alerts -->
+                        <div class="active-alerts-section">
+                            <h6><i class="bi bi-list-check"></i> Active Alerts</h6>
+                            <div id="active-alerts-list">
+                                <div class="text-muted">No active alerts</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <script src="abis.js"></script>
+    <script src="config.js"></script>
+    <script src="ui-state-manager.js"></script>
+    <script src="retry-helper.js"></script>
+    <script src="tx-notifications.js"></script>
+    <script src="wallet.js?v=8"></script>
+    <script src="ui_interactions.js"></script>
+    <script src="kyber.js"></script>
+    <script src="score.js"></script>
+    <script src="analytics.js"></script>
+    <script src="price-alerts.js"></script>
+    <script src="trollbox.js"></script>
+    <script src="app.js"></script>
+    <script src="analytics-integration.js"></script>
+    <script src="custom-chart-manager.js"></script>
+    <script src="option-type-filter.js"></script>
+
+
+
+    <!-- Add this hidden span to store adjusted leverage -->
+    <span id="adjusted-leverage-value" style="display: none;"></span>
+    <!-- Add this new hidden span to store raw leverage -->
+    <span id="leverage-value" style="display: none;"></span>
+
+    <!-- Trollbox Chat Widget -->
+    <div id="trollbox-widget" class="trollbox-widget">
+        <div class="trollbox-resize-handle" id="trollbox-resize-handle" title="Drag to resize"></div>
+        <div class="trollbox-header" id="trollbox-header">
+            <div class="trollbox-title">
+                <i class="bi bi-chat-dots-fill"></i>
+                <span>Trollbox</span>
+                <span class="online-count" id="online-count">0 online</span>
+            </div>
+            <div class="trollbox-controls">
+                <button id="trollbox-minimize" class="btn btn-sm">
+                    <i class="bi bi-dash"></i>
+                </button>
+                <button id="trollbox-close" class="btn btn-sm">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="trollbox-content" id="trollbox-content">
+            <div class="trollbox-messages" id="trollbox-messages">
+                <div class="system-message">
+                    <i class="bi bi-info-circle"></i>
+                    Welcome to the Chiong Trollbox! Share your 0DTE strategies and market insights.
+                </div>
+                <div class="system-message">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    No authentication required - don't trust users blindly. No links or spam allowed.
+                </div>
+            </div>
+            
+            <div class="trollbox-input-container">
+                <div class="trollbox-user-info" id="trollbox-user-info">
+                    <span class="user-badge">Anonymous</span>
+                </div>
+                <div class="trollbox-input-wrapper">
+                    <input type="text" 
+                           id="trollbox-input" 
+                           class="trollbox-input" 
+                           placeholder="Type your message... (Enter to send)"
+                           maxlength="200"
+                           disabled>
+                    <button id="trollbox-send" class="trollbox-send-btn" disabled>
+                        <i class="bi bi-send"></i>
+                    </button>
+                </div>
+                <div class="trollbox-status" id="trollbox-status">
+                    Connect wallet to chat
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trollbox Toggle Button (when minimized) -->
+    <button id="trollbox-toggle" class="trollbox-toggle" style="display: none;">
+        <i class="bi bi-chat-dots"></i>
+        <span class="chat-notification" id="chat-notification" style="display: none;">0</span>
+    </button>
+
+        <!-- Beta flag with liquidity information (moved to bottom) -->
+        <div class="beta-flag-container">
+            <div class="container">
+                <div class="beta-flag">
+                    <span class="beta-label">PUBLIC BETA</span>
+                    <span class="beta-info">Remaining maker liquidity for today:</span>
+                    <span class="liquidity-info">
+                        <span id="usdc-liquidity">--</span> USDC | 
+                        <span id="weth-liquidity">--</span> WETH | 
+                        <span id="cbbtc-liquidity">--</span> CBBTC
+                    </span>
+                    <span class="renewal-info">Liquidity renewed daily at 09:00 UTC</span>
+                </div>
+            </div>
+        </div>
+
+</body>
+</html> 

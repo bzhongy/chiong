@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chiong.fi | User Browser - Marketing & Audit Tool</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="app.css">
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Icon library -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Ethers.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.6.9/ethers.umd.min.js"></script>
+    
+    <!-- Mobile-friendly styles -->
+    <style>
+        /* Mobile navbar improvements */
+        @media (max-width: 991.98px) {
+            .navbar-brand .brand-text h1 {
+                font-size: 1.2rem;
+            }
+            .navbar-brand .brand-tagline {
+                font-size: 0.7rem;
+            }
+            .navbar-nav {
+                padding-top: 1rem;
+            }
+            .nav-link {
+                padding: 0.75rem 1rem;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+            .nav-link:last-child {
+                border-bottom: none;
+            }
+        }
+        
+        /* Mobile user lookup section */
+        @media (max-width: 767.98px) {
+            .user-lookup-section .col-md-9 {
+                margin-bottom: 1rem;
+            }
+            .user-lookup-section .col-md-3 button {
+                width: 100%;
+            }
+            .top-trader-btn {
+                font-size: 0.8rem;
+                padding: 0.375rem 0.5rem;
+            }
+            .user-stats {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.25rem;
+            }
+            .user-stats .badge {
+                font-size: 0.7rem;
+            }
+        }
+        
+        /* Mobile table improvements */
+        @media (max-width: 767.98px) {
+            .table-responsive {
+                font-size: 0.8rem;
+            }
+            .position-card {
+                margin-bottom: 1rem;
+            }
+            .position-card .col-md-6 {
+                margin-bottom: 1rem;
+            }
+            .detail-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.25rem 0;
+                border-bottom: 1px solid rgba(0,0,0,0.05);
+            }
+            .detail-row:last-child {
+                border-bottom: none;
+            }
+        }
+        
+        /* Mobile filters */
+        @media (max-width: 767.98px) {
+            .filters .col-md-3 {
+                margin-bottom: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <nav class="navbar navbar-expand-lg">
+                <div class="container-fluid">
+                    <!-- Brand -->
+                    <a class="navbar-brand" href="#">
+                        <div class="brand-container">
+                            <div class="brand-text">
+                                <h1>Chiong<span>.fi</span></h1>
+                                <p class="brand-tagline">User Browser - Marketing & Audit Tool</p>
+                            </div>
+                        </div>
+                    </a>
+                    
+                    <!-- Toggle button for mobile -->
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+                            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    
+                    <!-- Navigation -->
+                    <div class="collapse navbar-collapse" id="navbarNav">
+                        <ul class="navbar-nav ms-auto">
+                            <li class="nav-item">
+                                <a class="nav-link active" href="#" id="nav-positions">Positions</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="#" id="nav-history">History</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="app.html">← Back to Trading</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+        </header>
+
+        <main>
+            <!-- User Lookup Section -->
+            <section class="user-lookup-section py-4">
+                <div class="container">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">
+                                        <i class="bi bi-search"></i> User Lookup
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-9">
+                                            <input type="text" class="form-control" id="user-address-input" 
+                                                   placeholder="Enter wallet address (0x...)" 
+                                                   pattern="^0x[a-fA-F0-9]{40}$">
+                                            <div class="form-text">Enter a valid Ethereum wallet address to view their trading activity</div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <button class="btn btn-primary w-100" id="lookup-user-btn">
+                                                <i class="bi bi-search"></i> Lookup
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Quick Access to Top Traders -->
+                                    <div class="mt-3">
+                                        <h6>Quick Access - Top Traders:</h6>
+                                        <div class="btn-group-vertical w-100" id="top-traders-list">
+                                            <div class="text-muted">Loading top traders...</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- User Info Display -->
+            <div id="user-info-display" class="container mt-4" style="display: none;">
+                <div class="alert alert-info">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <strong>Viewing data for:</strong> <span id="current-user-address" class="font-monospace">0x...</span>
+                            <button class="btn btn-sm btn-outline-primary ms-2" id="copy-address-btn">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <div class="user-stats">
+                                <span class="badge bg-primary me-1">Active: <span id="active-positions-count">0</span></span>
+                                <span class="badge bg-secondary me-1">Total Trades: <span id="total-trades-count">0</span></span>
+                                <span class="badge bg-success">Profit: <span id="total-profit">$0</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Positions Section -->
+            <section id="positions-section" class="content-section">
+                <div class="container">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2>Active Positions</h2>
+                        <button class="btn btn-outline-secondary" id="refresh-positions-btn">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                    </div>
+                    
+                    <div id="positions-container">
+                        <div class="no-user-selected text-center py-5">
+                            <i class="bi bi-person-x" style="font-size: 3rem; color: #6c757d;"></i>
+                            <h4 class="text-muted mt-3">No User Selected</h4>
+                            <p class="text-muted">Enter a wallet address above to view their active positions</p>
+                        </div>
+                        
+                        <div class="loading-positions text-center py-5" style="display: none;">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-3">Loading positions...</p>
+                        </div>
+                        
+                        <div class="no-positions-message text-center py-5" style="display: none;">
+                            <i class="bi bi-inbox" style="font-size: 3rem; color: #6c757d;"></i>
+                            <h4 class="text-muted mt-3">No Active Positions</h4>
+                            <p class="text-muted">This user has no active positions</p>
+                        </div>
+                        
+                        <div id="positions-list">
+                            <!-- Active positions will be displayed here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- History Section -->
+            <section id="history-section" class="content-section" style="display: none;">
+                <div class="container">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2>Trade History</h2>
+                        <button class="btn btn-outline-secondary" id="refresh-history-btn">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                    </div>
+                    
+                    <div class="filters mb-4">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="history-asset">Asset</label>
+                                    <select class="form-select" id="history-asset">
+                                        <option value="all" selected>All Assets</option>
+                                        <option value="ETH">ETH</option>
+                                        <option value="BTC">BTC</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="history-type">Type</label>
+                                    <select class="form-select" id="history-type">
+                                        <option value="all" selected>All Types</option>
+                                        <option value="INVERSE_CALL">Calls</option>
+                                        <option value="PUT">Puts</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="history-status">Status</label>
+                                    <select class="form-select" id="history-status">
+                                        <option value="all" selected>All Statuses</option>
+                                        <option value="settled">Settled</option>
+                                        <option value="expired">Expired</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label for="history-date-range">Date Range</label>
+                                    <select class="form-select" id="history-date-range">
+                                        <option value="all" selected>All Time</option>
+                                        <option value="week">Last 7 Days</option>
+                                        <option value="month">Last 30 Days</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="history-table-container">
+                        <div class="table-responsive">
+                            <table class="table table-striped history-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Asset</th>
+                                        <th>Type</th>
+                                        <th>Strike</th>
+                                        <th>Size</th>
+                                        <th>Premium</th>
+                                        <th>Settlement Price</th>
+                                        <th>PnL</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-table-body">
+                                    <!-- Trade history will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="no-user-selected-history text-center py-5">
+                            <i class="bi bi-person-x" style="font-size: 3rem; color: #6c757d;"></i>
+                            <h4 class="text-muted mt-3">No User Selected</h4>
+                            <p class="text-muted">Enter a wallet address above to view their trade history</p>
+                        </div>
+                        
+                        <div class="loading-history text-center py-5" style="display: none;">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-3">Loading trade history...</p>
+                        </div>
+                        
+                        <div id="no-history-message" style="display: none;">
+                            <div class="text-center py-5">
+                                <i class="bi bi-clock-history" style="font-size: 3rem; color: #6c757d;"></i>
+                                <h4 class="text-muted mt-3">No Trade History</h4>
+                                <p class="text-muted">This user has no trade history</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Position Detail Modal (same as main app) -->
+    <div class="modal fade" id="position-detail-modal" tabindex="-1" aria-labelledby="positionDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="positionDetailModalLabel">Position Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="position-modal-countdown" class="countdown-timer"></div>
+                    
+                    <h5 id="position-modal-title">LONG ETH CALL @ $2,400</h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="details-card">
+                                <h6>Trade Details</h6>
+                                <div class="detail-item">
+                                    <span class="detail-label">Cost:</span>
+                                    <span class="detail-value" id="position-modal-cost">$200 USDC</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Payout:</span>
+                                    <span class="detail-value" id="position-modal-payout">$1.24 for every $1 above $2,400 in WETH</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Time of Trade:</span>
+                                    <span class="detail-value" id="position-modal-time">10:24:36 UTC</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="details-card">
+                                <h6>Current Status</h6>
+                                <div class="detail-item">
+                                    <span class="detail-label">Price:</span>
+                                    <span class="detail-value" id="position-modal-current-price">$2,362.45</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Status:</span>
+                                    <span class="detail-value" id="position-modal-status">Needs +$37.55 to reach strike</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">P/L:</span>
+                                    <span class="detail-value" id="position-modal-pnl">-$47 (-23.5%)</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Time Left:</span>
+                                    <span class="detail-value countdown" id="position-modal-time-left">01:41:23</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="settlement-scenarios mt-4">
+                        <h6>If ETH price at 08:00 UTC is:</h6>
+                        <ul>
+                            <li id="position-scenario-loss">$2,400 or below: Option expires worthless, lose $200</li>
+                            <li id="position-scenario-breakeven">$2,424: Break even</li>
+                            <li id="position-scenario-profit1">$2,450: Profit $221 (110% return)</li>
+                            <li id="position-scenario-profit2">$2,500: Profit $646 (323% return)</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="settlement-info mt-3">
+                        <h6>Settlement Information:</h6>
+                        <ul>
+                            <li>Settlement Price: Chainlink Oracle at 08:00 UTC</li>
+                            <li>If above $2,400: Automatically settled to user's wallet</li>
+                            <li>If at/below $2,400: Option expires worthless</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load necessary JavaScript files -->
+    <script src="abis.js"></script>
+    <script src="config.js"></script>
+    <script src="score.js"></script>
+    
+    <!-- User Browser specific JavaScript -->
+    <script>
+        // Configuration constants (matching the main app)
+        const API_BASE_URL = 'https://odette.fi';
+        const BASE_RPC_URL = 'https://base-rpc.thetanuts.finance';
+        
+        let currentUserAddress = null;
+        let currentProvider = null;
+        let rawHistoryData = []; // Store raw history data for filtering
+
+        // Initialize provider without wallet connection
+        async function initializeProvider() {
+            try {
+                currentProvider = new ethers.providers.JsonRpcProvider(BASE_RPC_URL);
+                console.log('Provider initialized for user browsing');
+            } catch (error) {
+                console.error('Error initializing provider:', error);
+            }
+        }
+
+        // Load top traders for quick access
+        async function loadTopTraders() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/scoreboard`);
+                const data = await response.json();
+                
+                const topTradersContainer = document.getElementById('top-traders-list');
+                if (data && data.all && data.all.traders && data.all.traders.length > 0) {
+                    topTradersContainer.innerHTML = data.all.traders.slice(0, 10).map((trader, index) => `
+                        <button class="btn btn-sm btn-outline-primary mb-1 top-trader-btn" 
+                                data-address="${trader.address}" 
+                                title="Rank #${index + 1} - $${trader.profitUSD.toFixed(2)} profit">
+                            #${index + 1} ${trader.address.substring(0, 6)}...${trader.address.substring(38)} 
+                            ($${trader.profitUSD.toFixed(2)})
+                        </button>
+                    `).join('');
+                    
+                    // Add click handlers
+                    document.querySelectorAll('.top-trader-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const address = btn.getAttribute('data-address');
+                            document.getElementById('user-address-input').value = address;
+                            lookupUser();
+                        });
+                    });
+                } else {
+                    topTradersContainer.innerHTML = '<div class="text-muted">No top traders available</div>';
+                }
+            } catch (error) {
+                console.error('Error loading top traders:', error);
+                document.getElementById('top-traders-list').innerHTML = '<div class="text-muted">Error loading top traders</div>';
+            }
+        }
+
+        // Helper function to convert PnL values to USD
+        function convertPnLToUSD(pnlValue, collateralSymbol) {
+            if (!pnlValue || isNaN(pnlValue)) return 0;
+            
+            switch (collateralSymbol) {
+                case 'USDC':
+                    return pnlValue; // 1:1 conversion for USDC
+                case 'WETH':
+                    // For userBrowser, we need to get current ETH price
+                    // This could be fetched from an API or use a default value
+                    return pnlValue * 2500; // Using a default ETH price - could be improved with real-time data
+                case 'CBBTC':
+                    // For userBrowser, we need to get current BTC price
+                    return pnlValue * 100000; // Using a default BTC price - could be improved with real-time data
+                default:
+                    return 0;
+            }
+        }
+        
+        // Helper function to format USD value for tooltip
+        function formatUSDTooltip(usdValue) {
+            if (usdValue === 0) return 'N/A';
+            const prefix = usdValue >= 0 ? '+' : '';
+            return `${prefix}$${Math.abs(usdValue).toFixed(2)} USD`;
+        }
+
+        // Function to lookup a specific user
+        async function lookupUser() {
+            const address = document.getElementById('user-address-input').value.trim();
+            
+            if (!address) {
+                alert('Please enter a wallet address');
+                return;
+            }
+            
+            if (!ethers.utils.isAddress(address)) {
+                alert('Please enter a valid Ethereum address');
+                return;
+            }
+            
+            currentUserAddress = address;
+            
+            // Show user info
+            document.getElementById('current-user-address').textContent = address;
+            document.getElementById('user-info-display').style.display = 'block';
+            
+            // Load user data
+            await Promise.all([
+                loadUserPositions(address),
+                loadUserHistory(address),
+                loadUserStats(address)
+            ]);
+        }
+
+        // Load user positions
+        async function loadUserPositions(address) {
+            const positionsContainer = document.getElementById('positions-list');
+            const loadingElement = document.querySelector('.loading-positions');
+            const noPositionsElement = document.querySelector('.no-positions-message');
+            const noUserElement = document.querySelector('.no-user-selected');
+            
+            // Hide no user message
+            noUserElement.style.display = 'none';
+            
+            // Show loading
+            loadingElement.style.display = 'block';
+            noPositionsElement.style.display = 'none';
+            positionsContainer.innerHTML = '';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/user/${address}/positions`);
+                const data = await response.json();
+                
+                loadingElement.style.display = 'none';
+                
+                if (data && Array.isArray(data) && data.length > 0) {
+                    positionsContainer.innerHTML = data.map(position => {
+                        // Determine option type and underlying asset
+                        const isCall = position.optionTypeRaw === 0;
+                        const optionType = isCall ? 'CALL' : 'PUT';
+                        const strikePrice = position.strikes && position.strikes.length > 0 ? 
+                            (parseFloat(position.strikes[0]) / 1e8).toFixed(2) : 'N/A';
+                        
+                        // Format premium
+                        const premium = position.entryPremium ? 
+                            (parseFloat(position.entryPremium) / Math.pow(10, position.collateralDecimals || 18)).toFixed(4) : 'N/A';
+                        
+                        // Format entry time
+                        const entryTime = position.entryTimestamp ? 
+                            new Date(position.entryTimestamp * 1000).toLocaleString() : 'N/A';
+                        
+                        // Format expiry time
+                        const expiryTime = position.expiryTimestamp ? 
+                            formatTimeLeft(position.expiryTimestamp * 1000) : 'N/A';
+                        
+                        return `
+                            <div class="position-card card mb-3">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6 class="position-title">
+                                                LONG ${position.underlyingAsset || 'UNKNOWN'} ${optionType} @ $${strikePrice}
+                                            </h6>
+                                            <div class="position-details">
+                                                <div class="detail-row">
+                                                    <span class="detail-label">Premium Paid:</span>
+                                                    <span class="detail-value">${premium} ${position.collateralSymbol || 'TOKEN'}</span>
+                                                </div>
+                                                <div class="detail-row">
+                                                    <span class="detail-label">Entry Time:</span>
+                                                    <span class="detail-value">${entryTime}</span>
+                                                </div>
+                                                <div class="detail-row">
+                                                    <span class="detail-label">Time to Expiry:</span>
+                                                    <span class="detail-value countdown">${expiryTime}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="position-status">
+                                                <div class="detail-row">
+                                                    <span class="detail-label">Status:</span>
+                                                    <span class="detail-value">${position.status || 'Active'}</span>
+                                                </div>
+                                                <div class="detail-row">
+                                                    <span class="detail-label">Settlement Price:</span>
+                                                    <span class="detail-value">${position.settlement?.settlementPrice ? 
+                                                        '$' + (parseFloat(position.settlement.settlementPrice) / 1e8).toFixed(2) : 'Pending'}</span>
+                                                </div>
+                                            </div>
+                                            <button class="btn btn-sm btn-outline-primary view-details-btn" 
+                                                    data-position='${JSON.stringify(position)}'>
+                                                View Details
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    // Add click handlers for view details
+                    document.querySelectorAll('.view-details-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const position = JSON.parse(btn.getAttribute('data-position'));
+                            showPositionDetails(position);
+                        });
+                    });
+                    
+                } else {
+                    noPositionsElement.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading positions:', error);
+                loadingElement.style.display = 'none';
+                positionsContainer.innerHTML = '<div class="alert alert-danger">Error loading positions</div>';
+            }
+        }
+
+        // Load user history
+        async function loadUserHistory(address, applyFilters = true) {
+            const historyTableBody = document.getElementById('history-table-body');
+            const loadingElement = document.querySelector('.loading-history');
+            const noHistoryElement = document.getElementById('no-history-message');
+            const noUserElement = document.querySelector('.no-user-selected-history');
+            
+            // Hide no user message
+            noUserElement.style.display = 'none';
+            
+            // Only fetch data if we don't have it or if the address changed
+            if (rawHistoryData.length === 0 || currentUserAddress !== address) {
+                // Show loading
+                loadingElement.style.display = 'block';
+                noHistoryElement.style.display = 'none';
+                historyTableBody.innerHTML = '';
+                
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/user/${address}/history`);
+                    const data = await response.json();
+                    
+                    if (data && Array.isArray(data)) {
+                        rawHistoryData = data; // Store raw data
+                        console.log('Loaded raw history data:', rawHistoryData.length, 'trades');
+                        if (rawHistoryData.length > 0) {
+                            console.log('Sample trade data:', rawHistoryData[0]);
+                        }
+                    } else {
+                        rawHistoryData = [];
+                    }
+                } catch (error) {
+                    console.error('Error loading history:', error);
+                    loadingElement.style.display = 'none';
+                    historyTableBody.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Error loading history</td></tr>';
+                    return;
+                }
+                
+                loadingElement.style.display = 'none';
+            }
+            
+            // Apply filters if requested
+            if (applyFilters) {
+                renderFilteredHistory(address);
+            }
+        }
+        
+        // Render filtered history (separated from data loading)
+        function renderFilteredHistory(address) {
+            const historyTableBody = document.getElementById('history-table-body');
+            const noHistoryElement = document.getElementById('no-history-message');
+            
+            if (!rawHistoryData || rawHistoryData.length === 0) {
+                noHistoryElement.style.display = 'block';
+                document.querySelector('.history-table-container table').style.display = 'none';
+                return;
+            }
+            
+            // Hide no history message and show table
+            noHistoryElement.style.display = 'none';
+            document.querySelector('.history-table-container table').style.display = 'table';
+            
+            // Get filter values
+            const assetFilter = document.getElementById('history-asset').value;
+            const typeFilter = document.getElementById('history-type').value;
+            const statusFilter = document.getElementById('history-status').value;
+            const dateRangeFilter = document.getElementById('history-date-range').value;
+            
+            console.log('Applying filters:', { assetFilter, typeFilter, statusFilter, dateRangeFilter });
+            
+            // Apply filters
+            let filteredHistory = [...rawHistoryData]; // Create a copy
+            
+            if (assetFilter !== 'all') {
+                filteredHistory = filteredHistory.filter(item => item.underlyingAsset === assetFilter);
+                console.log(`After asset filter (${assetFilter}):`, filteredHistory.length);
+            }
+            
+            if (typeFilter !== 'all') {
+                filteredHistory = filteredHistory.filter(item => {
+                    const isCall = item.optionTypeRaw === 0;
+                    const optionType = isCall ? 'CALL' : 'PUT';
+                    if (typeFilter === 'INVERSE_CALL') {
+                        return optionType === 'CALL';
+                    } else if (typeFilter === 'PUT') {
+                        return optionType === 'PUT';
+                    }
+                    return true;
+                });
+                console.log(`After type filter (${typeFilter}):`, filteredHistory.length);
+            }
+            
+            if (statusFilter !== 'all') {
+                filteredHistory = filteredHistory.filter(item => item.status === statusFilter);
+                console.log(`After status filter (${statusFilter}):`, filteredHistory.length);
+            }
+            
+            if (dateRangeFilter !== 'all') {
+                const now = Math.floor(Date.now() / 1000);
+                let cutoffTime = now;
+                
+                if (dateRangeFilter === 'week') {
+                    cutoffTime = now - (7 * 24 * 60 * 60); // 7 days
+                } else if (dateRangeFilter === 'month') {
+                    cutoffTime = now - (30 * 24 * 60 * 60); // 30 days
+                }
+                
+                filteredHistory = filteredHistory.filter(item => item.entryTimestamp >= cutoffTime);
+                console.log(`After date filter (${dateRangeFilter}):`, filteredHistory.length);
+            }
+            
+            // Sort history in reverse chronological order (newest first)
+            filteredHistory.sort((a, b) => b.entryTimestamp - a.entryTimestamp);
+            
+            // Render the filtered data
+            if (filteredHistory.length === 0) {
+                historyTableBody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No trades match the current filters</td></tr>';
+                return;
+            }
+            
+            historyTableBody.innerHTML = filteredHistory.map(trade => {
+                console.log('Processing trade:', {
+                    status: trade.status,
+                    buyer: trade.buyer,
+                    seller: trade.seller,
+                    address: address,
+                    settlement: trade.settlement
+                }); // Debug log
+                
+                // Determine option type and underlying asset
+                const isCall = trade.optionTypeRaw === 0;
+                const optionType = isCall ? 'CALL' : 'PUT';
+                
+                // Format strike price
+                const strikePrice = trade.strikes && trade.strikes.length > 0 ? 
+                    (parseFloat(trade.strikes[0]) / 1e8).toFixed(2) : 'N/A';
+                
+                // Format premium
+                const premium = trade.entryPremium ? 
+                    (parseFloat(trade.entryPremium) / Math.pow(10, trade.collateralDecimals || 18)).toFixed(4) : 'N/A';
+                
+                // Format entry time
+                const entryDate = trade.entryTimestamp ? 
+                    new Date(trade.entryTimestamp * 1000).toLocaleDateString() : 'N/A';
+                
+                // Format settlement price
+                const settlementPrice = trade.settlement?.settlementPrice ? 
+                    '$' + (parseFloat(trade.settlement.settlementPrice) / 1e8).toFixed(2) : 'Pending';
+                
+                // Calculate PnL (based on main app logic)
+                let pnl = 'Pending';
+                let pnlClass = '';
+                
+                if (trade.status === 'settled') {
+                    const userAddress = address.toLowerCase();
+                    let pnlValue = 0;
+                    
+                    if (trade.buyer && trade.buyer.toLowerCase() === userAddress) {
+                        // User was the buyer
+                        if (trade.settlement?.payoutBuyer) {
+                            const payout = parseFloat(trade.settlement.payoutBuyer) / Math.pow(10, trade.collateralDecimals || 18);
+                            const premiumPaid = parseFloat(trade.entryPremium) / Math.pow(10, trade.collateralDecimals || 18);
+                            pnlValue = payout - premiumPaid;
+                        } else {
+                            // No payout means option expired worthless
+                            const premiumPaid = parseFloat(trade.entryPremium) / Math.pow(10, trade.collateralDecimals || 18);
+                            pnlValue = -premiumPaid;
+                        }
+                        
+                        pnl = `${pnlValue >= 0 ? '+' : ''}${pnlValue.toFixed(4)} ${trade.collateralSymbol || 'TOKEN'}`;
+                        pnlClass = pnlValue >= 0 ? 'text-success' : 'text-danger';
+                        
+                    } else if (trade.seller && trade.seller.toLowerCase() === userAddress) {
+                        // User was the seller
+                        if (trade.settlement?.collateralReturnedSeller) {
+                            const collateralReturned = parseFloat(trade.settlement.collateralReturnedSeller) / Math.pow(10, trade.collateralDecimals || 18);
+                            const collateralAmount = parseFloat(trade.collateralAmount) / Math.pow(10, trade.collateralDecimals || 18);
+                            const premiumReceived = parseFloat(trade.entryPremium) / Math.pow(10, trade.collateralDecimals || 18);
+                            pnlValue = collateralReturned - collateralAmount + premiumReceived;
+                        } else {
+                            const collateralAmount = parseFloat(trade.collateralAmount) / Math.pow(10, trade.collateralDecimals || 18);
+                            const premiumReceived = parseFloat(trade.entryPremium) / Math.pow(10, trade.collateralDecimals || 18);
+                            pnlValue = premiumReceived - collateralAmount;
+                        }
+                        
+                        pnl = `${pnlValue >= 0 ? '+' : ''}${pnlValue.toFixed(4)} ${trade.collateralSymbol || 'TOKEN'}`;
+                        pnlClass = pnlValue >= 0 ? 'text-success' : 'text-danger';
+                    } else {
+                        pnl = 'Unknown Role';
+                        pnlClass = 'text-warning';
+                    }
+                } else if (trade.status === 'closed') {
+                    // Handle closed positions
+                    if (trade.explicitClose) {
+                        const collateralReturned = parseFloat(trade.explicitClose.collateralReturned || '0') / Math.pow(10, trade.collateralDecimals || 18);
+                        const premiumPaid = parseFloat(trade.entryPremium) / Math.pow(10, trade.collateralDecimals || 18);
+                        const pnlValue = collateralReturned - premiumPaid;
+                        pnl = `${pnlValue >= 0 ? '+' : ''}${pnlValue.toFixed(4)} ${trade.collateralSymbol || 'TOKEN'}`;
+                        pnlClass = pnlValue >= 0 ? 'text-success' : 'text-danger';
+                    } else {
+                        pnl = 'Closed';
+                        pnlClass = 'text-info';
+                    }
+                }
+                
+                // Determine user role for display
+                let userRole = 'Unknown';
+                if (trade.buyer && trade.buyer.toLowerCase() === address.toLowerCase()) {
+                    userRole = 'Buyer';
+                } else if (trade.seller && trade.seller.toLowerCase() === address.toLowerCase()) {
+                    userRole = 'Seller';
+                }
+                
+                // Convert PnL to USD
+                const usdValue = convertPnLToUSD(pnlValue, trade.collateralSymbol);
+                
+                return `
+                    <tr>
+                        <td>${entryDate}</td>
+                        <td>${trade.underlyingAsset || 'UNKNOWN'}</td>
+                        <td>${optionType} (${userRole})</td>
+                        <td>$${strikePrice}</td>
+                        <td>${premium}</td>
+                        <td>${settlementPrice}</td>
+                        <td class="${pnlClass}" title="${formatUSDTooltip(convertPnLToUSD(pnlValue, trade.collateralSymbol))}" style="cursor: help;">${pnl}</td>
+                        <td>
+                            <span class="badge ${trade.status === 'settled' ? 'bg-success' : trade.status === 'closed' ? 'bg-secondary' : 'bg-warning'}">
+                                ${(trade.status || 'Active').charAt(0).toUpperCase() + (trade.status || 'active').slice(1)}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Load user stats
+        async function loadUserStats(address) {
+            try {
+                const [positionsResponse, historyResponse] = await Promise.all([
+                    fetch(`${API_BASE_URL}/api/user/${address}/positions`),
+                    fetch(`${API_BASE_URL}/api/user/${address}/history`)
+                ]);
+                
+                const positionsData = await positionsResponse.json();
+                const historyData = await historyResponse.json();
+                
+                const activeCount = Array.isArray(positionsData) ? positionsData.length : 0;
+                const totalTrades = Array.isArray(historyData) ? historyData.length : 0;
+                
+                // Calculate total profit from settled trades
+                let totalProfit = 0;
+                if (Array.isArray(historyData)) {
+                    totalProfit = historyData.reduce((sum, trade) => {
+                        if (trade.status === 'settled' && trade.settlement?.payoutBuyer) {
+                            const payout = parseFloat(trade.settlement.payoutBuyer) / Math.pow(10, trade.collateralDecimals || 18);
+                            const premiumPaid = parseFloat(trade.entryPremium) / Math.pow(10, trade.collateralDecimals || 18);
+                            
+                            // Convert to USD (simplified - using strike price as approximation)
+                            let multiplier = 1; // Default for USDC
+                            if (trade.collateralSymbol === 'WETH' || trade.collateralSymbol === 'CBBTC') {
+                                multiplier = trade.strikes && trade.strikes.length > 0 ? 
+                                    parseFloat(trade.strikes[0]) / 1e8 : 1;
+                            }
+                            
+                            return sum + ((payout - premiumPaid) * multiplier);
+                        }
+                        return sum;
+                    }, 0);
+                }
+                
+                document.getElementById('active-positions-count').textContent = activeCount;
+                document.getElementById('total-trades-count').textContent = totalTrades;
+                document.getElementById('total-profit').textContent = totalProfit >= 0 ? 
+                    `+$${totalProfit.toFixed(2)}` : `-$${Math.abs(totalProfit).toFixed(2)}`;
+                
+            } catch (error) {
+                console.error('Error loading user stats:', error);
+            }
+        }
+
+        // Utility functions
+        function formatTimeLeft(expiryTimestamp) {
+            const now = Date.now();
+            const expiry = new Date(expiryTimestamp).getTime();
+            const timeLeft = expiry - now;
+            
+            if (timeLeft <= 0) return 'Expired';
+            
+            const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+            const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function showPositionDetails(position) {
+            // Populate modal with position details (reuse existing modal logic)
+            // This would need to be implemented based on your existing position detail modal
+            const modal = new bootstrap.Modal(document.getElementById('position-detail-modal'));
+            modal.show();
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', async function() {
+            await initializeProvider();
+            await loadTopTraders();
+            
+            // Check for address in URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const addressFromUrl = urlParams.get('address');
+            if (addressFromUrl && ethers.utils.isAddress(addressFromUrl)) {
+                document.getElementById('user-address-input').value = addressFromUrl;
+                await lookupUser(); // Auto-lookup the user
+            }
+            
+            // Lookup button
+            document.getElementById('lookup-user-btn').addEventListener('click', lookupUser);
+            
+            // Enter key on input
+            document.getElementById('user-address-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    lookupUser();
+                }
+            });
+            
+            // Copy address button
+            document.getElementById('copy-address-btn').addEventListener('click', function() {
+                if (currentUserAddress) {
+                    navigator.clipboard.writeText(currentUserAddress);
+                    this.innerHTML = '<i class="bi bi-check"></i>';
+                    setTimeout(() => {
+                        this.innerHTML = '<i class="bi bi-clipboard"></i>';
+                    }, 2000);
+                }
+            });
+            
+            // Navigation
+            document.getElementById('nav-positions').addEventListener('click', function(e) {
+                e.preventDefault();
+                document.getElementById('positions-section').style.display = 'block';
+                document.getElementById('history-section').style.display = 'none';
+                this.classList.add('active');
+                document.getElementById('nav-history').classList.remove('active');
+            });
+            
+            document.getElementById('nav-history').addEventListener('click', function(e) {
+                e.preventDefault();
+                document.getElementById('history-section').style.display = 'block';
+                document.getElementById('positions-section').style.display = 'none';
+                this.classList.add('active');
+                document.getElementById('nav-positions').classList.remove('active');
+            });
+            
+            // Refresh buttons
+            document.getElementById('refresh-positions-btn').addEventListener('click', function() {
+                if (currentUserAddress) {
+                    loadUserPositions(currentUserAddress);
+                }
+            });
+            
+            document.getElementById('refresh-history-btn').addEventListener('click', function() {
+                if (currentUserAddress) {
+                    loadUserHistory(currentUserAddress);
+                }
+            });
+            
+            // History filters
+            ['history-asset', 'history-type', 'history-status', 'history-date-range'].forEach(filterId => {
+                document.getElementById(filterId).addEventListener('change', function() {
+                    if (currentUserAddress) {
+                        console.log('Filter changed:', filterId, this.value);
+                        renderFilteredHistory(currentUserAddress); // Just re-render with filters, don't refetch
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html> 
