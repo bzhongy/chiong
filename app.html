@@ -18,11 +18,7 @@
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Icon library -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <!-- LogRocket -->
-    <script src="https://cdn.lgrckt-in.com/LogRocket.min.js" crossorigin="anonymous"></script>
-    <script>window.LogRocket && window.LogRocket.init('otknkq/chiong');</script>    
-    <!-- LogRocket Integration -->
-    <script src="logrocket-integration.js"></script>
+
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
     <!-- Bootstrap JS -->
@@ -231,7 +227,6 @@
                             <div id="wallet-status" class="not-connected">
                                 <!-- Buttons for choosing connection type -->
                                 <button id="connect-web3modal-btn" class="btn btn-primary" style="display: none;">Connect Wallet</button>
-                                <button id="use-in-browser-wallet-btn" class="btn btn-secondary ms-2" style="display: none;">Use Quick Wallet</button>
                                 
                                 <div class="connected-details" style="display: none;">
                                     <span class="address-display" id="address-display"></span>
@@ -246,9 +241,7 @@
                                         <i class="bi bi-save"></i> Save Key
                                     </button>
                                     
-                                    <button id="wallet-help-icon" class="btn btn-sm btn-outline-info ms-1" style="display: none;" title="Show Quick Wallet information">
-                                        <i class="bi bi-question-circle"></i>
-                                    </button>
+
                                 
                                     
                                     <button id="disconnect-wallet-btn" class="btn btn-sm btn-outline-danger ms-1" style="display: none; margin-top:1px">
@@ -1061,66 +1054,7 @@
             </div>
         </div>
 
-        <!-- Quick Wallet Explanation Modal -->
-        <div class="modal fade" id="quick-wallet-explanation" tabindex="-1" aria-labelledby="quickWalletExplanationLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="quickWalletExplanationLabel">
-                            <i class="bi bi-lightning-charge-fill"></i> Your Quick Wallet is Ready!
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="alert alert-warning">
-                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                            <strong>Important:</strong> This is a convenience wallet for quick testing. It's not as secure as dedicated wallets.
-                        </div>
-                        
-                        <h6><i class="bi bi-shield-lock"></i> Safety First</h6>
-                        <ul>
-                            <li><strong>Back up your private key</strong> by clicking the "Save Key" button next to your address</li>
-                            <li>Your key is stored in your browser's local storage - clearing browser data will erase it</li>
-                            <li>Only use small amounts you're willing to lose</li>
-                            <li>For larger trades, consider connecting a dedicated wallet instead</li>
-                        </ul>
-                        
-                        <h6><i class="bi bi-lightning-charge"></i> Perfect for Quick Testing</h6>
-                        <ul>
-                            <li>No wallet extension or app needed</li>
-                                                            <li>Instant access to Chiong.fi</li>
-                            <li>Stays connected between sessions on this device</li>
-                        </ul>
-                        
-                        <h6><i class="bi bi-currency-exchange"></i> Getting Started</h6>
-                        <ul>
-                            <li>To use your Quick Wallet, you'll need:
-                                <ul>
-                                    <li>A tiny amount of ETH for gas (0.0001 ETH is plenty, each tx costs < $0.01)</li>
-                                    <li>Trading collateral (USDC, WETH, or CBBTC)</li>
-                                </ul>
-                            </li>
-                            <li>You can send these from an exchange or another wallet to your Quick Wallet address</li>
-                            <li>Built-in KyberSwap lets you swap between collateral types, so having just one is fine</li>
-                        </ul>
-                        
-                        <div class="alert alert-info mt-3">
-                            <i class="bi bi-info-circle-fill me-2"></i>
-                            Your wallet address: <strong id="modal-wallet-address"></strong>
-                            <button class="btn btn-sm btn-outline-primary ms-2" id="modal-copy-address">
-                                <i class="bi bi-clipboard"></i> Copy
-                            </button>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="button" class="btn btn-primary" id="modal-save-key">
-                            <i class="bi bi-save"></i> Save Private Key
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+
 
         <!-- Price Alert Modal -->
         <div class="modal fade" id="price-alert-modal" tabindex="-1" aria-labelledby="priceAlertModalLabel" aria-hidden="true">

@@ -72,7 +72,7 @@ async function setupWeb3Modal() {
     };
     
     // Configure WalletConnect with Base chain
-    const walletConnectProjectId = 'aee6080680dc3a81dfecc8f941533fc3';
+    const walletConnectProjectId = 'c0c838fac0cbe5b43ad76ea8652e3029';
     
     // Use only the Base chain in the chains array
     const chains = [base];

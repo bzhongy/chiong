@@ -396,7 +396,7 @@ class OdetteTrollbox {
             // Wallet just connected
             this.onWalletConnected({
                 address: currentAddress,
-                isQuickWallet: this.isQuickWallet()
+                isQuickWallet: false
             });
         } else if (!isConnected && this.currentUser) {
             // Wallet just disconnected
@@ -405,19 +405,12 @@ class OdetteTrollbox {
             // Wallet address changed
             this.onWalletConnected({
                 address: currentAddress,
-                isQuickWallet: this.isQuickWallet()
+                isQuickWallet: false
             });
         }
     }
     
-    isQuickWallet() {
-        // Check if using Odette's in-browser wallet
-        return window.activeWalletType === 'in-browser' || 
-               (window.ethereumClientInstance && 
-                window.ethereumClientInstance.getAccount && 
-                window.ethereumClientInstance.getAccount().connector && 
-                window.ethereumClientInstance.getAccount().connector.id === 'in-browser');
-    }
+
     
     onWalletConnected(walletInfo) {
         this.currentUser = {
@@ -454,9 +447,7 @@ class OdetteTrollbox {
             if (userBadge) {
                 userBadge.textContent = this.currentUser.shortAddress;
                 userBadge.className = 'user-badge';
-                if (this.currentUser.isQuickWallet) {
-                    userBadge.classList.add('quick-wallet');
-                }
+
             }
             
             if (statusElement) {
