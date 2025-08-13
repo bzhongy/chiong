@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Test</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="app.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@date-io/date-fns@2.16.1/build/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-12">
+                <h2>Analytics Test</h2>
+                
+                <!-- Simulated Price Target Section -->
+                <div class="conviction-slider-container">
+                    <div class="leverage-indicator">
+                        <span class="leverage-value">100x</span> LEVERAGE
+                    </div>
+                    <div class="conviction-labels">
+                        <span class="bearish-label">BEARISH</span>
+                        <span class="bullish-label">BULLISH</span>
+                    </div>
+                    <input type="range" class="form-range" id="conviction-slider" min="0" max="100" value="50">
+                    
+                    <!-- Analytics Levels Overlay -->
+                    <div class="analytics-levels-overlay" id="analytics-levels-overlay">
+                        <!-- Support and resistance levels will be dynamically positioned here -->
+                    </div>
+                    
+                    <div class="price-targets">
+                        <span class="price-target low" id="low-price">$100,000</span>
+                        <span class="price-target current" id="current-target">$105,000</span>
+                        <span class="price-target high" id="high-price">$110,000</span>
+                    </div>
+                </div>
+                
+                <!-- Analytics Dashboard -->
+                <div class="analytics-dashboard mt-4" id="analytics-dashboard">
+                    <div class="analytics-header d-flex justify-content-between align-items-center">
+                        <h6 class="analytics-title mb-0">
+                            <i class="bi bi-graph-up"></i> Market Analytics
+                        </h6>
+                        <div class="analytics-controls">
+                            <button class="btn btn-sm btn-outline-primary" id="refresh-analytics" title="Refresh Analytics">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" id="toggle-analytics-view" title="Expand Chart View">
+                                <i class="bi bi-arrows-fullscreen"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Put/Call Ratio Dials -->
+                    <div class="pc-ratio-dials mt-3">
+                        <div class="row">
+                            <div class="col-3">
+                                <div class="ratio-dial" data-period="overall" 
+                                     title="Overall Put/Call Ratio - Combined sentiment across all option expirations. Higher values indicate more bearish positioning.">
+                                    <div class="dial-container">
+                                        <div class="dial-circle">
+                                            <div class="dial-needle" id="dial-overall"></div>
+                                            <div class="dial-center"></div>
+                                        </div>
+                                    </div>
+                                    <div class="dial-label">
+                                        Overall <span class="dial-value-inline" id="ratio-overall-inline">(--)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="ratio-dial" data-period="0dte" 
+                                     title="0DTE Put/Call Ratio - Same-day expiry options sentiment. Often shows extreme readings due to gamma hedging and day trading activity.">
+                                    <div class="dial-container">
+                                        <div class="dial-circle">
+                                            <div class="dial-needle" id="dial-0dte"></div>
+                                            <div class="dial-center"></div>
+                                        </div>
+                                    </div>
+                                    <div class="dial-label">
+                                        0DTE <span class="dial-value-inline" id="ratio-0dte-inline">(--)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="ratio-dial" data-period="1w" 
+                                     title="1 Week Put/Call Ratio - Weekly expiry options sentiment. Reflects medium-term directional positioning and hedging activity.">
+                                    <div class="dial-container">
+                                        <div class="dial-circle">
+                                            <div class="dial-needle" id="dial-1w"></div>
+                                            <div class="dial-center"></div>
+                                        </div>
+                                    </div>
+                                    <div class="dial-label">
+                                        1W <span class="dial-value-inline" id="ratio-1w-inline">(--)</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="ratio-dial" data-period="1m" 
+                                     title="1 Month Put/Call Ratio - Monthly expiry options sentiment. Shows longer-term positioning and institutional hedging patterns.">
+                                    <div class="dial-container">
+                                        <div class="dial-circle">
+                                            <div class="dial-needle" id="dial-1m"></div>
+                                            <div class="dial-center"></div>
+                                        </div>
+                                    </div>
+                                    <div class="dial-label">
+                                        1M <span class="dial-value-inline" id="ratio-1m-inline">(--)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ratio-legend mt-2">
+                            <small class="text-muted">
+                                <span class="legend-bear">● Bearish (&gt;1.2)</span> | 
+                                <span class="legend-neutral">● Neutral (0.8-1.2)</span> | 
+                                <span class="legend-bull">● Bullish (&lt;0.8)</span>
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <!-- Analytics Status -->
+                    <div class="analytics-status mt-2" id="analytics-status">
+                        <small class="text-muted">Loading analytics...</small>
+                    </div>
+                    
+                    <!-- Expandable Chart Section -->
+                    <div class="analytics-chart-section mt-3" id="analytics-chart-section" style="display: none;">
+                        <div class="chart-container">
+                            <div class="chart-wrapper" style="position: relative; height: 400px;">
+                                <canvas id="priceChart"></canvas>
+                            </div>
+                            <div class="levels-legend mt-2">
+                                <h6>Key Levels:</h6>
+                                <div class="levels-list" id="levels-list">
+                                    <!-- Key levels will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Test Controls -->
+                <div class="mt-4">
+                    <h6>Test Controls:</h6>
+                    <div class="btn-group mb-2">
+                        <button class="btn btn-secondary" onclick="testUpdatePrices(104000, 108000)">BTC Range 104k-108k</button>
+                        <button class="btn btn-secondary" onclick="testUpdatePrices(100000, 112000)">BTC Range 100k-112k</button>
+                        <button class="btn btn-secondary" onclick="testUpdatePrices(2400, 2600)">ETH Range 2400-2600</button>
+                        <button class="btn btn-secondary" onclick="testUpdatePrices(2200, 2800)">ETH Range 2200-2800</button>
+                    </div>
+                    <br>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" onclick="switchAsset('BTC')">Switch to BTC</button>
+                        <button class="btn btn-secondary" onclick="switchAsset('ETH')">Switch to ETH</button>
+                        <button class="btn btn-secondary" onclick="refreshAnalytics()">Force Refresh</button>
+                        <button class="btn btn-secondary" onclick="testApiCall()">Test API Call</button>
+                        <button class="btn btn-secondary" onclick="testDials()">Test Dials</button>
+                        <button class="btn btn-secondary" onclick="testMockLevels()">Test Mock Levels</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="analytics.js"></script>
+    <script>
+        // Custom Chart Manager for Test Environment
+        class TestChartManager {
+            constructor() {
+                this.chart = null;
+                this.priceData = [];
+                this.currentPrice = 105000; // Default BTC price
+                this.currentAsset = 'BTC'; // Track current asset
+                this.lastHoveredPrice = null; // Track last hovered price to reduce console spam
+            }
+            
+            async generateMockPriceData(asset) {
+                // Generate mock price data for the chart
+                const basePrice = asset === 'BTC' ? 105000 : 2500;
+                const data = [];
+                const now = new Date();
+                
+                for (let i = 48; i >= 0; i--) {
+                    const timestamp = new Date(now.getTime() - i * 30 * 60 * 1000); // 30-minute intervals
+                    const randomVariation = (Math.random() - 0.5) * 0.04;    // ±2% variation
+                    const price = basePrice * (1 + randomVariation);
+                    
+                    data.push({
+                        x: timestamp,
+                        y: price
+                    });
+                }
+                
+                this.currentPrice = data[data.length - 1].y;
+                this.priceData = data;
+                this.currentAsset = asset; // Update current asset
+                return data;
+            }
+            
+            initializeChart() {
+                const ctx = document.getElementById('priceChart');
+                if (!ctx) {
+                    console.warn('Chart canvas not found');
+                    return;
+                }
+                
+                if (this.chart) {
+                    this.chart.destroy();
+                }
+                
+                // Store reference to this instance for use in callbacks
+                const chartManager = this;
+                
+                // Create chart without time scale initially to avoid date-fns issues
+                this.chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'Price',
+                            data: this.priceData.map((point, index) => ({
+                                x: index, // Use index instead of timestamp
+                                y: point.y
+                            })),
+                            borderColor: '#00d4aa',
+                            backgroundColor: 'rgba(0, 212, 170, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.1,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            isLevel: false // Mark as price data
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'nearest',
+                            axis: 'xy'
+                        },
+                        onHover: (event, activeElements, chart) => {
+                            // Change cursor to pointer when hovering over level lines
+                            event.native.target.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
+                            
+                            // Highlight hovered level line(s)
+                            if (activeElements.length > 0) {
+                                const activeElement = activeElements[0];
+                                const dataset = chart.data.datasets[activeElement.datasetIndex];
+                                
+                                if (dataset.isLevel) {
+                                    const hoveredPrice = dataset.levelData.value;
+                                    
+                                    // Only log if price changed significantly to reduce spam
+                                    if (!chartManager.lastHoveredPrice || Math.abs(hoveredPrice - chartManager.lastHoveredPrice) > hoveredPrice * 0.001) {
+                                        chartManager.lastHoveredPrice = hoveredPrice;
+                                    }
+                                    
+                                    const priceThreshold = hoveredPrice * 0.002; // 0.2% threshold for grouping levels
+                                    
+                                    // Find all levels within the price threshold
+                                    const clusteredLevels = [];
+                                    const seenLevels = new Set(); // Prevent duplicates
+                                    
+                                    chart.data.datasets.forEach((ds, index) => {
+                                        if (ds.isLevel && ds.levelData) {
+                                            const priceDiff = Math.abs(ds.levelData.value - hoveredPrice);
+                                            const levelKey = `${ds.levelData.name}_${ds.levelData.value}`;
+                                            
+                                            if (priceDiff <= priceThreshold && !seenLevels.has(levelKey)) {
+                                                seenLevels.add(levelKey);
+                                                clusteredLevels.push({
+                                                    dataset: ds,
+                                                    index: index,
+                                                    levelData: ds.levelData
+                                                });
+                                            }
+                                        }
+                                    });
+                                    
+                                    // Only log if the number of levels changed or it's a new price
+                                    if (!chart._lastClusterSize || chart._lastClusterSize !== clusteredLevels.length || 
+                                        !chart._lastClusterPrice || Math.abs(chart._lastClusterPrice - hoveredPrice) > hoveredPrice * 0.001) {
+                                        console.log(`Found ${clusteredLevels.length} unique levels around $${hoveredPrice.toLocaleString()}: ${clusteredLevels.map(l => l.levelData.name).join(', ')}`);
+                                        chart._lastClusterSize = clusteredLevels.length;
+                                        chart._lastClusterPrice = hoveredPrice;
+                                    }
+                                    
+                                    // Reset all level line widths first
+                                    chart.data.datasets.forEach((ds) => {
+                                        if (ds.isLevel) {
+                                            ds.borderWidth = ds.levelData.confidence > 0.8 ? 3 : 2;
+                                            ds.borderColor = chartManager.getLevelColor(chartManager.getLevelType(ds.levelData.name));
+                                        }
+                                    });
+                                    
+                                    // Highlight all clustered levels
+                                    clusteredLevels.forEach(({dataset}) => {
+                                        dataset.borderWidth = 4;
+                                        dataset.borderColor = chartManager.getBrightLevelColor(chartManager.getLevelType(dataset.levelData.name));
+                                    });
+                                    
+                                    // Store unique clustered levels for tooltip use
+                                    chart._clusteredLevels = clusteredLevels.map(({levelData}) => levelData);
+                                    
+                                    chart.update('none');
+                                }
+                            } else {
+                                // Reset all levels when not hovering
+                                let needsUpdate = false;
+                                chart.data.datasets.forEach((ds) => {
+                                    if (ds.isLevel) {
+                                        const normalWidth = ds.levelData.confidence > 0.8 ? 3 : 2;
+                                        if (ds.borderWidth !== normalWidth) {
+                                            ds.borderWidth = normalWidth;
+                                            ds.borderColor = chartManager.getLevelColor(chartManager.getLevelType(ds.levelData.name));
+                                            needsUpdate = true;
+                                        }
+                                    }
+                                });
+                                
+                                // Clear clustered levels and tracking
+                                chart._clusteredLevels = null;
+                                chart._lastClusterSize = null;
+                                chart._lastClusterPrice = null;
+                                chartManager.lastHoveredPrice = null;
+                                
+                                if (needsUpdate) {
+                                    chart.update('none');
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                                titleColor: '#ffffff',
+                                bodyColor: '#ffffff',
+                                borderColor: '#00d4aa',
+                                borderWidth: 1,
+                                callbacks: {
+                                    title: function(context) {
+                                        const activeElement = context[0];
+                                        const dataset = activeElement.dataset;
+                                        const chart = activeElement.chart;
+                                        
+                                        if (dataset.isLevel) {
+                                            // Check if we have clustered levels
+                                            if (chart._clusteredLevels && chart._clusteredLevels.length > 1) {
+                                                const levelNames = chart._clusteredLevels.map(level => level.name);
+                                                console.log('TOOLTIP TITLE - Clustered levels:', levelNames);
+                                                return `${levelNames.length} Levels at $${dataset.levelData.value.toLocaleString()}`;
+                                            } else {
+                                                console.log('TOOLTIP TITLE - Single level:', dataset.levelData.name);
+                                                // Show single level name as title when hovering over level
+                                                return dataset.levelData.name;
+                                            }
+                                        } else {
+                                            // Show time for price data
+                                            const index = activeElement.dataIndex;
+                                            const timeAgo = Math.floor((48 - index) / 2);
+                                            console.log('TOOLTIP TITLE - Price data at index:', index);
+                                            return timeAgo > 0 ? `${timeAgo}h ago` : 'Now';
+                                        }
+                                    },
+                                    label: function(context) {
+                                        const dataset = context.dataset;
+                                        const chart = context.chart;
+                                        
+                                        console.log('TOOLTIP LABEL - Dataset isLevel:', dataset.isLevel, 'Dataset label:', dataset.label);
+                                        
+                                        if (dataset.isLevel) {
+                                            // Check if we have clustered levels
+                                            if (chart._clusteredLevels && chart._clusteredLevels.length > 1) {
+                                                console.log('TOOLTIP LABEL - Processing clustered levels:', chart._clusteredLevels.length);
+                                                
+                                                // Only show clustered details for the first dataset to avoid duplication
+                                                // Use the first clustered level's name as the trigger
+                                                const firstClusteredLevel = chart._clusteredLevels[0];
+                                                if (dataset.levelData.name === firstClusteredLevel.name) {
+                                                    console.log('TOOLTIP LABEL - First dataset, showing full clustered details');
+                                                    
+                                                    // Show all clustered levels with deduplication
+                                                    const labels = [];
+                                                    const uniqueLevels = new Map();
+                                                    
+                                                    // Deduplicate by name + price combination
+                                                    chart._clusteredLevels.forEach(levelData => {
+                                                        const key = `${levelData.name}_${levelData.value}`;
+                                                        if (!uniqueLevels.has(key)) {
+                                                            uniqueLevels.set(key, levelData);
+                                                        }
+                                                    });
+                                                    
+                                                    console.log('TOOLTIP LABEL - Unique levels after deduplication:', uniqueLevels.size);
+                                                    
+                                                    // Convert back to array and sort by confidence
+                                                    const sortedLevels = Array.from(uniqueLevels.values())
+                                                        .sort((a, b) => b.confidence - a.confidence);
+                                                    
+                                                    console.log('TOOLTIP LABEL - Sorted levels:', sortedLevels.map(l => l.name));
+                                                    
+                                                    sortedLevels.forEach((levelData, index) => {
+                                                        const levelType = chartManager.getLevelType(levelData.name);
+                                                        const typeSymbol = levelType === 'support' ? '🟢' : 
+                                                                         levelType === 'resistance' ? '🔴' : '🟠';
+                                                        
+                                                        labels.push(`${typeSymbol} ${levelData.name}`);
+                                                        labels.push(`   Price: $${levelData.value.toLocaleString()}`);
+                                                        labels.push(`   Confidence: ${(levelData.confidence * 100).toFixed(0)}%`);
+                                                        labels.push(`   Distance: ${levelData.distance_to_spot > 0 ? '+' : ''}${levelData.distance_to_spot?.toLocaleString() || 'N/A'}`);
+                                                        
+                                                        if (index < sortedLevels.length - 1) {
+                                                            labels.push(''); // Add spacing between levels
+                                                        }
+                                                    });
+                                                    
+                                                    console.log('TOOLTIP LABEL - Final labels array length:', labels.length);
+                                                    console.log('TOOLTIP LABEL - Final labels:', labels);
+                                                    return labels;
+                                                } else {
+                                                    console.log('TOOLTIP LABEL - Subsequent dataset, returning empty to avoid duplication');
+                                                    return []; // Return empty for subsequent datasets to avoid duplication
+                                                }
+                                            } else {
+                                                console.log('TOOLTIP LABEL - Single level details for:', dataset.levelData.name);
+                                                // For single level datasets, show level details
+                                                const levelData = dataset.levelData;
+                                                return [
+                                                    `Price: $${levelData.value.toLocaleString()}`,
+                                                    `Confidence: ${(levelData.confidence * 100).toFixed(0)}%`,
+                                                    `Distance: ${levelData.distance_to_spot > 0 ? '+' : ''}${levelData.distance_to_spot?.toLocaleString() || 'N/A'}`
+                                                ];
+                                            }
+                                        } else {
+                                            console.log('TOOLTIP LABEL - Price dataset value:', context.parsed.y);
+                                            // For price dataset, show current price
+                                            return `Price: $${context.parsed.y.toLocaleString()}`;
+                                        }
+                                    },
+                                    afterBody: function(context) {
+                                        const activeElement = context[0];
+                                        const dataset = activeElement.dataset;
+                                        
+                                        console.log('TOOLTIP AFTERBODY - Dataset isLevel:', dataset.isLevel);
+                                        
+                                        if (!dataset.isLevel) {
+                                            // Only show all levels when hovering over price, not when hovering over a specific level
+                                            const chart = activeElement.chart;
+                                            const levels = [];
+                                            
+                                            chart.data.datasets.forEach((ds, index) => {
+                                                if (ds.isLevel && index > 0) {
+                                                    const levelData = ds.levelData;
+                                                    levels.push(`${levelData.name}: $${levelData.value.toLocaleString()}`);
+                                                }
+                                            });
+                                            
+                                            console.log('TOOLTIP AFTERBODY - All levels:', levels.length);
+                                            return levels.length > 0 ? ['', 'All Key Levels:', ...levels.slice(0, 8)] : [];
+                                        }
+                                        
+                                        console.log('TOOLTIP AFTERBODY - Returning empty for level dataset');
+                                        return [];
+                                    },
+                                    afterLabel: function(context) {
+                                        const dataset = context.dataset;
+                                        const chart = context.chart;
+                                        
+                                        console.log('TOOLTIP AFTERLABEL - Dataset isLevel:', dataset.isLevel);
+                                        
+                                        if (dataset.isLevel) {
+                                            // Check if we have clustered levels
+                                            if (chart._clusteredLevels && chart._clusteredLevels.length > 1) {
+                                                // Only show descriptions for the first dataset to avoid duplication
+                                                const firstClusteredLevel = chart._clusteredLevels[0];
+                                                if (dataset.levelData.name === firstClusteredLevel.name) {
+                                                    console.log('TOOLTIP AFTERLABEL - First dataset, showing clustered level descriptions');
+                                                    // Show combined description for clustered levels
+                                                    const levelTypes = chart._clusteredLevels.map(level => 
+                                                        chartManager.getLevelType(level.name)
+                                                    );
+                                                    const uniqueTypes = [...new Set(levelTypes)];
+                                                    
+                                                    const typeDescriptions = {
+                                                        'support': 'Support zones where price may bounce up',
+                                                        'resistance': 'Resistance zones where price may face selling pressure',  
+                                                        'gamma-wall': 'High options activity zones'
+                                                    };
+                                                    
+                                                    const descriptions = uniqueTypes.map(type => typeDescriptions[type]).filter(Boolean);
+                                                    console.log('TOOLTIP AFTERLABEL - Descriptions:', descriptions);
+                                                    return ['', ...descriptions];
+                                                } else {
+                                                    console.log('TOOLTIP AFTERLABEL - Subsequent dataset, returning empty to avoid duplication');
+                                                    return ''; // Return empty for subsequent datasets
+                                                }
+                                            } else {
+                                                console.log('TOOLTIP AFTERLABEL - Single level description for:', dataset.levelData.name);
+                                                // Add single level type description
+                                                const levelType = chartManager.getLevelType(dataset.levelData.name);
+                                                const descriptions = {
+                                                    'support': 'Support Level - Price may bounce up from here',
+                                                    'resistance': 'Resistance Level - Price may face selling pressure',
+                                                    'gamma-wall': 'Gamma Wall - High options activity zone'
+                                                };
+                                                
+                                                return descriptions[levelType] || 'Key market level';
+                                            }
+                                        }
+                                        
+                                        console.log('TOOLTIP AFTERLABEL - Returning empty for price dataset');
+                                        return '';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                position: 'bottom',
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#888',
+                                    callback: function(value, index) {
+                                        const hoursAgo = Math.floor((48 - index) / 2);
+                                        return hoursAgo > 0 ? `-${hoursAgo}h` : 'Now';
+                                    }
+                                }
+                            },
+                            y: {
+                                position: 'right',
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: '#888',
+                                    callback: function(value) {
+                                        return '$' + value.toLocaleString();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                console.log('Chart initialized successfully');
+            }
+            
+            addAnalyticsLevels(analyticsData, forceAsset = null) {
+                if (!this.chart) {
+                    console.warn('Chart not initialized, cannot add levels');
+                    return;
+                }
+                
+                if (!analyticsData || !analyticsData.key_levels) {
+                    console.warn('No analytics data or key_levels found');
+                    return;
+                }
+                
+                // Check asset alignment if forceAsset is provided
+                const expectedAsset = forceAsset || this.currentAsset;
+                console.log(`Adding levels for asset: ${expectedAsset}, Chart asset: ${this.currentAsset}`);
+                
+                if (forceAsset && forceAsset !== this.currentAsset) {
+                    console.warn(`Asset mismatch: Expected ${forceAsset}, Chart has ${this.currentAsset}. Skipping level update.`);
+                    return;
+                }
+                
+                console.log('Analytics data received:', analyticsData);
+                console.log('Available levels:', analyticsData.key_levels.map(l => `${l.name}: $${l.value}`));
+                
+                // Remove existing level annotations (keep only price dataset)
+                this.chart.data.datasets = this.chart.data.datasets.filter(ds => !ds.isLevel);
+                
+                // Get all level values to determine the full range needed
+                const levelValues = analyticsData.key_levels.map(level => level.value);
+                const currentPrices = this.priceData.map(d => d.y);
+                const allValues = [...levelValues, ...currentPrices];
+                
+                const minValue = Math.min(...allValues);
+                const maxValue = Math.max(...allValues);
+                const valueRange = maxValue - minValue;
+                
+                // Add padding to make the chart more readable
+                const padding = valueRange * 0.05; // 5% padding
+                const chartMin = minValue - padding;
+                const chartMax = maxValue + padding;
+                
+                console.log(`Full range: $${minValue.toLocaleString()} - $${maxValue.toLocaleString()}`);
+                console.log(`Chart range with padding: $${chartMin.toLocaleString()} - $${chartMax.toLocaleString()}`);
+                
+                // Update Y-axis scale to show all levels
+                this.chart.options.scales.y.min = chartMin;
+                this.chart.options.scales.y.max = chartMax;
+                
+                // Sort levels by confidence for better visual hierarchy
+                const sortedLevels = [...analyticsData.key_levels]
+                    .sort((a, b) => b.confidence - a.confidence);
+                
+                console.log(`Adding all ${sortedLevels.length} levels to chart:`, sortedLevels.map(l => `${l.name}: $${l.value.toLocaleString()}`));
+                
+                // Add all levels as horizontal line datasets
+                sortedLevels.forEach((level, index) => {
+                    const levelType = this.getLevelType(level.name);
+                    const color = this.getLevelColor(levelType);
+                    const alpha = Math.max(0.4, level.confidence); // Use confidence for opacity
+                    
+                    // Create horizontal line data using index-based x values
+                    const lineData = this.priceData.map((point, idx) => ({
+                        x: idx,
+                        y: level.value
+                    }));
+                    
+                    this.chart.data.datasets.push({
+                        label: level.name,
+                        data: lineData,
+                        borderColor: color,
+                        backgroundColor: color,
+                        borderWidth: level.confidence > 0.8 ? 3 : 2, // Thicker lines for high confidence
+                        borderDash: this.getLevelDash(levelType),
+                        fill: false,
+                        tension: 0,
+                        pointRadius: 0,
+                        pointHoverRadius: 0,
+                        isLevel: true,
+                        levelData: level,
+                        order: index + 1 // Ensure levels are rendered after price
+                    });
+                });
+                
+                console.log(`Chart now has ${this.chart.data.datasets.length} datasets (1 price + ${sortedLevels.length} levels)`);
+                console.log(`Y-axis range set to: $${chartMin.toLocaleString()} - $${chartMax.toLocaleString()}`);
+                
+                this.chart.update('none'); // Update without animation for performance
+            }
+            
+            clearLevels() {
+                if (this.chart) {
+                    console.log('Clearing existing levels from chart');
+                    this.chart.data.datasets = this.chart.data.datasets.filter(ds => !ds.isLevel);
+                    this.chart.update('none');
+                }
+            }
+            
+            getLevelType(levelName) {
+                const levelTypes = {
+                    'Put Support': 'support',
+                    'Put Support 0DTE': 'support',
+                    'Put Support 1W': 'support', 
+                    'Put Support 1M': 'support',
+                    'Put Flow Support': 'support',
+                    'Call Resistance': 'resistance',
+                    'Call Resistance 0DTE': 'resistance',
+                    'Call Resistance 1W': 'resistance',
+                    'Call Resistance 1M': 'resistance',
+                    'Call Flow Resistance': 'resistance',
+                    'Gamma Wall (Short Gamma)': 'gamma-wall',
+                    'Gamma Wall (Long Gamma)': 'gamma-wall',
+                    'HVL': 'gamma-wall',
+                    'HVS': 'gamma-wall',
+                    'Max Pain Flow': 'gamma-wall',
+                    'VWAS': 'gamma-wall'
+                };
+                return levelTypes[levelName] || 'gamma-wall';
+            }
+            
+            getLevelColor(levelType) {
+                const colors = {
+                    'support': '#00d4aa',     // Green for support
+                    'resistance': '#ff4757', // Red for resistance  
+                    'gamma-wall': '#ffa726'  // Orange for gamma walls
+                };
+                return colors[levelType] || '#ffa726';
+            }
+            
+            getBrightLevelColor(levelType) {
+                const brightColors = {
+                    'support': '#00ff88',     // Bright green for support
+                    'resistance': '#ff6b6b', // Bright red for resistance  
+                    'gamma-wall': '#ffb347'  // Bright orange for gamma walls
+                };
+                return brightColors[levelType] || '#ffb347';
+            }
+            
+            getLevelDash(levelType) {
+                const dashes = {
+                    'support': [5, 5],       // Dashed line for support
+                    'resistance': [5, 5],    // Dashed line for resistance
+                    'gamma-wall': [10, 5]    // Different dash for gamma walls
+                };
+                return dashes[levelType] || [5, 5];
+            }
+            
+            async updateChart(asset) {
+                console.log(`Updating chart for ${asset}`);
+                
+                // Clear existing levels first to prevent misalignment
+                this.clearLevels();
+                
+                await this.generateMockPriceData(asset);
+                
+                if (this.chart) {
+                    // Update the main price dataset
+                    this.chart.data.datasets[0].data = this.priceData.map((point, index) => ({
+                        x: index,
+                        y: point.y
+                    }));
+                    this.chart.update();
+                    console.log(`Chart updated for ${asset}, levels cleared`);
+                }
+            }
+            
+            destroy() {
+                if (this.chart) {
+                    this.chart.destroy();
+                    this.chart = null;
+                }
+            }
+        }
+        
+        // Initialize test chart manager
+        window.testChartManager = new TestChartManager();
+        
+        // Test functions
+        function testUpdatePrices(low, high) {
+            console.log(`Testing price range: $${low} - $${high}`);
+            document.getElementById('low-price').textContent = `$${low.toLocaleString()}`;
+            document.getElementById('high-price').textContent = `$${high.toLocaleString()}`;
+            document.getElementById('current-target').textContent = `$${Math.round((low + high) / 2).toLocaleString()}`;
+            
+            // Trigger overlay update
+            if (window.analyticsManager) {
+                setTimeout(() => {
+                    window.analyticsManager.updateLevelOverlays();
+                }, 100);
+            }
+        }
+        
+        function switchAsset(asset) {
+            console.log(`Switching to asset: ${asset}`);
+            if (window.analyticsManager) {
+                // Clear existing levels immediately to prevent misalignment
+                if (window.testChartManager && window.testChartManager.chart) {
+                    window.testChartManager.clearLevels();
+                }
+                
+                // Update analytics manager asset
+                window.analyticsManager.currentAsset = asset;
+                
+                // Update chart data for new asset
+                if (window.testChartManager) {
+                    window.testChartManager.updateChart(asset).then(() => {
+                        // Refresh analytics after chart is updated
+                        window.analyticsManager.refreshAnalytics();
+                    });
+                } else {
+                    window.analyticsManager.refreshAnalytics();
+                }
+            }
+        }
+        
+        function refreshAnalytics() {
+            console.log('Force refreshing analytics...');
+            if (window.analyticsManager) {
+                window.analyticsManager.refreshAnalytics();
+            }
+        }
+        
+        function testDials() {
+            console.log('Testing dial angles...');
+            if (window.analyticsManager) {
+                // Test different P/C ratios
+                const testRatios = [0.5, 0.75, 1.0, 1.25, 2.0, 5.0];
+                testRatios.forEach((ratio, index) => {
+                    setTimeout(() => {
+                        console.log(`Testing ratio ${ratio}:`);
+                        window.analyticsManager.updateDial('overall', ratio);
+                    }, index * 1000);
+                });
+            }
+        }
+        
+        function testMockLevels() {
+            console.log('Testing with mock analytics levels...');
+            const currentAsset = window.testChartManager?.currentAsset || 'BTC';
+            
+            // Create mock data appropriate for current asset
+            const mockAnalyticsData = currentAsset === 'BTC' ? {
+                key_levels: [
+                    { name: 'Put Support 0DTE', value: 104000, confidence: 0.9, distance_to_spot: -1000 },
+                    { name: 'Call Resistance', value: 107000, confidence: 0.85, distance_to_spot: 2000 },
+                    { name: 'Gamma Wall (Short Gamma)', value: 105500, confidence: 0.8, distance_to_spot: 500 },
+                    { name: 'Put Support 1W', value: 103000, confidence: 0.75, distance_to_spot: -2000 },
+                    { name: 'HVL', value: 106000, confidence: 0.7, distance_to_spot: 1000 },
+                    { name: '1D Min', value: 104520.5, confidence: 0.6, distance_to_spot: -480 },
+                    { name: 'VWAS', value: 104353.507, confidence: 0.65, distance_to_spot: -647 }
+                ]
+            } : {
+                key_levels: [
+                    { name: 'Put Support 0DTE', value: 2400, confidence: 0.9, distance_to_spot: -100 },
+                    { name: 'Call Resistance', value: 2600, confidence: 0.85, distance_to_spot: 100 },
+                    { name: 'Gamma Wall (Short Gamma)', value: 2550, confidence: 0.8, distance_to_spot: 50 },
+                    { name: 'Put Support 1W', value: 2350, confidence: 0.75, distance_to_spot: -150 },
+                    { name: 'HVL', value: 2580, confidence: 0.7, distance_to_spot: 80 },
+                    { name: '1D Min', value: 2420.5, confidence: 0.6, distance_to_spot: -80 },
+                    { name: 'VWAS', value: 2535.25, confidence: 0.65, distance_to_spot: 35 }
+                ]
+            };
+            
+            console.log(`Using mock data for ${currentAsset}:`, mockAnalyticsData.key_levels.map(l => `${l.name}: $${l.value.toLocaleString()}`));
+            
+            if (window.testChartManager && window.testChartManager.chart) {
+                window.testChartManager.addAnalyticsLevels(mockAnalyticsData, currentAsset);
+            } else {
+                console.warn('Chart not initialized. Click "Expand Chart View" first.');
+            }
+        }
+        
+        async function testApiCall() {
+            console.log('Testing direct API call...');
+            const currentAsset = window.analyticsManager?.currentAsset || 'BTC';
+            
+            try {
+                const response = await fetch(`https://orange-band-e454.devops-118.workers.dev/analytics?currency=${currentAsset}`);
+                const data = await response.json();
+                console.log('Raw API Response:', JSON.stringify(data, null, 2));
+                
+                if (data.success && data.data && data.data.metadata) {
+                    console.log('Put/Call Ratios:', data.data.metadata.put_call_ratios);
+                } else {
+                    console.log('No put_call_ratios found in metadata');
+                }
+                
+                if (data.success && data.data && data.data.key_levels) {
+                    console.log(`Key Levels for ${currentAsset}:`, data.data.key_levels);
+                    
+                    // Test adding levels to chart if it's open, ensuring asset alignment
+                    if (window.testChartManager && window.testChartManager.chart) {
+                        window.testChartManager.addAnalyticsLevels(data.data, currentAsset);
+                    }
+                }
+            } catch (error) {
+                console.error('API test failed:', error);
+            }
+        }
+        
+        // Wait for DOM and analytics.js to be fully loaded, then override TradingView methods
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Test page loaded, setting initial asset to BTC');
+            
+            // Wait for analytics manager to initialize and override TradingView methods
+            setTimeout(() => {
+                if (window.analyticsManager && window.analyticsManager.constructor) {
+                    console.log('Overriding TradingView methods with Chart.js...');
+                    
+                    // Store original updateAnalyticsUI method
+                    const originalUpdateAnalyticsUI = window.analyticsManager.updateAnalyticsUI;
+                    
+                    // Override the TradingView methods in the instance
+                    window.analyticsManager.initializeTradingViewChart = function() {
+                        console.log('Initializing Chart.js instead of TradingView...');
+                        window.testChartManager.generateMockPriceData(this.currentAsset).then(() => {
+                            window.testChartManager.initializeChart();
+                            // Add levels if data is already available
+                            if (this.analyticsData) {
+                                setTimeout(() => {
+                                    window.testChartManager.addAnalyticsLevels(this.analyticsData, this.currentAsset);
+                                }, 100);
+                            }
+                        });
+                    };
+                    
+                    window.analyticsManager.updateTradingViewChart = function() {
+                        console.log('Updating Chart.js with analytics levels...');
+                        if (this.analyticsData && window.testChartManager && window.testChartManager.chart) {
+                            window.testChartManager.addAnalyticsLevels(this.analyticsData, this.currentAsset);
+                        }
+                    };
+                    
+                    window.analyticsManager.destroyTradingViewChart = function() {
+                        console.log('Destroying Chart.js...');
+                        window.testChartManager.destroy();
+                    };
+                    
+                    // Override updateAnalyticsUI to also update chart levels
+                    window.analyticsManager.updateAnalyticsUI = function() {
+                        console.log(`Analytics UI update for ${this.currentAsset} - also updating chart levels`);
+                        // Call original method
+                        originalUpdateAnalyticsUI.call(this);
+                        
+                        // Also update chart levels if chart is open, ensuring asset alignment
+                        if (window.testChartManager && window.testChartManager.chart && this.analyticsData) {
+                            setTimeout(() => {
+                                window.testChartManager.addAnalyticsLevels(this.analyticsData, this.currentAsset);
+                            }, 100);
+                        }
+                    };
+                    
+                    // Set initial asset to BTC
+                    window.analyticsManager.currentAsset = 'BTC';
+                } else {
+                    console.warn('AnalyticsManager not found, TradingView overrides not applied');
+                }
+                
+                // Initialize chart with BTC data
+                if (window.testChartManager) {
+                    window.testChartManager.generateMockPriceData('BTC').then(() => {
+                        // Chart will be initialized when analytics view is expanded
+                    });
+                }
+            }, 1500); // Increased timeout to ensure analytics.js is fully loaded
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,300 @@
+.trollbox-messages .message.admin-message {
+    background: rgba(255, 167, 38, 0.1);
+    border-left: 3px solid #ffa726;
+    padding: 10px 12px;
+    margin: 8px 0;
+}
+
+.trollbox-messages .message-author.admin-author {
+    color: #ffa726 !important;
+    font-weight: 700;
+    text-shadow: 0 0 4px rgba(255, 167, 38, 0.3);
+}
+
+.trollbox-messages .message-author.admin-author::before {
+    content: '📢 ';
+    margin-right: 2px;
+    font-size: 0.9rem;
+    opacity: 0.7;
+}
+
+.admin-badge {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 6px;
+    color: #ffa726;
+    font-size: 0.8rem;
+    text-shadow: 0 0 4px rgba(255, 167, 38, 0.5);
+}
+
+.admin-badge i {
+    animation: adminGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes adminGlow {
+    from {
+        text-shadow: 0 0 4px rgba(255, 167, 38, 0.5);
+        color: #ffa726;
+    }
+    to {
+        text-shadow: 0 0 8px rgba(255, 167, 38, 0.8);
+        color: #ffb347;
+    }
+}
+
+.trollbox-messages .message.admin-message .message-content {
+    font-weight: 500;
+    color: #ffffff;
+}
+
+/* Emoji Reaction System Styles */
+.message-reactions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+}
+
+.message-reactions:empty {
+    display: none;
+    margin-top: 0;
+}
+
+.reaction-item {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 2px 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.reaction-item:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: scale(1.05);
+}
+
+.reaction-item.user-reacted {
+    background: rgba(0, 212, 170, 0.3);
+    border-color: #00d4aa;
+    color: #00d4aa;
+    font-weight: 600;
+}
+
+.reaction-item.user-reacted:hover {
+    background: rgba(0, 212, 170, 0.4);
+    border-color: #00c49a;
+}
+
+.emoji-picker {
+    position: absolute;
+    z-index: 1000;
+    background: rgba(26, 26, 46, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 8px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    animation: emojiPickerFadeIn 0.2s ease-out;
+}
+
+@keyframes emojiPickerFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.emoji-picker-content {
+    display: flex;
+    gap: 4px;
+}
+
+.emoji-button {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    min-height: 40px;
+}
+
+.emoji-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.emoji-button:active {
+    transform: scale(0.95);
+}
+
+/* Message content hover effect for reactions */
+.trollbox-messages .message .message-content[title]:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 2px 4px;
+    margin: -2px -4px;
+}
+
+/* Add indicator for clickable messages */
+.trollbox-messages .message .message-content[title]::after {
+    content: '✨';
+    opacity: 0;
+    font-size: 0.7rem;
+    margin-left: 6px;
+    transition: opacity 0.2s ease;
+}
+
+.trollbox-messages .message .message-content[title]:hover::after {
+    opacity: 0.6;
+}
+
+/* Reaction animations */
+.reaction-item {
+    animation: reactionAppear 0.3s ease-out;
+}
+
+@keyframes reactionAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Mobile responsive adjustments for reactions */
+@media (max-width: 768px) {
+    .emoji-picker {
+        left: 10px !important;
+        right: 10px !important;
+        width: auto !important;
+    }
+    
+    .emoji-picker-content {
+        justify-content: space-around;
+    }
+    
+    .emoji-button {
+        min-width: 36px;
+        min-height: 36px;
+        font-size: 1.1rem;
+    }
+    
+    .reaction-item {
+        font-size: 0.75rem;
+        padding: 1px 5px;
+    }
+}
+
+/* Ensure reactions don't break message layout */
+.trollbox-messages .message {
+    overflow: visible;
+}
+
+.trollbox-messages {
+    position: relative;
+}
+
+/* Trollbox Drag-to-Resize Functionality */
+.trollbox-widget {
+    min-height: 300px;
+    max-height: 80vh;
+    resize: none; /* Disable default browser resize */
+}
+
+/* Override height when minimized - use !important to override inline styles */
+.trollbox-widget.minimized {
+    height: auto !important;
+    min-height: auto !important;
+}
+
+.trollbox-widget.minimized .trollbox-content {
+    display: none;
+}
+
+.trollbox-resize-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: transparent;
+    cursor: ns-resize;
+    z-index: 10;
+    transition: background-color 0.2s ease;
+}
+
+.trollbox-resize-handle:hover {
+    background: rgba(0, 212, 170, 0.3);
+}
+
+.trollbox-resize-handle::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 1px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.trollbox-resize-handle:hover::before {
+    opacity: 1;
+}
+
+.trollbox-widget.resizing {
+    user-select: none;
+}
+
+.trollbox-widget.resizing .trollbox-resize-handle {
+    background: rgba(0, 212, 170, 0.5);
+}
+
+.trollbox-widget.resizing .trollbox-resize-handle::before {
+    opacity: 1;
+    background: #00d4aa;
+}
+
+/* Hide resize handle on mobile and when minimized */
+@media (max-width: 768px) {
+    .trollbox-resize-handle {
+        display: none;
+    }
+}
+
+.trollbox-widget.minimized .trollbox-resize-handle {
+    display: none;
+}
+
+/* Adjust content to account for resize handle */
+.trollbox-content {
+    margin-top: 6px;
+}
+
+/* Ensure minimized trollbox has proper styling */
+.trollbox-widget.minimized .trollbox-header {
+    border-bottom: none;
+}

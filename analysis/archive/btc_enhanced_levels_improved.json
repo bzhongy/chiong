@@ -1,0 +1,54 @@
+{
+  "currency": "BTC",
+  "timestamp": "2025-06-12T16:11:12.171669",
+  "key_levels": [
+    {
+      "name": "Call Resistance 0DTE",
+      "value": 107420.9,
+      "distance_to_spot": "0.00%",
+      "confidence": 0.9
+    },
+    {
+      "name": "Gamma Wall 0DTE",
+      "value": 107420.9,
+      "distance_to_spot": "0.00%",
+      "confidence": 0.8
+    },
+    {
+      "name": "Put Support 0DTE",
+      "value": 107420.9,
+      "distance_to_spot": "0.00%",
+      "confidence": 0.9
+    },
+    {
+      "name": "HVL",
+      "value": 107206.0582,
+      "distance_to_spot": "-0.20%",
+      "confidence": 0.7
+    },
+    {
+      "name": "1D Min",
+      "value": 106618.0,
+      "distance_to_spot": "-0.75%",
+      "confidence": 0.9
+    },
+    {
+      "name": "1D Max",
+      "value": 109806.5,
+      "distance_to_spot": "2.22%",
+      "confidence": 0.9
+    },
+    {
+      "name": "Call Resistance",
+      "value": 110000.0,
+      "distance_to_spot": "2.40%",
+      "confidence": 0.8
+    },
+    {
+      "name": "Put Support",
+      "value": 95000.0,
+      "distance_to_spot": "-11.56%",
+      "confidence": 0.8
+    }
+  ]
+}
