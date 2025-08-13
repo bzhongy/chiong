@@ -1,6 +1,6 @@
 /* Reset and Base Styles */
 :root {
-    --primary-color: #00B8D4;
+    --primary-color: #1c1c1c;
     --secondary-color: #1C2A35;
     --accent-color: #DFFA4C;
     --signal-green: #18F2B2;
@@ -11,10 +11,10 @@
     --card-bg: #ffffff;
     --text-color: #333333;
     --muted-color: #666666;
-    --border-color: rgba(0, 184, 212, 0.2);
+    --border-color: rgba(28, 28, 28, 0.2);
     --border-radius: 8px;
-    --box-shadow: 0 4px 20px rgba(0, 184, 212, 0.15);
-    --glow-effect: 0 0 15px rgba(0, 184, 212, 0.4);
+    --box-shadow: 0 4px 20px rgba(28, 28, 28, 0.15);
+    --glow-effect: 0 0 15px rgba(28, 28, 28, 0.4);
 }
 
 * {
@@ -39,7 +39,64 @@ body {
 /* Navbar and Brand Styling */
 .navbar {
     background-color: #ffffff;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border: none;
+    border-bottom: none;
+}
+
+.navbar-nav {
+    border: none;
+}
+
+.navbar-collapse {
+    border: none;
+}
+
+/* Override Bootstrap default navbar borders */
+.navbar > .container-fluid {
+    border: none;
+}
+
+.navbar-nav .nav-item {
+    border: none;
+}
+
+.navbar-nav .nav-link {
+    border: none;
+}
+
+/* Remove any remaining Bootstrap navbar borders */
+.navbar-expand-lg {
+    border: none !important;
+}
+
+.navbar-expand-lg .navbar-nav {
+    border: none !important;
+}
+
+.navbar-expand-lg .navbar-collapse {
+    border: none !important;
+}
+
+/* Target the specific line that appears */
+.navbar::after,
+.navbar::before {
+    display: none !important;
+}
+
+.navbar .container-fluid::after,
+.navbar .container-fluid::before {
+    display: none !important;
+}
+
+/* Remove header borders */
+header {
+    border: none !important;
+    border-bottom: none !important;
+}
+
+header::after,
+header::before {
+    display: none !important;
 }
 
 .navbar-brand {
@@ -53,7 +110,7 @@ body {
 }
 
 .brand-text h1 {
-    color: #000000;
+    color: #1c1c1c;
     font-size: 2.5rem;
     font-weight: 700;
     margin: 0;
@@ -92,7 +149,112 @@ body {
 }
 
 .navbar-toggler:focus {
-    box-shadow: 0 0 0 0.2rem rgba(0, 184, 212, 0.25);
+    box-shadow: 0 0 0 0.2rem rgba(0, 0, 0, 0.25);
+}
+
+/* Hero Section */
+.hero-section {
+    padding: 120px 0 80px 0;
+    text-align: left;
+}
+
+.hero-title {
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: #1c1c1c;
+    margin-bottom: 5rem;
+    line-height: 1.2;
+}
+
+.hero-subtitle {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 1.5rem;
+}
+
+.hero-description {
+    font-size: 0.8rem;
+    color: #666666;
+    margin-bottom: 5rem;
+    max-width: 600px;
+    line-height: 1.6;
+}
+
+.hero-cta {
+    margin-bottom: 3rem;
+}
+
+.hero-cta .btn {
+    font-size: 1rem;
+    padding: 12px 30px;
+    font-weight: 600;
+}
+
+.hero-link {
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: #1c1c1c;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.hero-link:hover {
+    color: #666666;
+}
+
+.hero-features {
+    display: flex;
+    justify-content: flex-start;
+    gap: 3rem;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+}
+
+.feature-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    color: #666666;
+}
+
+.feature-item i {
+    font-size: 2rem;
+    color: var(--primary-color);
+}
+
+.feature-item span {
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+/* Footer */
+footer {
+    margin-top: 4rem;
+}
+
+.footer-text {
+    color: #999999;
+    font-size: 0.7rem;
+    margin: 0;
+}
+
+.social-links {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: flex-end;
+}
+
+.social-link {
+    color: #666666;
+    font-size: 0.8rem;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.social-link:hover {
+    color: var(--primary-color);
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -116,7 +278,7 @@ a:hover {
     border-radius: 4px;
     padding: 10px 24px;
     font-weight: 500;
-    color: var(--secondary-color);
+    color: #ffffff;
     text-shadow: none;
     position: relative;
     overflow: hidden;
@@ -125,9 +287,9 @@ a:hover {
 }
 
 .btn-primary:hover, .btn-primary:focus {
-    background-color: var(--accent-color);
-    border-color: var(--accent-color);
-    color: var(--secondary-color);
+    background-color: #333333;
+    border-color: #333333;
+    color: #ffffff;
     box-shadow: var(--glow-effect);
     transform: translateY(-2px);
 }
@@ -142,7 +304,7 @@ a:hover {
 }
 
 .btn-outline-secondary:hover, .btn-outline-secondary:focus {
-    background-color: rgba(0, 184, 212, 0.1);
+    background-color: rgba(0, 0, 0, 0.1);
     border-color: var(--primary-color);
     color: var(--primary-color);
     box-shadow: var(--glow-effect);

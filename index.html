@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chiong.fi | Zero-Day Lightning Trades</title>
+    <title>Chiong.fi | Quick ETH/BTC Options</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="landing.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,8 +12,6 @@
     <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
-    <script src="leverage-visualization.js"></script>
 </head>
 <body>
     <div class="landing-container">
@@ -23,8 +21,8 @@
                     <a class="navbar-brand" href="#">
                         <div class="brand-container">
                             <div class="brand-text">
-                                <h1>Chiong<span>.fi</span></h1>
-                                <p class="brand-tagline">Zero-Day Lightning Trades</p>
+                                <!-- <h1>Chiong<span>.fi</span></h1> -->
+                                <!-- <p class="brand-tagline">Quick ETH/BTC Options</p> -->
                             </div>
                         </div>
                     </a>
@@ -34,7 +32,7 @@
                     <div class="collapse navbar-collapse" id="navbarNav">
                         <ul class="navbar-nav ms-auto">
                             <li class="nav-item">
-                                <a class="nav-link btn btn-primary launch-app" href="app.html">Trade Now</a>
+                                <!-- <a class="nav-link btn btn-primary launch-app" href="app.html">Start Trading</a> -->
                             </li>
                         </ul>
                     </div>
@@ -42,601 +40,53 @@
             </nav>
         </header>
 
-        <section class="hero">
-            <div class="row align-items-center">
-                <div class="col-lg-6">
-                    <div class="hero-badge">
-                        <i class="bi bi-lightning-charge-fill"></i> FIRST ON-CHAIN ZERO-DAY OPTIONS
-                    </div>
-                    <h2>Zero-Day Options<br>Instant Execution</h2>
-                    <p>Trade crypto options that expire at <span class="highlight">8:00 UTC daily</span>, capturing intraday price moves with maximum leverage and capital efficiency.</p>
-                    <div class="hero-cta">
-                        <a href="app.html" class="btn btn-primary btn-lg">Start Trading</a>
-                        <a href="#how-it-works" class="btn btn-outline-secondary btn-lg">Learn More</a>
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <div class="hero-image">
-                        <div class="time-element">
-                            <div class="expiry-countdown">
-                                <span class="hours">--</span><span class="minutes">--</span><span class="seconds">--</span>
-                                <div class="expiry-label">UNTIL EXPIRY</div>
-                            </div>
-                        </div>
-                        <img src="img/hero-terminal.png" alt="Chiong Trading Terminal" class="terminal-img">
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <div class="thetanuts-attribution">
+        <main class="hero-section">
             <div class="container">
-                <div class="thetanuts-container">
-                    <span>Powered by</span>
-                    <a href="https://thetanuts.finance/v4" target="_blank" class="thetanuts-link">Thetanuts Options Protocol</a>
-                    <span class="thetanuts-icon">⚡</span>
-                    <div class="thetanuts-info">
-                        <i class="bi bi-info-circle"></i>
-                        <div class="thetanuts-tooltip">
-                            Chiong.fi leverages Thetanuts' enterprise-grade options infrastructure to provide 
-                            same-day expiration options with instant execution and reliable settlement.
-                        </div>
-                    </div>
-                    <a href="#" class="tech-learn-more">
-                        <span>Learn how Thetanuts powers Chiong</span>
-                        <i class="bi bi-chevron-down"></i>
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Technology Section (initially hidden) -->
-        <section id="technology-section" class="technology-section" style="display: none;">
-            <div class="container">
-                <div class="section-header">
-                    <h2>The Technology Behind Chiong.fi</h2>
-                    <p>Our platform leverages Thetanuts' enterprise-grade options infrastructure to bring the explosive popularity of zero-day trading to the DeFi ecosystem.</p>
-                </div>
-                <div class="steps-container">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="step-card technology-step">
-                                <div class="step-icon">
-                                    <i class="bi bi-lightning-charge"></i>
-                                </div>
-                                <h3>Lightning-Fast Order Book</h3>
-                                <p>Thetanuts' pre-signed order system enables instant execution with minimal slippage, allowing you to enter and exit positions precisely when you need to.</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="step-card technology-step">
-                                <div class="step-icon">
-                                    <i class="bi bi-shield-check"></i>
-                                </div>
-                                <h3>Reliable Settlement</h3>
-                                <p>All options are settled using Chainlink oracle price feeds at exactly 8:00 UTC with a 30 minute TWAP, ensuring manipulation-resistant and transparent execution at expiry.</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="step-card technology-step">
-                                <div class="step-icon">
-                                    <i class="bi bi-clock-history"></i>
-                                </div>
-                                <h3>Zero-Day Expiration</h3>
-                                <p>Our integration with Thetanuts' cash-settled options protocol creates the first on-chain zero-day contracts, opening a new dimension of trading opportunities.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="technology-footer">
-                                            <a href="https://docs.chiong.fi/technology" target="_blank" class="btn btn-outline-primary">Learn More About Our Technology</a>
-                </div>
-            </div>
-        </section>
-
-        <section id="how-it-works" class="how-it-works">
-            <div class="section-header">
-                <h2>How It Works</h2>
-                <p>Trade zero-day expiration options with unprecedented speed and precision</p>
-            </div>
-            <div class="steps-container">
                 <div class="row">
-                    <div class="col-md-3">
-                        <div class="step-card">
-                            <div class="step-number">1</div>
-                            <h3>Select Your Position</h3>
-                            <p>Choose from calls, puts, or spreads across multiple strike prices for ETH and BTC.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="step-card">
-                            <div class="step-number">2</div>
-                            <h3>Execute Instantly</h3>
-                            <p>Benefit from instant execution against real-time maker quotes with minimal slippage.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="step-card">
-                            <div class="step-number">3</div>
-                            <h3>Monitor Position</h3>
-                            <p>Track your P/L in real-time with our intuitive dashboard as market conditions evolve.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="step-card">
-                            <div class="step-number">4</div>
-                            <h3>Automatic Settlement</h3>
-                            <p>Options settle automatically at 8:00 UTC based on Chainlink oracle price feeds.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="time-decay-visualization">
-            <div class="section-header">
-                <h2>The Zero-Day Advantage</h2>
-                <p>Harness the power of accelerated time decay and maximum leverage</p>
-            </div>
-            
-            <div class="row align-items-center">
-                <div class="col-md-12">
-                    <!-- p5.js container -->
-                    <div id="leverage-visualization" class="visualization-container"></div>
-                </div>
-                <div class="col-md-12 mt-4">
-                    <div class="strategy-explanation">
-                        <div class="row">
-                            <div class="col-lg-12">
-                                <h3>Zero-day expiration delivers unmatched capital efficiency</h3>
-                                
-                                <ul class="strategy-points">
-                                    <li>
-                                        <span class="point-icon"><i class="bi bi-graph-down"></i></span>
-                                        <span class="point-text"><strong>Accelerated Time Decay:</strong> Options lose value exponentially as expiry approaches, creating both opportunities and risks</span>
-                                    </li>
-                                    <li>
-                                        <span class="point-icon"><i class="bi bi-arrows-angle-expand"></i></span>
-                                        <span class="point-text"><strong>Maximum Leverage:</strong> 0DTE options provide up to 2000x leverage compared to 100x for perpetuals and futures</span>
-                                    </li>
-                                    <li>
-                                        <span class="point-icon"><i class="bi bi-calendar-check"></i></span>
-                                        <span class="point-text"><strong>Defined Timeframe:</strong> All positions settle at the same time each day, no additional margin requirements</span>
-                                    </li>
-                                    <li>
-                                        <span class="point-icon"><i class="bi bi-shield-check"></i></span>
-                                        <span class="point-text">
-                                            <strong>No Liquidation Risk: </strong> Unlike futures or perpetuals, 0DTE options can never be liquidated until expiry. Price manipulation tactics cannot force you out of your position.
-                                        </span>
-                                    </li>
-                                </ul>
-                            </div>
-                            
-                            <div class="col-lg-12">
-                                <div class="comparison-table card">
-                                    <div class="card-header">
-                                        <h4>Zero-Day Options vs. Perpetual Futures</h4>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="table-responsive">
-                                            <table class="table table-bordered">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Feature</th>
-                                                        <th>Chiong Zero-Day Options</th>
-                                                        <th>Perpetual Futures</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr>
-                                                        <td>Expiration</td>
-                                                        <td>One-day settlement</td>
-                                                        <td>No expiry (until closed)</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>Liquidation Risk</td>
-                                                        <td><span class="highlight-advantage">No liquidations</span></td>
-                                                        <td>Forced liquidation during adverse moves</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>Maximum Leverage</td>
-                                                        <td>Up to 2000x</td>
-                                                        <td>Up to 100x</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>Cost Structure</td>
-                                                        <td>Upfront fixed premium (from 0.05%/day at 2000x)</td>
-                                                        <td>Continuous funding (from 0.03%/day until closed)</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>Capital Efficiency</td>
-                                                        <td>Highest possible efficiency with premium-only outlay</td>
-                                                        <td>Requires margin maintenance to prevent liquidation</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>Risk Management</td>
-                                                        <td>Known maximum loss upfront (premium paid)</td>
-                                                        <td>Potentially unlimited losses</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>Resistance to Manipulation</td>
-                                                        <td>Immune to stop-hunting and liquidation cascades</td>
-                                                        <td>Vulnerable to liquidation hunting</td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="trading-scenarios" class="trading-scenarios">
-            <div class="section-header">
-                <h2>Real-World Trading Scenarios</h2>
-                <p>See how traders leverage the power of one-day expiration</p>
-            </div>
-            
-            <div class="row scenario-cards">
-                <div class="col-md-3">
-                    <div class="scenario-card">
-                        <div class="scenario-header">
-                            <div class="scenario-badge breaking-news">Breaking News Trade</div>
-                        </div>
-                        <div class="scenario-timeline">
-                            <div class="timeline-item">
-                                <div class="time-marker">9:30 AM</div>
-                                <div class="timeline-content">
-                                    Major protocol announces unexpected partnership
-                                </div>
-                            </div>
-                            <div class="timeline-item">
-                                <div class="time-marker">9:32 AM</div>
-                                <div class="timeline-content">
-                                    ETH jumps 2% in minutes with momentum building
-                                </div>
-                            </div>
-                            <div class="timeline-item highlight">
-                                <div class="time-marker">9:35 AM</div>
-                                <div class="timeline-content">
-                                    Trader buys 5 ETH call 0DTEs with $2150 strike for 0.003 ETH each
-                                </div>
-                            </div>
-                            <div class="timeline-item">
-                                <div class="time-marker">2:00 PM</div>
-                                <div class="timeline-content">
-                                    ETH rallies to $2200
-                                </div>
-                            </div>
-                            <div class="timeline-item">
-                                <div class="time-marker">2:05 PM</div>
-                                <div class="timeline-content">
-                                    Trader sells position for 0.055 ETH each
-                                </div>
-                            </div>
-                        </div>
-                        <div class="scenario-result">
-                            <div class="result-label">Result</div>
-                            <div class="result-value success">18.3x return in less than 5 hours</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="scenario-card">
-                        <div class="scenario-header">
-                            <div class="scenario-badge event-volatility">Event Volatility Capture</div>
-                        </div>
-                        <div class="scenario-timeline">
-                            <div class="timeline-item">
-                                <div class="time-marker">5:00 PM</div>
-                                <div class="timeline-content">
-                                    Key data release scheduled for 6:30 PM
-                                </div>
-                            </div>
-                            <div class="timeline-item highlight">
-                                <div class="time-marker">6:15 PM</div>
-                                <div class="timeline-content">
-                                    Spot price is 2100. Trader buys ETH call spread (long $2100/short $2150) for 0.005 ETH
-                                </div>
-                            </div>
-                            <div class="timeline-item">
-                                <div class="time-marker">6:35 PM</div>
-                                <div class="timeline-content">
-                                    Better-than-expected data causes ETH to spike.
-                                </div>
-                            </div>
-                            <div class="timeline-item">
-                                <div class="time-marker">8:00 PM</div>
-                                <div class="timeline-content">
-                                    12 hours to expiry. Trader closes position for 5x return at spot price $2140.
-                                </div>
-                            </div>
-                        </div>
-                        <div class="scenario-result">
-                            <div class="result-label">Result</div>
-                            <div class="result-value success">5x return in 115 minutes with defined risk</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="scenario-card">
-                        <div class="scenario-header">
-                            <div class="scenario-badge precise-hedge">Precise Intraday Hedge</div>
-                        </div>
-                        <div class="scenario-timeline">
-                            <div class="timeline-item">
-                                <div class="time-marker">10:00 AM</div>
-                                <div class="timeline-content">
-                                    Trader holds significant ETH position with downside concerns
-                                </div>
-                            </div>
-                            <div class="timeline-item">
-                                <div class="time-marker">10:15 AM</div>
-                                <div class="timeline-content">
-                                    Technical resistance shows potential short-term rejection
-                                </div>
-                            </div>
-                            <div class="timeline-item highlight">
-                                <div class="time-marker">10:20 AM</div>
-                                <div class="timeline-content">
-                                    Trader buys 10 ETH put 0DTEs as temporary downside protection
-                                </div>
-                            </div>
-                            <div class="timeline-item">
-                                <div class="time-marker">1:30 PM</div>
-                                <div class="timeline-content">
-                                    Market uncertainty passes, ETH holds support
-                                </div>
-                            </div>
-                            <div class="timeline-item">
-                                <div class="time-marker">1:45 PM</div>
-                                <div class="timeline-content">
-                                    Trader closes hedge at small loss, avoiding unnecessary long-term option cost
-                                </div>
-                            </div>
-                        </div>
-                        <div class="scenario-result">
-                            <div class="result-label">Result</div>
-                            <div class="result-value neutral">Intraday peace of mind without week-long premium expense</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="scenario-card">
-                        <div class="scenario-header">
-                            <div class="scenario-badge liquidation-protection">Liquidation Protection</div>
-                        </div>
-                        <div class="scenario-timeline">
-                            <div class="timeline-item">
-                                <div class="time-marker">12:00 AM UTC</div>
-                                <div class="timeline-content">
-                                    Trader believes ETH will rise from $2300 to $2400 by end of day
-                                </div>
-                            </div>
-                            <div class="timeline-item">
-                                <div class="time-marker">12:15 AM</div>
-                                <div class="timeline-content">
-                                    <div class="strategy-comparison">
-                                        <div class="option-strategy">
-                                            <span class="strategy-label">Options Strategy:</span> Buy 7 hour $2350 call for $1.10 (2000x long)
-                                        </div>
-                                        <div class="perp-strategy">
-                                            <span class="strategy-label">Perpetual Strategy:</span> 20x long at $2300 (liq. at $2200)
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="timeline-item highlight">
-                                <div class="time-marker">3:30 AM</div>
-                                <div class="timeline-content">
-                                    Sudden market volatility causes ETH to drop to $2180
-                                </div>
-                            </div>
-                            <div class="timeline-item">
-                                <div class="time-marker">3:45 AM</div>
-                                <div class="timeline-content">
-                                    <div class="option-outcome">Option position intact, waiting for recovery</div>
-                                    <div class="perp-outcome">Perpetual position liquidated at $2200</div>
-                                </div>
-                            </div>
-                            <div class="timeline-item">
-                                <div class="time-marker">8:00 AM</div>
-                                <div class="timeline-content">
-                                    ETH rebounds and reaches $2420 by option market close
-                                </div>
-                            </div>
-                        </div>
-                        <div class="scenario-result">
-                            <div class="result-label">Result</div>
-                            <div class="result-value positive">Option trader profits 61x while futures trader is forced out with full loss of initial margin</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="features" class="features">
-            <div class="section-header">
-                <h2>Advanced Features</h2>
-                <p>Designed for serious traders who demand precision and control</p>
-            </div>
-            
-            <div class="feature-container">
-                <div class="row">
-                    <div class="col-md-6 col-lg-3">
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="bi bi-stopwatch"></i>
-                            </div>
-                            <h3>Liquidation-Proof</h3>
-                            <p>Never worry about being forced out of your position due to price manipulation or volatility. With options, your risk is strictly limited to the premium paid - no surprise liquidations.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-3">
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="bi bi-laptop"></i>
-                            </div>
-                            <h3>Trader-Focused Interface</h3>
-                            <p>Intuitive options chain view with quick-trade buttons, real-time position dashboard, and complete order history.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-3">
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="bi bi-shield-lock"></i>
-                            </div>
-                            <h3>Security & Reliability</h3>
-                            <p>Non-custodial execution, reliable oracle settlement, and gas-efficient design for cost-effective trading.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-3">
-                        <div class="feature-card">
-                            <div class="feature-icon">
-                                <i class="bi bi-bar-chart"></i>
-                            </div>
-                            <h3>Strategic Tools</h3>
-                            <p>Advanced greeks display, IV calculator, multi-leg strategy builder, and hands-free settlement at expiration.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="trader-profiles" class="trader-profiles">
-            <div class="section-header">
-                <h2>Perfect for Different Traders</h2>
-                <p>0DTE options deliver unique benefits across trading styles</p>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="profile-card">
-                        <div class="profile-icon">
-                            <i class="bi bi-bullseye"></i>
-                        </div>
-                        <h3>The Tactical Precision Trader</h3>
-                        <ul class="profile-points">
-                            <li>Seeks to capitalize on specific intraday price moves</li>
-                            <li>Values rapid execution and position flexibility</li>
-                            <li>Focuses on high leverage with controlled risk</li>
-                            <li>Prefers to avoid overnight exposure</li>
-                        </ul>
-                        <div class="profile-benefit">
-                            <span class="benefit-label">Chiong benefit:</span>
-                            <span class="benefit-text">Precision timing with same-day settlement</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="profile-card">
-                        <div class="profile-icon">
-                            <i class="bi bi-newspaper"></i>
-                        </div>
-                        <h3>The News & Event Trader</h3>
-                        <ul class="profile-points">
-                            <li>Trades around specific announcements and events</li>
-                            <li>Needs immediate market access when news breaks</li>
-                            <li>Looks for asymmetric risk/reward opportunities</li>
-                            <li>Values capital efficiency and targeted exposure</li>
-                        </ul>
-                        <div class="profile-benefit">
-                            <span class="benefit-label">Chiong benefit:</span>
-                            <span class="benefit-text">Ultra-low cost options with maximum leverage</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="profile-card">
-                        <div class="profile-icon">
-                            <i class="bi bi-shield-shaded"></i>
-                        </div>
-                        <h3>The Sophisticated Risk Manager</h3>
-                        <ul class="profile-points">
-                            <li>Actively manages portfolio exposure in changing markets</li>
-                            <li>Requires temporary hedging solutions</li>
-                            <li>Understands and optimizes for theta (time decay)</li>
-                            <li>Carefully balances cost vs. protection</li>
-                        </ul>
-                        <div class="profile-benefit">
-                            <span class="benefit-label">Chiong benefit:</span>
-                            <span class="benefit-text">Affordable short-term protection without week-long premium cost</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="cta-section">
-            <div class="row align-items-center">
-                <div class="col-lg-7">
-                    <h2>Ready to trade at lightning speed?</h2>
-                    <p>Start with Chiong.fi - the first on-chain platform for same-day expiration options.</p>
-                </div>
-                <div class="col-lg-5 text-lg-end">
-                    <a href="app.html" class="btn btn-primary btn-lg">Trade Now</a>
-                    <a href="https://docs.chiong.fi" target="_blank" class="btn btn-outline-secondary btn-lg ms-3">Read Docs</a>
-                </div>
-            </div>
-        </section>
-
-        <footer>
-            <div class="footer-main">
-                <div class="row">
-                    <div class="col-lg-4">
-                        <div class="footer-brand">
-                            <h1>Chiong<span>.fi</span></h1>
-                            <p>Zero-Day Lightning Trades</p>
-                        </div>
-                    </div>
                     <div class="col-lg-8">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <h4>Product</h4>
-                                <ul>
-                                    <li><a href="app.html">Trade</a></li>
-                                    <li><a href="#how-it-works">How It Works</a></li>
-                                    <li><a href="#features">Features</a></li>
-                                </ul>
-                            </div>
-                            <div class="col-md-4">
-                                <h4>Resources</h4>
-                                <ul>
-                                    <li><a href="https://docs.chiong.fi" target="_blank">Documentation</a></li>
-                                    <li><a href="#">Risk Disclosure</a></li>
-                                    <li><a href="#">FAQ</a></li>
-                                </ul>
-                            </div>
-                            <div class="col-md-4">
-                                <h4>Community</h4>
-                                <ul>
-                                    <li><a href="#" target="_blank">Discord</a></li>
-                                    <li><a href="#" target="_blank">Twitter</a></li>
-                                    <li><a href="#" target="_blank">GitHub</a></li>
-                                </ul>
-                            </div>
+                        <h1 class="hero-title">Chiong</h1>
+                        <h2 class="hero-subtitle">Buy ETH & BTC Options Fast & On-chain.</h2>
+                        <p class="hero-description">
+                            Trade crypto options that expire daily at 8:00 UTC. 
+                            Enter and exit positions instantly with minimal slippage.
+                        </p>
+                        <div class="hero-cta">
+                            <a href="app.html" class="hero-link">Start Trading Now -></a>
                         </div>
+                        <!-- <div class="hero-features">
+                            <div class="feature-item">
+                                <i class="bi bi-lightning-charge-fill"></i>
+                                <span>Instant Execution</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="bi bi-clock-fill"></i>
+                                <span>Daily Expiry</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="bi bi-shield-check-fill"></i>
+                                <span>Secure Settlement</span>
+                            </div>
+                        </div> -->
                     </div>
                 </div>
             </div>
-            <div class="footer-bottom">
-                <div class="row align-items-center">
+        </main>
+
+        <footer class="py-4">
+            <div class="container">
+                <div class="row">
                     <div class="col-md-6">
-                        <p>&copy; 2023 Chiong.fi - All rights reserved</p>
+                        <p class="footer-text">Powered by Thetanuts Options Protocol</p>
                     </div>
                     <div class="col-md-6 text-md-end">
-                        <a href="#">Terms of Service</a>
-                        <a href="#">Privacy Policy</a>
+                        <div class="social-links">
+                            <a href="#" class="social-link">Discord</a>
+                            <a href="#" class="social-link">Twitter</a>
+                        </div>
                     </div>
                 </div>
             </div>
         </footer>
     </div>
-
-    <script src="landing.js"></script>
 </body>
 </html>
