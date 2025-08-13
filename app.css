@@ -467,6 +467,27 @@ main {
     display: block !important; /* Ensure table is always visible in advanced view */
 }
 
+/* Responsive table styling */
+@media (max-width: 768px) {
+    .options-table-container {
+        padding: 0 0.5rem;
+    }
+    
+    .options-table th:nth-child(3),
+    .options-table td:nth-child(3) {
+        min-width: 100px;
+        font-size: 0.75rem;
+    }
+}
+
+/* Table info styling */
+.table-info {
+    text-align: center;
+    padding: 0.5rem;
+    border-top: 1px solid var(--border-color);
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
 .options-table {
     color: var(--text-primary);
 }
@@ -477,6 +498,30 @@ main {
     font-size: 0.85rem;
     font-weight: 500;
     border-color: var(--border-color);
+}
+
+/* Expiry column styling */
+.options-table th:nth-child(3),
+.options-table td:nth-child(3) {
+    min-width: 120px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* Make expiry column more prominent */
+.options-table th:nth-child(3) {
+    background-color: var(--primary);
+    color: white;
+    font-weight: 600;
+}
+
+/* Sort indicator styling */
+.options-table th:nth-child(3) .bi-sort-down {
+    margin-left: 4px;
+    font-size: 0.8em;
+    opacity: 0.8;
 }
 
 .options-table tbody td {

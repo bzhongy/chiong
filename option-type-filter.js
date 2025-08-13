@@ -249,7 +249,7 @@ function populateOptionsTableWithFilter() {
         const filterName = optionTypeFilter.toUpperCase();
         tableBody.append(`
             <tr>
-                <td colspan="8" class="text-center text-muted">
+                <td colspan="9" class="text-center text-muted">
                     No ${filterName === 'ALL' ? '' : filterName} options available for ${state.selectedAsset}
                 </td>
             </tr>
@@ -257,8 +257,15 @@ function populateOptionsTableWithFilter() {
         return;
     }
     
-    for (let i = 0; i < filteredOrders.length; i++) {
-        const orderWrapper = filteredOrders[i];
+    // Sort filtered orders by expiry time (earliest first)
+    const sortedFilteredOrders = [...filteredOrders].sort((a, b) => {
+        const expiryA = parseInt(a.order.expiry) || 0;
+        const expiryB = parseInt(b.order.expiry) || 0;
+        return expiryA - expiryB; // Ascending order (earliest first)
+    });
+    
+    for (let i = 0; i < sortedFilteredOrders.length; i++) {
+        const orderWrapper = sortedFilteredOrders[i];
         const order = orderWrapper.order;
         const optionType = order.isCall ? "CALL" : "PUT";
         const collateral = CONFIG.getCollateralDetails(order.collateral);
@@ -282,10 +289,37 @@ function populateOptionsTableWithFilter() {
             originalOrderWrapper.order.isCall === order.isCall
         );
         
+        // Format expiry date from individual order
+        let expiryDisplay = 'N/A';
+        if (order.expiry) {
+            try {
+                const orderExpiryTimestamp = parseInt(order.expiry) * 1000; // Convert to milliseconds
+                if (!isNaN(orderExpiryTimestamp) && orderExpiryTimestamp > 0) {
+                    const expiryDate = new Date(orderExpiryTimestamp);
+                    const expiryTimeString = expiryDate.toLocaleTimeString('en-US', { 
+                        hour12: false, 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        timeZone: 'UTC'
+                    });
+                    const expiryDateString = expiryDate.toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        timeZone: 'UTC'
+                    });
+                    expiryDisplay = `${expiryDateString} ${expiryTimeString} UTC`;
+                }
+            } catch (error) {
+                console.warn('Error formatting expiry date for order:', order, error);
+                expiryDisplay = 'Invalid';
+            }
+        }
+        
         const row = `
             <tr class="option-row ${originalIndex === state.selectedOrderIndex ? 'selected' : ''}" data-index="${originalIndex}">
                 <td>$${formatNumber(strike)}</td>
                 <td><span class="badge ${order.isCall ? 'bg-success' : 'bg-danger'}">${optionType}</span></td>
+                <td title="Expires at ${expiryDisplay}">${expiryDisplay}</td>
                 <td>$${formatNumber(premium)}</td>
                 <td>${payoutRatio}x</td>
                 <td>$${breakeven}</td>
