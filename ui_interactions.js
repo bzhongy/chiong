@@ -49,9 +49,8 @@ function setupEventListeners() {
     $('#go-to-trade-from-history').on('click', () => showSection('trade'));
     
     // Asset selection
-    $('.dropdown-item[data-asset]').on('click', function(e) {
-        e.preventDefault();
-        const asset = $(this).data('asset');
+    $('input[name="asset-selection"]').on('change', function() {
+        const asset = $(this).val();
         selectAsset(asset);
     });
     
@@ -198,6 +197,9 @@ function selectAsset(asset) {
     state.selectedAsset = asset;
     updateUI('#selected-asset, #positions-selected-asset', asset);
     updateUI('#asset-symbol', asset);
+    
+    // Update radio button state
+    $(`input[name="asset-selection"][value="${asset}"]`).prop('checked', true);
     
     // Dispatch asset change event for price alerts system
     const assetChangeEvent = new CustomEvent('assetChanged', {
