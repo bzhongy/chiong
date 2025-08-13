@@ -47,7 +47,7 @@ const state = {
     expiryTime: null,
     selectedOrderIndex: null,
     selectedPositionSize: 100,
-    viewMode: 'basic', // 'basic' or 'advanced'
+    viewMode: 'advanced', // 'advanced' is now the only view
     countDownInterval: 0,
     selectedPositionPercentage: 50,
 };

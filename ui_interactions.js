@@ -54,9 +54,7 @@ function setupEventListeners() {
         selectAsset(asset);
     });
     
-    // View toggle
-    $('#basic-view').on('click', () => switchView('basic'));
-    $('#advanced-view').on('click', () => switchView('advanced'));
+    // Advanced view is now the default and only view
     
     // Position size sliders - use one handler for both sliders
     $(document).on('input', '#position-size-slider, #adv-position-size-slider', updatePositionSize);
@@ -153,6 +151,8 @@ function showSection(section) {
     if (section === 'trade') {
         $('#trade-section').show();
         $('#nav-trade').addClass('active');
+        // Ensure advanced view is shown by default
+        switchView('advanced');
     } else if (section === 'positions') {
         $('#positions-section').show();
         $('#nav-positions').addClass('active');
@@ -171,25 +171,12 @@ function showSection(section) {
     }
 }
 
-// Create a function for view switching that handles all the UI updates
+// Advanced view is now the default and only view
 function switchView(view) {
-    state.viewMode = view;
-    
-    if (view === 'basic') {
-        //$('#basic-view-container').show();
-        //$('#advanced-view-container').hide();
-        $('#basic-view').addClass('active');
-        $('#advanced-view').removeClass('active');
-        $('.options-table-container').hide()
-    } else {
-        //$('#basic-view-container').hide();
-        //$('#advanced-view-container').show();
-        $('#basic-view').removeClass('active');
-        $('#advanced-view').addClass('active');
-        $('.options-table-container').show()
-        // Make sure the advanced view is populated
-        populateOptionsTable();
-    }
+    state.viewMode = 'advanced';
+    $('.options-table-container').show();
+    // Make sure the advanced view is populated
+    populateOptionsTable();
 }
 
 // Select an asset (ETH, BTC), update state, UI then refresh data
@@ -433,10 +420,10 @@ function updateConviction(e) {
 async function selectOptionBasedOnConviction(updatePaymentAsset = false) {
     // Get slider value from the visible slider
     let sliderValue;
-    if ($('#basic-view-container').is(':visible')) {
-        sliderValue = parseInt($('#conviction-slider').val());
-    } else {
+    if ($('#advanced-view-container').is(':visible')) {
         sliderValue = parseInt($('#adv-conviction-slider').val());
+    } else {
+        sliderValue = parseInt($('#conviction-slider').val());
     }
     
     if (!state.orders || state.orders.length === 0 || !state.sliderTicks || state.sliderTicks.length === 0) return;

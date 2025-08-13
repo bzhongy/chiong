@@ -286,33 +286,22 @@
                                         <span id="expiry-time">08:00 UTC EXPIRY</span> | <span id="time-left" class="countdown">--:--:--</span>
                                     </div>
                                 </div>
-                                <div class="view-toggle">
-                                    <button id="basic-view" class="btn btn-sm btn-outline-primary active">Basic View</button>
-                                    <button id="advanced-view" class="btn btn-sm btn-outline-primary">Advanced View</button>
-                                    
-                                    <!-- Option Type Filter - smaller and positioned here -->
-                                    <div class="option-type-filter-compact mt-2">
-                                        <div class="btn-group btn-group-sm" role="group" aria-label="Option type filter">
-                                            <input type="radio" class="btn-check" name="option-type-filter" id="filter-all" value="all" checked>
-                                            <label class="btn btn-outline-secondary" for="filter-all">ALL</label>
-                                            
-                                            <input type="radio" class="btn-check" name="option-type-filter" id="filter-puts" value="puts">
-                                            <label class="btn btn-outline-danger" for="filter-puts">PUTS</label>
-                                            
-                                            <input type="radio" class="btn-check" name="option-type-filter" id="filter-calls" value="calls">
-                                            <label class="btn btn-outline-success" for="filter-calls">CALLS</label>
-                                        </div>
-                                        <div class="filter-description-compact mt-1">
-                                            <small class="text-muted" id="filter-description">Showing all options</small>
-                                        </div>
+                                <!-- Option Type Filter - ALL only, no filtering -->
+                                <div class="option-type-filter-compact mt-2">
+                                    <div class="btn-group btn-group-sm" role="group" aria-label="Option type filter">
+                                        <input type="radio" class="btn-check" name="option-type-filter" id="filter-all" value="all" checked>
+                                        <label class="btn btn-outline-secondary" for="filter-all">ALL</label>
+                                    </div>
+                                    <div class="filter-description-compact mt-1">
+                                        <small class="text-muted" id="filter-description">Showing all options</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Trading Interface - Basic View -->
+                        <!-- Trading Interface - Advanced View (Default) -->
                         <div id="quote-status-message" class="alert alert-warning mt-3" style="display: none;" role="alert"></div>                         
-                        <div class="col-12" id="basic-view-container">
+                        <div class="col-12" id="advanced-view-container">
                             <div class="trade-card card">
                                 <div class="card-body">
                                     <div class="leverage-indicator">

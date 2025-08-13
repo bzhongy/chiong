@@ -225,7 +225,7 @@ main {
 
 /* Trade Card */
 .trade-card {
-    background-color: var(--card-bg);
+    background-color: var(--background);
     border: 1px solid var(--border-color);
     border-radius: 0.5rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
@@ -463,8 +463,8 @@ main {
 .options-table-container {
     margin: 1.5rem 0;
     overflow-x: auto;
-    display: none;
     padding: 0 1rem;
+    display: block !important; /* Ensure table is always visible in advanced view */
 }
 
 .options-table {

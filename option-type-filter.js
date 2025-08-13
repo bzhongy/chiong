@@ -302,10 +302,10 @@ function populateOptionsTableWithFilter() {
 async function selectOptionBasedOnConvictionWithFilter(updatePaymentAsset = false) {
     // Get slider value from the visible slider
     let sliderValue;
-    if ($('#basic-view-container').is(':visible')) {
-        sliderValue = parseInt($('#conviction-slider').val());
-    } else {
+    if ($('#advanced-view-container').is(':visible')) {
         sliderValue = parseInt($('#adv-conviction-slider').val());
+    } else {
+        sliderValue = parseInt($('#conviction-slider').val());
     }
     
     const filteredOrders = getFilteredOrders();

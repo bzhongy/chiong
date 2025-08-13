@@ -39,10 +39,10 @@
 async function refreshData() {
     try {
         // Store current slider position before refresh
-        if ($('#basic-view-container').is(':visible')) {
-            lastSelectedSliderPosition = parseInt($('#conviction-slider').val());
-        } else {
+        if ($('#advanced-view-container').is(':visible')) {
             lastSelectedSliderPosition = parseInt($('#adv-conviction-slider').val());
+        } else {
+            lastSelectedSliderPosition = parseInt($('#conviction-slider').val());
         }
         
         // Fetch orders from API
@@ -130,9 +130,12 @@ async function refreshData() {
         // Select the option based on slider position
         await selectOptionBasedOnConviction();
         
-        // Populate advanced view options table
-        if (state.viewMode === 'advanced') {
+        // Populate advanced view options table (always show since advanced is now default)
+        console.log('Refreshing data, populating options table...');
+        if (typeof populateOptionsTable === 'function') {
             populateOptionsTable();
+        } else {
+            console.warn('populateOptionsTable function not available');
         }
         
         // Update positions if on positions tab
@@ -164,8 +167,22 @@ async function refreshData() {
 
 // Populate the options table in advanced view
 function populateOptionsTable() {
+    console.log('Populating options table...');
+    console.log('Orders available:', state.orders ? state.orders.length : 'undefined');
+    
     const tableBody = $('#options-table-body');
+    if (!tableBody.length) {
+        console.error('Options table body not found');
+        return;
+    }
+    
     tableBody.empty();
+    
+    if (!state.orders || state.orders.length === 0) {
+        console.warn('No orders available to populate table');
+        tableBody.html('<tr><td colspan="8" class="text-center text-muted">No options available</td></tr>');
+        return;
+    }
     
     for (let i = 0; i < state.orders.length; i++) {
         const order = state.orders[i].order;
@@ -1314,6 +1331,26 @@ async function initialize() {
     state.refreshTimer = setInterval(refreshData, REFRESH_INTERVAL); // Set a timer to refresh data periodically
     updateCountdowns(); // Start the countdown loop *once* after initial setup
     
+    // Ensure advanced view is properly initialized
+    state.viewMode = 'advanced';
+    $('.options-table-container').show();
+    console.log('Advanced view initialized, options table container shown');
+    
+    // Populate the options table after data is loaded
+    if (state.orders && state.orders.length > 0 && typeof populateOptionsTable === 'function') {
+        console.log('Orders available, populating table...');
+        populateOptionsTable();
+    } else {
+        console.log('No orders available yet or populateOptionsTable not defined');
+        // Retry populating the table after a short delay
+        setTimeout(() => {
+            if (state.orders && state.orders.length > 0 && typeof populateOptionsTable === 'function') {
+                console.log('Retrying to populate table...');
+                populateOptionsTable();
+            }
+        }, 1000);
+    }
+    
     // Enable the trade button now that app is fully loaded
     // (but still respect fund/swap checks via the normal updateTradeButtonState flow)
     if (typeof updateTradeButtonState === 'function') {
@@ -1339,5 +1376,18 @@ async function initialize() {
 }
 
 $(document).ready(() => {
-    initialize();    
+    console.log('Document ready, initializing...');
+    initialize();
+    
+    // Additional initialization to ensure advanced view is properly set up
+    setTimeout(() => {
+        console.log('Additional initialization check...');
+        if (state.viewMode === 'advanced') {
+            $('.options-table-container').show();
+            if (state.orders && state.orders.length > 0 && typeof populateOptionsTable === 'function') {
+                console.log('Populating table in additional initialization...');
+                populateOptionsTable();
+            }
+        }
+    }, 2000);
 });
