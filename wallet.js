@@ -68,7 +68,7 @@ async function setupWeb3Modal() {
             },
             rpcUrls: {
                 public: { http: ['https://mainnet.base.org'] },
-        default: { http: ['https://base-mainnet.infura.io/v3/31b32a8cde404894ab67544e011510b9'] },
+        default: { http: ['https://base-rpc.thetanuts.finance'] },
             },
             blockExplorers: {
                 etherscan: { name: 'BaseScan', url: 'https://basescan.org' },
