@@ -8,9 +8,9 @@
     --alert-red: #FF3D71;
     --soft-slate: #607D8B;
     --dark-bg: #0d1821;
-    --card-bg: #1C2A35;
-    --text-color: #eaf0f6;
-    --muted-color: #a0a9b2;
+    --card-bg: #ffffff;
+    --text-color: #333333;
+    --muted-color: #666666;
     --border-color: rgba(0, 184, 212, 0.2);
     --border-radius: 8px;
     --box-shadow: 0 4px 20px rgba(0, 184, 212, 0.15);
@@ -26,18 +26,73 @@
 body {
     font-family: 'Inter', sans-serif;
     color: var(--text-color);
-    background-color: var(--dark-bg);
+    background-color: #ffffff;
     line-height: 1.6;
-    background-image: 
-        radial-gradient(circle at 15% 50%, rgba(0, 184, 212, 0.08) 0%, transparent 25%),
-        radial-gradient(circle at 85% 30%, rgba(223, 250, 76, 0.05) 0%, transparent 25%);
-    background-attachment: fixed;
 }
 
 .landing-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 20px;
+}
+
+/* Navbar and Brand Styling */
+.navbar {
+    background-color: #ffffff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    text-decoration: none;
+}
+
+.brand-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.brand-text h1 {
+    color: #000000;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.brand-text h1 span {
+    color: var(--primary-color);
+}
+
+.brand-tagline {
+    color: #666666;
+    font-size: 0.9rem;
+    margin: 0;
+    font-weight: 500;
+}
+
+/* Navigation Links */
+.navbar-nav .nav-link {
+    color: #333333 !important;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover {
+    color: var(--primary-color) !important;
+}
+
+.navbar-nav .nav-link.active {
+    color: var(--primary-color) !important;
+}
+
+/* Navbar Toggler */
+.navbar-toggler {
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+.navbar-toggler:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 184, 212, 0.25);
 }
 
 h1, h2, h3, h4, h5, h6 {
