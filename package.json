@@ -1,0 +1,21 @@
+{
+  "name": "theta-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Theta Mobile - web3-onboard integration",
+  "scripts": {
+    "build": "node scripts/build.js"
+  },
+  "dependencies": {
+    "@web3-onboard/core": "^2.24.1",
+    "@web3-onboard/injected-wallets": "^2.11.3",
+    "@web3-onboard/walletconnect": "^2.6.2",
+    "@web3-onboard/coinbase": "^2.4.2",
+    "ethers": "^5.7.2"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.2"
+  }
+}
+
+

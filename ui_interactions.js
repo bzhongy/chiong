@@ -9,7 +9,7 @@
  * - CONFIG - Asset mappings and token information
  * 
  * wallet.js:
- * - setupWeb3Modal() - Initialize wallet connection interface
+ * - setupWeb3Onboard() - Initialize wallet connection interface
  * - connectWallet() - Handle user wallet connection
  * - Web3 client configuration and chain setup
  * 
@@ -1194,7 +1194,7 @@ async function executeTrade() {
 }
 
 function refreshBackend() {
-    $.get("api/update", function(x) { 
+    $.get("https://odette.fi/api/update", function(x) { 
         if (x.status == "skipped") {
             console.log("Update skipped, retrying in 10 seconds...");
             setTimeout(refreshBackend, 10000);
@@ -1475,7 +1475,7 @@ async function settleOption(event) {
         `);
 
         // Call api/update-position to update the position
-        await fetch('/api/update');
+        await fetch('https://odette.fi/api/update');
         
     } catch (error) {
         console.error('Error settling option:', error);

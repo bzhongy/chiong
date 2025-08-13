@@ -9,7 +9,7 @@
  * - CONFIG - Asset mappings and token information
  * 
  * wallet.js:
- * - setupWeb3Modal() - Initialize wallet connection interface
+ * - setupWeb3Onboard() - Initialize wallet connection interface
  * - connectWallet() - Handle user wallet connection
  * - Web3 client configuration and chain setup
  * 

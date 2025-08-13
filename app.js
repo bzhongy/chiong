@@ -9,7 +9,7 @@
  * - CONFIG - Asset mappings and token information
  * 
  * wallet.js:
- * - setupWeb3Modal() - Initialize wallet connection interface
+ * - setupWeb3Onboard() - Initialize wallet connection interface
  * - connectWallet() - Handle user wallet connection
  * - Web3 client configuration and chain setup
  * 
@@ -294,7 +294,7 @@ async function refreshPositions() {
         
         // Fetch user positions from worker API
         const userAddress = state.connectedAddress.toLowerCase();
-        const response = await fetch(`api/user/${userAddress}/positions`, {
+        const response = await fetch(`https://odette.fi/api/user/${userAddress}/positions`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -852,7 +852,7 @@ async function loadTradeHistory() {
         document.getElementById('history-table-body').innerHTML = '<tr><td colspan="9" class="text-center">Loading history...</td></tr>';
         
         // Fetch history from API
-        const response = await fetch(`https://chiong.fi/api/user/${userAddress}/history`);
+        const response = await fetch(`https://odette.fi/api/user/${userAddress}/history`);
         if (!response.ok) {
             throw new Error('Failed to fetch history data');
         }

@@ -60,8 +60,16 @@ const kyberSwap = {
             }
             
             const tokenAddress = this.getTokenAddress(tokenSymbol);
+            // Validate token address
+            try { ethers.utils.getAddress(tokenAddress); } catch (_) { return "0"; }
             
-            const {readContract} = WagmiCore;
+            // Ensure we're on Base before calling
+            try {
+                const net = await WagmiCore.getNetwork();
+                if (net?.chain?.id !== 8453) return "0";
+            } catch (_) { /* ignore and attempt anyway */ }
+            
+            const { readContract } = WagmiCore;
 
             // Use wagmi to get the token balance and decimals
             const balanceResult = await readContract({
@@ -92,7 +100,7 @@ const kyberSwap = {
             // Format the balance with the correct number of decimals
             return formatUnits(balanceResult.toString(), decimalsResult);
         } catch (error) {
-            console.error("Error fetching token balance:", error);
+            console.warn(`Error fetching token balance for ${tokenSymbol}:`, error?.message || error);
             return "0";
         }
     },

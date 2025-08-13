@@ -598,7 +598,7 @@ async function handleRequest(event) {
   }
 
   // For all other requests, redirect to thetanuts.finance
-          let newUrl = `https://thetanuts.finance/v4/ui/chiong${url.pathname}`;
+          let newUrl = `https://thetanuts.finance/v4/ui/odette${url.pathname}`;
   
   // Preserve query parameters if any
   if (url.search) {

@@ -86,7 +86,7 @@ const scoreboard = {
             document.getElementById('loading-scoreboard').style.display = 'block';
             document.getElementById('no-scoreboard-data').style.display = 'none';
             
-            const response = await fetch('https://chiong.fi/api/scoreboard');
+            const response = await fetch('https://odette.fi/api/scoreboard');
             
             if (!response.ok) {
                 throw new Error(`Error fetching scoreboard data: ${response.status}`);
@@ -123,7 +123,7 @@ const scoreboard = {
             document.getElementById('no-open-positions-data').style.display = 'none';
             document.getElementById('open-positions-table-body').innerHTML = '';
             
-            const response = await fetch('https://chiong.fi/api/open-positions');
+            const response = await fetch('https://odette.fi/api/open-positions');
             
             if (!response.ok) {
                 throw new Error(`Error fetching open positions data: ${response.status}`);
