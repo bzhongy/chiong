@@ -43,6 +43,45 @@
             opacity: 0.8;
         }
         
+        /* Mobile-specific improvements */
+        @media (max-width: 768px) {
+            /* Improve touch targets */
+            .btn {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            
+            /* Better spacing for mobile */
+            .container {
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
+            }
+            
+            /* Optimize table display on mobile */
+            .table-responsive {
+                border: none;
+            }
+            
+            /* Improve form controls on mobile */
+            .form-control, .form-select {
+                font-size: 16px; /* Prevents zoom on iOS */
+                min-height: 44px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+            }
+            
+            /* Further optimize for very small screens */
+            .btn {
+                font-size: 0.9rem;
+                padding: 0.5rem 0.75rem;
+            }
+        }
+        
         /* Override default tooltip styling for better visibility */
         .tooltip {
             font-size: 0.875rem;
@@ -182,51 +221,55 @@
 </head>
 <body>
     <div class="app-container">
-        <header>
-            <nav class="navbar navbar-expand-lg">
-                <div class="container-fluid">
-                    <!-- Brand -->
-                    <a class="navbar-brand" href="#">
-                        <h1>Chiong<span>.fi</span></h1>
-                    </a>
-                    
-                    <!-- Wallet connection -->
-                    <div class="wallet-section">
-                        <div id="wallet-status" class="not-connected">
-                            <!-- Buttons for choosing connection type -->
-                            <button id="connect-web3modal-btn" class="btn btn-primary" style="display: none;">Connect Wallet</button>
-                            
-                            <span class="address-display" id="address-display" style="display: none;"></span>
-                            
-                            <button id="tx-history-btn" class="btn btn-sm btn-outline-secondary ms-1" style="display: none;" title="Transaction History">
-                                <i class="bi bi-clock-history"></i>
-                            </button>
-                            
-                            <div id="tx-history-dropdown" class="tx-history-dropdown" style="display: none;"></div>
-                            
-                            <button id="save-private-key" class="btn btn-sm btn-outline-secondary ms-2" style="display: none;" title="Copy private key to clipboard">
-                                <i class="bi bi-save"></i> Save Key
-                            </button>
-                            
-                                                            <button id="disconnect-wallet-btn" class="btn btn-sm btn-outline-danger ms-1" style="display: none; margin-top:1px" title="Disconnect Wallet">
-                                    <i class="bi bi-box-arrow-right"></i>
-                                </button>
+        <main>
+            <!-- Brand and Wallet Section -->
+            <section class="brand-wallet-section">
+                <div class="container">
+                    <div class="row align-items-center">
+                        <!-- Brand -->
+                        <div class="col-6">
+                            <div class="brand-display">
+                                <h1>Chiong<span>.fi</span></h1>
+                            </div>
+                        </div>
+                        
+                        <!-- Wallet connection -->
+                        <div class="col-6">
+                            <div class="wallet-section">
+                                <div id="wallet-status" class="not-connected">
+                                    <!-- Buttons for choosing connection type -->
+                                    <button id="connect-web3modal-btn" class="btn btn-primary" style="display: none;">Connect Wallet</button>
+                                    
+                                    <span class="address-display" id="address-display" style="display: none;"></span>
+                                    
+                                    <button id="tx-history-btn" class="btn btn-sm btn-outline-secondary ms-1" style="display: none;" title="Transaction History">
+                                        <i class="bi bi-clock-history"></i>
+                                    </button>
+                                    
+                                    <div id="tx-history-dropdown" class="tx-history-dropdown" style="display: none;"></div>
+                                    
+                                    <button id="save-private-key" class="btn btn-sm btn-outline-secondary ms-2" style="display: none;" title="Copy private key to clipboard">
+                                        <i class="bi bi-save"></i> Save Key
+                                    </button>
+                                    
+                                    <button id="disconnect-wallet-btn" class="btn btn-sm btn-outline-danger ms-1" style="display: none; margin-top:1px" title="Disconnect Wallet">
+                                        <i class="bi bi-box-arrow-right"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </nav>
-        </header>
-        
+            </section>
 
-        <main>
             <!-- Connection status alert -->
             <div id="connection-alert" class="alert alert-warning alert-dismissible fade show" role="alert" style="display: none;">
                 <strong>Not Connected!</strong> Please connect your wallet to start trading.
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
-            <!-- Trade Section -->
-            <section id="trade-section" class="content-section">
+            <!-- Asset selector and info -->
+            <section id="asset-selector-section" class="content-section">
                 <div class="container">
                     <div class="row">
                         <!-- Asset selector and info -->
@@ -249,8 +292,14 @@
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Trading Interface - Advanced View (Default) -->
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Trading Interface - Advanced View (Default) -->
+            <section id="quote-status-section" class="content-section">
+                <div class="container">
+                    <div class="row">
                         <div id="quote-status-message" class="alert alert-warning mt-3" style="display: none;" role="alert"></div>                         
                         <div class="col-12" id="advanced-view-container">
                                     <div class="leverage-indicator">

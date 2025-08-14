@@ -175,8 +175,7 @@ function populateOptionsTable() {
     
     for (let i = 0; i < sortedOrders.length; i++) {
         const order = sortedOrders[i].order;
-        console.log(`Order ${i} structure:`, order);
-        console.log(`Order ${i} expiry field:`, order.expiry);
+
         
         const optionType = order.isCall ? "CALL" : "PUT";
         const collateral = CONFIG.getCollateralDetails(order.collateral);
@@ -198,9 +197,7 @@ function populateOptionsTable() {
         let expiryDisplay = 'N/A';
         if (order.expiry) {
             try {
-                console.log(`Order ${i} expiry data:`, order.expiry, typeof order.expiry);
                 const orderExpiryTimestamp = parseInt(order.expiry) * 1000; // Convert to milliseconds
-                console.log(`Order ${i} parsed timestamp:`, orderExpiryTimestamp);
                 if (!isNaN(orderExpiryTimestamp) && orderExpiryTimestamp > 0) {
                     const expiryDate = new Date(orderExpiryTimestamp);
                     const expiryTimeString = expiryDate.toLocaleTimeString('en-US', { 
@@ -215,14 +212,14 @@ function populateOptionsTable() {
                         timeZone: 'UTC'
                     });
                     expiryDisplay = `${expiryDateString} ${expiryTimeString} UTC`;
-                    console.log(`Order ${i} formatted expiry:`, expiryDisplay);
+
                 }
             } catch (error) {
                 console.warn('Error formatting expiry date for order:', order, error);
                 expiryDisplay = 'Invalid';
             }
         } else {
-            console.log(`Order ${i} has no expiry data:`, order);
+            
         }
         
         // Find the original index in state.orders for proper selection tracking
