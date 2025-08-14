@@ -1,7 +1,7 @@
 # Swap Feature Implementation
 
 ## Overview
-This implementation adds a swap button to the "Pay with" section that allows users to swap between different assets (WETH/CBBTC to USDC) using the existing Kyber integration.
+This implementation adds a swap button to the "Pay with" section that allows users to swap between different assets (ETH/WETH/CBBTC to USDC) using the existing Kyber integration.
 
 ## Features
 
@@ -9,14 +9,16 @@ This implementation adds a swap button to the "Pay with" section that allows use
 - Located below the payment asset selection buttons
 - Text changes contextually:
   - "Swap Assets" when USDC is selected
+  - "Swap ETH to USDC" when ETH is selected
   - "Swap to USDC" when WETH or CBBTC is selected
 
 ### 2. Swap Modal
 - Opens when the swap button is clicked
 - Allows users to select:
-  - **From Asset**: WETH or CBBTC
+  - **From Asset**: ETH, WETH, or CBBTC
   - **To Asset**: USDC (fixed)
   - **Amount**: User input with quick amount buttons (0.01, 0.1, 0.5, 1.0)
+
 
 ### 3. Real-time Calculations
 - Uses existing Kyber API integration
@@ -37,6 +39,7 @@ This implementation adds a swap button to the "Pay with" section that allows use
 1. **app.html** - Added swap button and modal HTML
 2. **app.css** - Added styling for swap components
 3. **ui_interactions.js** - Added swap functionality and event handlers
+4. **config.js** - Added ETH support with special address
 
 ### Key Functions
 - `setupSwapModalListeners()` - Sets up event listeners for the swap modal
@@ -54,8 +57,8 @@ This implementation adds a swap button to the "Pay with" section that allows use
 ## Usage
 
 ### For Users
-1. Select a payment asset (WETH or CBBTC)
-2. Click the "Swap to USDC" button
+1. Select a payment asset (ETH, WETH, or CBBTC)
+2. Click the appropriate swap button
 3. Enter the amount you want to swap
 4. View real-time swap rates and output amounts
 5. Click "Execute Swap" to proceed
@@ -79,14 +82,6 @@ The swap functionality is modular and can be easily extended:
 - Transaction history and status tracking
 - Slippage protection settings
 - Gas optimization options
-
-## Testing
-To test the swap functionality:
-1. Ensure the app is running with wallet connected
-2. Select a non-USDC payment asset
-3. Click the swap button
-4. Enter amounts and verify calculations
-5. Test error scenarios (disconnect wallet, invalid amounts, etc.)
 
 ## Dependencies
 - Bootstrap 5.2.3 (for modal functionality)

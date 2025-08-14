@@ -98,7 +98,26 @@ function setupEventListeners() {
     });
     
     // Swap modal event listeners
-    setupSwapModalListeners();
+    $('#swap-assets-btn').on('click', openSwapModal);
+    $('#swap-from-asset').on('change', function() {
+        setTimeout(() => {
+            updateSwapFromBalance();
+            updateSwapCalculations();
+        }, 100);
+    });
+    $('#swap-from-amount').on('input', updateSwapCalculations);
+    $('.quick-amounts .btn').on('click', function() {
+        const amount = $(this).data('amount');
+        const isEthSpecific = $(this).data('eth-specific');
+        
+        if (isEthSpecific) {
+            $('#swap-from-asset').val('ETH').trigger('change');
+        }
+        
+        $('#swap-from-amount').val(amount);
+        updateSwapCalculations();
+    });
+    $('#execute-swap-btn').on('click', executeSwap);
     
     // Setup ETH wrapping listeners
     setupWrapETHListeners();
@@ -2055,89 +2074,11 @@ async function refreshFundStatus() {
     }, 100); // 100ms debounce delay
 }
 
-// Swap Modal Functionality
-function setupSwapModalListeners() {
-    // Open swap modal
-    $('#swap-assets-btn').on('click', openSwapModal);
-    
-    // Handle from asset selection change
-    $('#swap-from-asset').on('change', function() {
-        updateSwapFromBalance();
-        updateSwapCalculations();
-    });
-    
-    // Handle amount input change
-    $('#swap-from-amount').on('input', updateSwapCalculations);
-    
-    // Quick amount buttons
-    $('.quick-amounts .btn').on('click', function() {
-        const amount = $(this).data('amount');
-        $('#swap-from-amount').val(amount);
-        updateSwapCalculations();
-    });
-    
-    // Execute swap button
-    $('#execute-swap-btn').on('click', executeSwap);
-}
 
-// Test function for debugging Kyber API
-window.testKyberAPI = async function() {
-    console.log('Testing Kyber API...');
-    
-    try {
-        // Test with a simple case: 0.1 WETH to USDC
-        const testAmount = '0.1';
-        const fromAsset = 'WETH';
-        const toAsset = 'USDC';
-        
-        console.log(`Testing swap: ${testAmount} ${fromAsset} to ${toAsset}`);
-        
-        // Get token details
-        const fromTokenAddress = CONFIG.collateralMap[fromAsset];
-        const fromTokenDecimals = CONFIG.getCollateralDetails(fromTokenAddress).decimals;
-        
-        console.log('Token details:', {
-            fromTokenAddress,
-            fromTokenDecimals
-        });
-        
-        // Convert to raw units
-        const amountInRaw = ethers.utils.parseUnits(testAmount, fromTokenDecimals).toString();
-        console.log('Raw amount:', amountInRaw);
-        
-        // Test the API call
-        const quote = await kyberSwap.getQuote(fromAsset, toAsset, amountInRaw);
-        console.log('Quote result:', quote);
-        
-        if (quote && quote.outputAmount) {
-            const outputAmount = ethers.utils.formatUnits(quote.outputAmount, 6);
-            console.log(`Success! ${testAmount} ${fromAsset} = ${outputAmount} ${toAsset}`);
-            alert(`Test successful!\n${testAmount} ${fromAsset} = ${outputAmount} ${toAsset}`);
-        } else {
-            console.error('No quote received');
-            alert('Test failed: No quote received');
-        }
-        
-    } catch (error) {
-        console.error('Test failed:', error);
-        alert(`Test failed: ${error.message}`);
-    }
-};
 
-// Add test button to the swap modal for easy testing
-function addTestButton() {
-    const modalFooter = document.querySelector('#swapModal .modal-footer');
-    if (modalFooter && !document.getElementById('test-kyber-btn')) {
-        const testBtn = document.createElement('button');
-        testBtn.type = 'button';
-        testBtn.className = 'btn btn-warning me-auto';
-        testBtn.id = 'test-kyber-btn';
-        testBtn.innerHTML = '<i class="bi bi-bug me-1"></i>Test API';
-        testBtn.onclick = window.testKyberAPI;
-        
-        modalFooter.insertBefore(testBtn, modalFooter.firstChild);
-    }
-}
+
+
+
 
 // Update the openSwapModal function to include the test button
 function openSwapModal() {
@@ -2151,9 +2092,6 @@ function openSwapModal() {
     // Update balances
     updateSwapFromBalance();
     
-    // Add test button
-    addTestButton();
-    
     // Show modal
     const swapModal = new bootstrap.Modal(document.getElementById('swapModal'));
     swapModal.show();
@@ -2166,13 +2104,33 @@ function updateSwapFromBalance() {
         return;
     }
     
-    // Get balance using kyberSwap function
-    kyberSwap.getUserBalance(fromAsset).then(balance => {
-        $('#swap-from-balance').text(`${parseFloat(balance).toFixed(6)} ${fromAsset}`);
-    }).catch(error => {
-        console.error('Error fetching balance:', error);
-        $('#swap-from-balance').text('Error');
-    });
+    if (fromAsset === 'ETH') {
+        // For ETH, use the existing ETH balance display
+        const ethBalanceDisplay = document.getElementById('eth-balance-display-main');
+        if (ethBalanceDisplay && ethBalanceDisplay.textContent !== '--') {
+            $('#swap-from-balance').text(`${ethBalanceDisplay.textContent} ETH`);
+        } else {
+            // Fallback: try to get ETH balance from the existing function
+            updateETHBalance();
+            // Wait a bit for the balance to update, then set it
+            setTimeout(() => {
+                const updatedBalance = document.getElementById('eth-balance-display-main');
+                if (updatedBalance && updatedBalance.textContent !== '--') {
+                    $('#swap-from-balance').text(`${updatedBalance.textContent} ETH`);
+                } else {
+                    $('#swap-from-balance').text('Loading...');
+                }
+            }, 500);
+        }
+    } else {
+        // For other tokens, use the existing kyberSwap function
+        kyberSwap.getUserBalance(fromAsset).then(balance => {
+            $('#swap-from-balance').text(`${parseFloat(balance).toFixed(6)} ${fromAsset}`);
+        }).catch(error => {
+            console.error('Error fetching token balance:', error);
+            $('#swap-from-balance').text('Error');
+        });
+    }
 }
 
 async function updateSwapCalculations() {
@@ -2180,11 +2138,27 @@ async function updateSwapCalculations() {
     const toAsset = $('#swap-to-asset').val();
     const fromAmount = $('#swap-from-amount').val();
     
-    if (!fromAmount || parseFloat(fromAmount) <= 0) {
+    // Check if CONFIG is available
+    if (typeof CONFIG === 'undefined') {
         $('#swap-to-amount').val('');
-        $('#swap-rate').text('--');
+        $('#swap-rate').text('Config Error');
         $('#swap-rate-info').hide();
         $('#execute-swap-btn').prop('disabled', true);
+        return;
+    }
+    
+    // Fallback: Ensure ETH is available in collateralMap
+    if (!CONFIG.collateralMap.ETH) {
+        CONFIG.collateralMap.ETH = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+    }
+    
+    // Clear any previous error states first
+    $('#swap-to-amount').val('');
+    $('#swap-rate').text('--');
+    $('#swap-rate-info').hide();
+    $('#execute-swap-btn').prop('disabled', true);
+    
+    if (!fromAmount || parseFloat(fromAmount) <= 0) {
         return;
     }
     
@@ -2193,15 +2167,12 @@ async function updateSwapCalculations() {
     if (amountFloat < 0.000001) {
         $('#swap-to-amount').val('Amount too small');
         $('#swap-rate').text('Min: 0.000001');
-        $('#swap-rate-info').hide();
-        $('#execute-swap-btn').prop('disabled', true);
         return;
     }
     
     // Show loading state
     $('#swap-to-amount').val('Calculating...');
     $('#swap-rate').text('Loading...');
-    $('#execute-swap-btn').prop('disabled', true);
     
     try {
         // Get token decimals for proper formatting
@@ -2209,7 +2180,7 @@ async function updateSwapCalculations() {
         const toTokenAddress = CONFIG.collateralMap[toAsset];
         
         if (!fromTokenAddress || !toTokenAddress) {
-            throw new Error('Invalid token addresses');
+            throw new Error(`Invalid token addresses: ${fromAsset}(${fromTokenAddress}), ${toAsset}(${toTokenAddress})`);
         }
         
         // Get token decimals to properly format the input amount
@@ -2217,17 +2188,6 @@ async function updateSwapCalculations() {
         
         // Convert human-readable amount to raw units (wei/satoshi)
         const amountInRaw = ethers.utils.parseUnits(fromAmount, fromTokenDecimals).toString();
-        
-        console.log(`Swap calculation details:`, {
-            fromAsset,
-            toAsset,
-            fromAmount,
-            fromTokenAddress,
-            toTokenAddress,
-            fromTokenDecimals,
-            amountInRaw,
-            amountInRawBigInt: BigInt(amountInRaw).toString()
-        });
         
         // Validate the raw amount
         if (BigInt(amountInRaw) <= 0n) {
@@ -2238,6 +2198,9 @@ async function updateSwapCalculations() {
         const quote = await kyberSwap.getQuote(fromAsset, toAsset, amountInRaw);
         
         if (quote && quote.outputAmount) {
+            // Log the encodedSwapData for debugging
+            console.log('encodedSwapData:', quote.encodedSwapData);
+            
             // Format output amount
             const outputAmount = ethers.utils.formatUnits(quote.outputAmount, 6); // USDC has 6 decimals
             $('#swap-to-amount').val(parseFloat(outputAmount).toFixed(6));
@@ -2260,24 +2223,22 @@ async function updateSwapCalculations() {
         }
     } catch (error) {
         console.error('Error calculating swap:', error);
-        $('#swap-to-amount').val('Error');
+        
+        // Clear the input field to prevent validation errors
+        $('#swap-to-amount').val('');
         $('#swap-rate').text('Error');
         $('#swap-rate-info').hide();
         $('#execute-swap-btn').prop('disabled', true);
         
         // Show error message to user
         if (error.message.includes('Kyber API error') || error.message.includes('bad request')) {
-            $('#swap-to-amount').val('API Error');
-            $('#swap-rate').text('Invalid amount or service error');
+            $('#swap-rate').text('API Error');
         } else if (error.message.includes('Invalid token addresses')) {
-            $('#swap-to-amount').text('Invalid tokens');
             $('#swap-rate').text('Configuration error');
         } else if (error.message.includes('Invalid raw amount')) {
-            $('#swap-to-amount').val('Amount Error');
-            $('#swap-rate').text('Invalid amount format');
+            $('#swap-rate').text('Amount format error');
         } else {
-            $('#swap-to-amount').val('Calculation failed');
-            $('#swap-rate').text('Try again later');
+            $('#swap-rate').text('Calculation failed');
         }
     }
 }
@@ -2303,12 +2264,40 @@ async function executeSwap() {
     executeBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status"></span>Executing...');
     
     try {
-        // For now, just show a success message
-        // In a real implementation, you would call the actual swap function
-        const outputAmount = $('#swap-to-amount').val();
+        // Get the current quote to get the encodedSwapData
+        const fromTokenAddress = CONFIG.collateralMap[fromAsset];
+        const fromTokenDecimals = CONFIG.getCollateralDetails(fromTokenAddress).decimals;
+        const amountInRaw = ethers.utils.parseUnits(fromAmount, fromTokenDecimals).toString();
         
-        // Show success message
-        const successMessage = `Swap initiated successfully!\n\n${fromAmount} ${fromAsset} → ${outputAmount} ${toAsset}\n\nNote: This is a demo. In production, the actual swap transaction would be executed.`;
+        // Get fresh quote for execution
+        const quote = await kyberSwap.getQuote(fromAsset, toAsset, amountInRaw);
+        
+        if (!quote || !quote.encodedSwapData) {
+            throw new Error('No swap data available. Please calculate the swap rate first.');
+        }
+        
+        // Use the Web3Onboard bridge directly to send raw transaction data
+        const bridge = window.Web3OnboardBridge;
+        if (!bridge || !bridge.getSigner) {
+            throw new Error('Web3Onboard bridge not available');
+        }
+        
+        const signer = bridge.getSigner();
+        const provider = bridge.getProvider();
+        
+        // Build the raw transaction
+        const transaction = {
+            to: CONFIG.KYBER_CONTRACT_ADDRESS,
+            data: quote.encodedSwapData,
+            value: fromAsset === 'ETH' ? amountInRaw : 0, // Send ETH value if swapping from ETH
+            chainId: 8453
+        };
+        
+        // Send the raw transaction
+        const result = await signer.sendTransaction(transaction);
+        
+        // Show success message with transaction hash
+        const successMessage = `Swap transaction submitted successfully!\n\nTransaction Hash: ${result.hash}\n\n${fromAmount} ${fromAsset} → ${$('#swap-to-amount').val()} ${toAsset}`;
         alert(successMessage);
         
         // Close modal
@@ -2371,8 +2360,14 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
     if (swapBtn) {
         if (selectedAsset === 'USDC') {
             swapBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Swap Assets';
+        } else if (selectedAsset === 'ETH') {
+            swapBtn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i>Swap ETH to USDC`;
         } else {
             swapBtn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i>Swap to USDC`;
         }
     }
 }
+
+
+
+

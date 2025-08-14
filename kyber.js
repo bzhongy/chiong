@@ -11,7 +11,7 @@
 
 const KYBER_API_BASE = "https://web.thetanuts.finance/kyber/";
 const CHAIN_ID = 8453; // Base chain
-const DEFAULT_SLIPPAGE = 10; // 0.1%
+const DEFAULT_SLIPPAGE = 20; // 0.1%
 const DEFAULT_GAS_PRICE = 1000000000; // 1 gwei
 
 // Debounce function to limit API calls
@@ -144,28 +144,14 @@ const kyberSwap = {
             // Add recipient address if available
             if (to) url.searchParams.append("to", to);
             
-            console.log(`Kyber API call:`, {
-                url: url.toString(),
-                tokenIn,
-                tokenOut,
-                amountIn,
-                chainId: CHAIN_ID
-            });
-            
             const response = await fetch(url.toString());
             
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('Kyber API response error:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    body: errorText
-                });
                 throw new Error(`Kyber API error: ${response.status} ${response.statusText} - ${errorText}`);
             }
             
             const data = await response.json();
-            console.log('Kyber API response:', data);
             
             return data;
         } catch (error) {

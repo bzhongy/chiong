@@ -1194,15 +1194,18 @@ async function updateLiquidityInfo() {
         }
                 
         // Set up token addresses and update elements using CONFIG.collateralMap
-        const tokens = Object.entries(CONFIG.collateralMap).map(([symbol, address]) => {
-            const details = CONFIG.getCollateralDetails(address);
-            return {
-                symbol,
-                address,
-                decimals: details.decimals,
-                element: `#${symbol.toLowerCase()}-liquidity`
-            };
-        });
+        // Exclude ETH since it's a native token and doesn't need allowance
+        const tokens = Object.entries(CONFIG.collateralMap)
+            .filter(([symbol, address]) => symbol !== 'ETH') // Exclude ETH
+            .map(([symbol, address]) => {
+                const details = CONFIG.getCollateralDetails(address);
+                return {
+                    symbol,
+                    address,
+                    decimals: details.decimals,
+                    element: `#${symbol.toLowerCase()}-liquidity`
+                };
+            });
         
         // Prepare multicall data
         const calls = tokens.map(tokenInfo => ({
@@ -1275,13 +1278,16 @@ async function updateWalletBalance() {
     try {
         if (!state.connectedAddress) return;
         
-        const tokens = ['USDC', 'CBBTC', 'WETH'];
+        // Separate ETH (native) from ERC20 tokens
+        const erc20Tokens = ['USDC', 'CBBTC', 'WETH'];
+        const nativeTokens = ['ETH'];
         
         // Store current selection to preserve user preference
         const currentSelection = getSelectedPaymentAsset();
         
+        // Get ERC20 token balances
         const { readContracts } = WagmiCore;
-        const contracts = tokens.map(token => ({
+        const contracts = erc20Tokens.map(token => ({
             address: CONFIG.collateralMap[token],
             abi: ERC20ABI,
             functionName: 'balanceOf',
@@ -1292,7 +1298,9 @@ async function updateWalletBalance() {
         
         // Store balances for display
         state.paymentAssetBalances = {};
-        tokens.forEach((token, i) => {
+        
+        // Process ERC20 token balances
+        erc20Tokens.forEach((token, i) => {
             const balance = formatUnits(balances[i].result, CONFIG.getCollateralDetails(CONFIG.collateralMap[token]).decimals);
             state.paymentAssetBalances[token] = balance;
             
@@ -1312,6 +1320,11 @@ async function updateWalletBalance() {
                 }
             }
         });
+        
+        // Handle ETH balance separately (native token)
+        // ETH balance is already handled by updateETHBalance() function
+        // We'll set a placeholder here and let the existing ETH balance display handle it
+        state.paymentAssetBalances['ETH'] = '0'; // Placeholder, actual balance shown elsewhere
         
         // Update balance display for currently selected asset
         updatePaymentAssetBalanceDisplay(currentSelection);
@@ -1345,6 +1358,14 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
         return;
     }
     
+    // Handle ETH differently since it's a native token
+    if (selectedAsset === 'ETH') {
+        // For ETH, we don't have a balance in state.paymentAssetBalances
+        // The ETH balance is displayed separately by the existing ETH balance display
+        balanceDisplay.innerHTML = '<span class="balance-text">Native ETH balance shown above</span>';
+        return;
+    }
+    
     const balance = state.paymentAssetBalances[selectedAsset];
     
     if (!balance || balance === '0') {
@@ -1364,6 +1385,18 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
         <span class="balance-amount">${balance} ${selectedAsset}</span>
         <span class="balance-usd">${usdValue}</span>
     `;
+    
+    // Update swap button text to be more contextual
+    const swapBtn = document.getElementById('swap-assets-btn');
+    if (swapBtn) {
+        if (selectedAsset === 'USDC') {
+            swapBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Swap Assets';
+        } else if (selectedAsset === 'ETH') {
+            swapBtn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i>Swap ETH to USDC`;
+        } else {
+            swapBtn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i>Swap to USDC`;
+        }
+    }
 }
 
 // Initialize the application
