@@ -440,6 +440,23 @@
                                         </div>
                                     </div>
                                     
+                                    <!-- Filter Controls -->
+                                    <div class="filter-controls mb-3">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-filters-btn" onclick="clearAllFilters()">
+                                            <i class="bi bi-x-circle me-1"></i>Clear Filters
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Expiry Selection Buttons -->
+                                    <div class="expiry-buttons-container mb-3" id="expiry-buttons-container">
+                                        <!-- Expiry buttons will be populated here dynamically -->
+                                    </div>
+                                    
+                                    <!-- Strike Selection Buttons -->
+                                    <div class="strike-buttons-container mb-3" id="strike-buttons-container" style="display: none;">
+                                        <!-- Strike buttons will be populated here dynamically -->
+                                    </div>
+                                    
                                     <div class="options-table-container">
                                         <table class="table options-table">
                                             <thead>
@@ -461,7 +478,8 @@
                                         </table>
                                         <div class="table-info mt-2">
                                             <small class="text-muted">
-                                                <i class="bi bi-info-circle"></i> Table sorted by expiry time (earliest first)
+                                                <i class="bi bi-info-circle"></i> 
+                                                <span id="table-filter-info">Table sorted by expiry time (earliest first)</span>
                                             </small>
                                         </div>
                                     </div>

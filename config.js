@@ -50,6 +50,8 @@ const state = {
     viewMode: 'advanced', // 'advanced' is now the only view
     countDownInterval: 0,
     selectedPositionPercentage: 50,
+    selectedExpiry: null,
+    selectedStrike: null,
 };
 
 // Constants

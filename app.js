@@ -269,6 +269,11 @@ async function refreshData(isInitialLoad = false) {
             populateOptionsTable();
         }
         
+        // Also populate expiry buttons even if table is empty
+        if (typeof populateExpiryButtons === 'function') {
+            populateExpiryButtons();
+        }
+        
         // Update positions if on positions tab
         if ($('#positions-section').is(':visible')) {
             refreshPositions();
@@ -305,6 +310,16 @@ async function refreshData(isInitialLoad = false) {
 
 // Populate the options table in advanced view
 function populateOptionsTable() {
+    // Prevent infinite recursion if called from option-type-filter.js
+    if (window.isPopulatingTable) {
+        return;
+    }
+    
+    window.isPopulatingTable = true;
+    
+    // First, populate expiry and strike buttons
+    populateExpiryButtons();
+    
     const tableBody = $('#options-table-body');
     
     if (!tableBody.length) {
@@ -319,12 +334,41 @@ function populateOptionsTable() {
         tableBody.html('<tr><td colspan="9" class="text-center text-muted">No options available</td></tr>');
         return;
     }
-    
-    // Use the already sorted state.orders array
-    for (let i = 0; i < state.orders.length; i++) {
-        const order = state.orders[i].order;
 
-        
+    // Filter orders based on selected expiry and strike
+    let filteredOrders = state.orders;
+    
+    if (state.selectedExpiry) {
+        filteredOrders = filteredOrders.filter(order => {
+            return parseInt(order.order.expiry) === state.selectedExpiry;
+        });
+    }
+    
+    if (state.selectedStrike) {
+        filteredOrders = filteredOrders.filter(order => {
+            const strike = formatUnits(order.order.strikes[0], PRICE_DECIMALS);
+            return parseFloat(strike) === parseFloat(state.selectedStrike);
+        });
+    }
+
+    // Check if we have any valid orders after filtering
+    if (filteredOrders.length === 0) {
+        tableBody.html('<tr><td colspan="9" class="text-center text-muted">No options match the selected filters</td></tr>');
+        updateTableFilterInfo();
+        return;
+    }
+
+    // Use the filtered orders array
+    for (let i = 0; i < filteredOrders.length; i++) {
+        const order = filteredOrders[i].order;
+        const originalIndex = state.orders.findIndex(o => o === filteredOrders[i]);
+
+        // Skip invalid orders
+        if (!order || !order.strikes || !order.strikes[0]) {
+            console.warn('Skipping invalid order:', order);
+            continue;
+        }
+
         const optionType = order.isCall ? "CALL" : "PUT";
         const collateral = CONFIG.getCollateralDetails(order.collateral);
         const strike = formatUnits(order.strikes[0], PRICE_DECIMALS);
@@ -338,12 +382,17 @@ function populateOptionsTable() {
         // Calculate breakeven using centralized calculator
         const breakeven = optionCalculator.calculateBreakeven(order.isCall, parseFloat(strike), premium).toFixed(2);
         
-        // Calculate Greeks using centralized calculator
-        const { theta, delta, iv } = state.orders[i].greeks;
+        // Calculate Greeks using centralized calculator - handle missing greeks gracefully
+        let theta = 0, delta = 0, iv = 0;
+        if (filteredOrders[i].greeks) {
+            theta = filteredOrders[i].greeks.theta || 0;
+            delta = filteredOrders[i].greeks.delta || 0;
+            iv = filteredOrders[i].greeks.iv || 0;
+        }
         
         // Format expiry date from individual order
         let expiryDisplay = 'N/A';
-        if (order.expiry) {
+        if (order.expiry && order.expiry !== '0') {
             try {
                 const orderExpiryTimestamp = parseInt(order.expiry) * 1000; // Convert to milliseconds
                 if (!isNaN(orderExpiryTimestamp) && orderExpiryTimestamp > 0) {
@@ -370,9 +419,9 @@ function populateOptionsTable() {
             
         }
         
-        // Use the loop index directly for reliable row selection
+        // Use the original index for reliable row selection
         const row = `
-            <tr class="option-row ${i === state.selectedOrderIndex ? 'selected' : ''}" data-index="${i}">
+            <tr class="option-row ${originalIndex === state.selectedOrderIndex ? 'selected' : ''}" data-index="${originalIndex}">
                 <td>$${formatNumber(strike)}</td>
                 <td>${optionType}</td>
                 <td title="Expires at ${expiryDisplay}">${expiryDisplay}</td>
@@ -385,6 +434,244 @@ function populateOptionsTable() {
         `;
         tableBody.append(row);
     }
+    
+    // Update table filter info
+    updateTableFilterInfo();
+    
+    // Clear the flag to allow future calls
+    window.isPopulatingTable = false;
+}
+
+// Populate expiry selection buttons
+function populateExpiryButtons() {
+    if (!state.orders || state.orders.length === 0) return;
+    
+    const container = $('#expiry-buttons-container');
+    container.empty();
+    
+    // Get unique expiry timestamps - filter out invalid ones
+    const uniqueExpiries = Array.from(new Set(
+        state.orders
+            .filter(order => order.order && order.order.expiry && order.order.expiry !== '0')
+            .map(order => parseInt(order.order.expiry))
+    )).filter(expiry => !isNaN(expiry)).sort();
+    
+    // Create expiry buttons
+    uniqueExpiries.forEach(expiry => {
+        const expiryDate = new Date(expiry * 1000);
+        const expiryTimeString = expiryDate.toLocaleTimeString('en-US', { 
+            hour12: false, 
+            hour: '2-digit', 
+            minute: '2-digit',
+            timeZone: 'UTC'
+        });
+        const expiryDateString = expiryDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            timeZone: 'UTC'
+        });
+        const displayText = `${expiryDateString} ${expiryTimeString} UTC`;
+        
+        const button = $(`<button class="expiry-btn" data-expiry="${expiry}">${displayText}</button>`);
+        
+        // Mark as active if this expiry is selected
+        if (state.selectedExpiry === expiry) {
+            button.addClass('active');
+        }
+        
+        button.on('click', function() {
+            selectExpiry(expiry);
+        });
+        
+        container.append(button);
+    });
+}
+
+// Populate strike selection buttons for a specific expiry
+function populateStrikeButtons(expiry) {
+    if (!state.orders || state.orders.length === 0) return;
+    
+    const container = $('#strike-buttons-container');
+    container.empty();
+    
+    // Filter orders by expiry
+    const expiryOrders = state.orders.filter(order => parseInt(order.order.expiry) === expiry);
+    
+    // Separate calls and puts
+    const callOrders = expiryOrders.filter(order => order.order.isCall);
+    const putOrders = expiryOrders.filter(order => !order.order.isCall);
+    
+    // Get unique strikes for calls
+    const callStrikes = Array.from(new Set(
+        callOrders
+            .filter(order => order.order && order.order.strikes && order.order.strikes[0])
+            .map(order => parseFloat(formatUnits(order.order.strikes[0], PRICE_DECIMALS)))
+    )).filter(strike => !isNaN(strike)).sort((a, b) => a - b);
+    
+    // Get unique strikes for puts
+    const putStrikes = Array.from(new Set(
+        putOrders
+            .filter(order => order.order && order.order.strikes && order.order.strikes[0])
+            .map(order => parseFloat(formatUnits(order.order.strikes[0], PRICE_DECIMALS)))
+    )).filter(strike => !isNaN(strike)).sort((a, b) => a - b);
+    
+    // Create CALL strikes section
+    if (callStrikes.length > 0) {
+        const callLabel = $('<div class="strike-section-label mb-2"><strong>CALL Options</strong></div>');
+        container.append(callLabel);
+        
+        const callContainer = $('<div class="strike-buttons-row mb-3"></div>');
+        callStrikes.forEach(strike => {
+            const button = $(`<button class="strike-btn call-strike" data-strike="${strike}">$${formatNumber(strike)}</button>`);
+            
+            // Mark as active if this strike is selected
+            if (state.selectedStrike === strike) {
+                button.addClass('active');
+            }
+            
+            button.on('click', function() {
+                selectStrike(strike);
+            });
+            
+            callContainer.append(button);
+        });
+        container.append(callContainer);
+    }
+    
+    // Create PUT strikes section
+    if (putStrikes.length > 0) {
+        const putLabel = $('<div class="strike-section-label mb-2"><strong>PUT Options</strong></div>');
+        container.append(putLabel);
+        
+        const putContainer = $('<div class="strike-buttons-row mb-3"></div>');
+        putStrikes.forEach(strike => {
+            const button = $(`<button class="strike-btn put-strike" data-strike="${strike}">$${formatNumber(strike)}</button>`);
+            
+            // Mark as active if this strike is selected
+            if (state.selectedStrike === strike) {
+                button.addClass('active');
+            }
+            
+            button.on('click', function() {
+                selectStrike(strike);
+            });
+            
+            putContainer.append(button);
+        });
+        container.append(putContainer);
+    }
+    
+    // Show the strike buttons container
+    container.show();
+}
+
+// Handle expiry selection
+function selectExpiry(expiry) {
+    // Clear previous selections
+    state.selectedStrike = null;
+    
+    // Update selected expiry
+    if (state.selectedExpiry === expiry) {
+        state.selectedExpiry = null; // Deselect if clicking same expiry
+        $('#strike-buttons-container').hide();
+        $('.strike-btn').removeClass('active');
+    } else {
+        state.selectedExpiry = expiry;
+        populateStrikeButtons(expiry);
+    }
+    
+    // Update button states
+    $('.expiry-btn').removeClass('active');
+    if (state.selectedExpiry) {
+        $(`.expiry-btn[data-expiry="${state.selectedExpiry}"]`).addClass('active');
+    }
+    
+    // Refresh the table
+    populateOptionsTable();
+    
+    // Update table filter info
+    updateTableFilterInfo();
+}
+
+// Handle strike selection
+function selectStrike(strike) {
+    // Update selected strike
+    if (state.selectedStrike === strike) {
+        state.selectedStrike = null; // Deselect if clicking same strike
+    } else {
+        state.selectedStrike = strike;
+    }
+    
+    // Update button states
+    $('.strike-btn').removeClass('active');
+    if (state.selectedStrike) {
+        $(`.strike-btn[data-strike="${state.selectedStrike}"]`).addClass('active');
+    }
+    
+    // Find the first order with this strike and select it (mimic row click behavior)
+    if (state.selectedStrike) {
+        const matchingOrder = state.orders.find(order => {
+            if (!order.order || !order.order.strikes || !order.order.strikes[0]) return false;
+            const orderStrike = parseFloat(formatUnits(order.order.strikes[0], PRICE_DECIMALS));
+            return parseFloat(orderStrike) === parseFloat(state.selectedStrike);
+        });
+        
+        if (matchingOrder) {
+            const orderIndex = state.orders.indexOf(matchingOrder);
+            if (typeof selectOption === 'function') {
+                selectOption(orderIndex);
+            }
+        }
+    }
+    
+    // Refresh the table
+    populateOptionsTable();
+    
+    // Update table filter info
+    updateTableFilterInfo();
+}
+
+// Update table filter info display
+function updateTableFilterInfo() {
+    let filterText = 'Table sorted by expiry time (earliest first)';
+    
+    if (state.selectedExpiry) {
+        const expiryDate = new Date(state.selectedExpiry * 1000);
+        const expiryTimeString = expiryDate.toLocaleTimeString('en-US', { 
+            hour12: false, 
+            hour: '2-digit', 
+            minute: '2-digit',
+            timeZone: 'UTC'
+        });
+        const expiryDateString = expiryDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            timeZone: 'UTC'
+        });
+        filterText = `Filtered by expiry: ${expiryDateString} ${expiryTimeString} UTC`;
+        
+        if (state.selectedStrike) {
+            filterText += ` | Strike: $${formatNumber(state.selectedStrike)}`;
+        }
+    }
+    
+    $('#table-filter-info').text(filterText);
+}
+
+// Clear all filters and show all orders
+function clearAllFilters() {
+    state.selectedExpiry = null;
+    state.selectedStrike = null;
+    
+    // Update button states
+    $('.expiry-btn').removeClass('active');
+    $('.strike-btn').removeClass('active');
+    
+    // Hide strike buttons container
+    $('#strike-buttons-container').hide();
+    
+    // Refresh the table
+    populateOptionsTable();
 }
 
 // Set the expiry time for the current day
