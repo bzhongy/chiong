@@ -831,13 +831,7 @@ main .container {
     border-left: 3px solid var(--primary);
 }
 
-.select-option-btn {
-    background-color: var(--primary);
-    border-color: var(--primary);
-    color: var(--text-primary);
-    font-size: 0.85rem;
-    padding: 0.25rem 0.75rem;
-}
+
 
 /* Positions Section */
 .countdown-display {

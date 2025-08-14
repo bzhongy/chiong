@@ -79,6 +79,14 @@ function setupEventListeners() {
     // Conviction sliders - use one handler for both sliders
     $(document).on('input', '#conviction-slider', updateConviction);
     
+    // Option rows - make entire rows clickable for selection
+    $(document).on('click', '.option-row', function() {
+        const index = parseInt($(this).attr('data-index'));
+        if (!isNaN(index)) {
+            selectOption(index);
+        }
+    });
+    
     // Trade buttons
     $('#trade-now-btn').on('click', showTradeConfirmation);
     $('#confirm-trade-btn').on('click', executeTrade);
@@ -495,6 +503,13 @@ async function selectOption(index) {
     // Get the required amount for smart asset selection
     const orderData = state.orders[index];
     const order = orderData.order;
+    
+    // Debug: Log what order we're actually selecting
+    console.log('Selecting option at index:', index, 'Order data:', {
+        strike: formatUnits(order.strikes[0], PRICE_DECIMALS),
+        type: order.isCall ? 'CALL' : 'PUT',
+        expiry: new Date(parseInt(order.expiry) * 1000).toISOString()
+    });
     const collateral = CONFIG.getCollateralDetails(order.collateral);
     
     // Calculate required amount in USD for this trade

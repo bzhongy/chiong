@@ -188,10 +188,19 @@ async function refreshData() {
         });
         state.orders = filteredOrders;
         
-        // Sort orders by strike price
+        // Sort orders by expiry time (earliest first) - this is the primary sort for the table
         state.orders.sort((a, b) => {
-            return parseInt(a.order.strikes[0]) - parseInt(b.order.strikes[0]);
+            const expiryA = parseInt(a.order.expiry) || 0;
+            const expiryB = parseInt(b.order.expiry) || 0;
+            return expiryA - expiryB; // Ascending order (earliest first)
         });
+        
+        // Debug: Log the sorted order to verify
+        console.log('Orders sorted by expiry, first few strikes:', state.orders.slice(0, 3).map((order, i) => ({
+            index: i,
+            strike: formatUnits(order.order.strikes[0], PRICE_DECIMALS),
+            expiry: new Date(parseInt(order.order.expiry) * 1000).toISOString()
+        })));
 
         // Update expiry time display
         updateCountdowns();
@@ -254,15 +263,9 @@ function populateOptionsTable() {
         return;
     }
     
-    // Sort orders by expiry time (earliest first)
-    const sortedOrders = [...state.orders].sort((a, b) => {
-        const expiryA = parseInt(a.order.expiry) || 0;
-        const expiryB = parseInt(b.order.expiry) || 0;
-        return expiryA - expiryB; // Ascending order (earliest first)
-    });
-    
-    for (let i = 0; i < sortedOrders.length; i++) {
-        const order = sortedOrders[i].order;
+    // Use the already sorted state.orders array
+    for (let i = 0; i < state.orders.length; i++) {
+        const order = state.orders[i].order;
 
         
         const optionType = order.isCall ? "CALL" : "PUT";
@@ -321,7 +324,6 @@ function populateOptionsTable() {
                 <td>$${breakeven}</td>
                 <td>${delta.toFixed(2)}</td>
                 <td>${parseInt(iv*100)}%</td>
-                <td><button class="btn btn-sm btn-outline-primary select-option-btn">Select</button></td>
             </tr>
         `;
         tableBody.append(row);
