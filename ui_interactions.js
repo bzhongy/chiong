@@ -187,8 +187,17 @@ function showSection(section) {
         // Load history data
         loadTradeHistory();
     } else if (section === 'scoreboard-section') {
+        console.log('Showing scoreboard section...');
         $('#scoreboard-section').show();
         $('#nav-scoreboard-bottom').addClass('active');
+        
+        // Load scoreboard data when user actually visits the section
+        if (window.scoreboard && typeof window.scoreboard.loadData === 'function') {
+            console.log('Loading scoreboard data for user visit');
+            window.scoreboard.loadData();
+        } else {
+            console.warn('Scoreboard module not available');
+        }
     }
 }
 

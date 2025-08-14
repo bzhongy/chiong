@@ -16,16 +16,26 @@ const scoreboard = {
     settlementPriceCache: new Map(),
     
     // Initialize the scoreboard
-    init: function() {
+    init: function(autoLoadData = true) {
+        console.log('Scoreboard init called, autoLoadData:', autoLoadData);
+        
         // Load saved preference from localStorage
         const savedView = localStorage.getItem('scoreboard_view');
         if (savedView && (savedView === 'all' || savedView === 'past_week')) {
             this.currentView = savedView;
         }
         
-        this.loadData();
+        // Only load data if explicitly requested (not on page load)
+        if (autoLoadData) {
+            console.log('Loading scoreboard data...');
+            this.loadData();
+        } else {
+            console.log('Skipping data load on init (will load when user visits)');
+        }
+        
         this.setupEventListeners();
         this.updatePeriodButtonsInitial();
+        console.log('Scoreboard init completed');
     },
 
     // Set up event listeners for sort buttons
@@ -82,10 +92,12 @@ const scoreboard = {
 
     // Load scoreboard data from the indexer
     loadScoreboardData: async function() {
+        console.log('loadScoreboardData called');
         try {
             document.getElementById('loading-scoreboard').style.display = 'block';
             document.getElementById('no-scoreboard-data').style.display = 'none';
             
+            console.log('Fetching from https://odette.fi/api/scoreboard');
             const response = await fetch('https://odette.fi/api/scoreboard');
             
             if (!response.ok) {

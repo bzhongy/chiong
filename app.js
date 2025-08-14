@@ -125,8 +125,18 @@ if (!document.getElementById('simple-notification-styles')) {
     document.head.appendChild(style);
 }
 
-async function refreshData() {
+async function refreshData(isInitialLoad = false) {
+    // Prevent multiple simultaneous calls
+    if (state.isRefreshing) {
+        console.log('refreshData already in progress, skipping...');
+        return;
+    }
+    
+    state.isRefreshing = true;
+    
     try {
+        console.log(`refreshData called, isInitialLoad: ${isInitialLoad}`);
+        
         // Store current slider position before refresh
         if ($('#advanced-view-container').is(':visible')) {
             lastSelectedSliderPosition = parseInt($('#adv-conviction-slider').val());
@@ -224,14 +234,21 @@ async function refreshData() {
             refreshPositions();
         }
         
-        // Update the Beta flag liquidity information
-        await updateLiquidityInfo();
+        // Update the Beta flag liquidity information (only on initial load or when positions are visible)
+        if (isInitialLoad || $('#positions-section').is(':visible')) {
+            console.log('Updating liquidity info...');
+            await updateLiquidityInfo();
+        }
         
-        // Update the user wallet balance
-        updateWalletBalance();
+        // Update the user wallet balance (only on initial load or when positions are visible)
+        if (isInitialLoad || $('#positions-section').is(':visible')) {
+            console.log('Updating wallet balance...');
+            updateWalletBalance();
+        }
 
-        // Update ETH balance for wrapping functionality
-        if (typeof updateETHBalance === 'function') {
+        // Update ETH balance for wrapping functionality (only on initial load)
+        if (isInitialLoad && typeof updateETHBalance === 'function') {
+            console.log('Updating ETH balance...');
             updateETHBalance();
         }
 
@@ -243,6 +260,9 @@ async function refreshData() {
         }
     } catch (error) {
         console.error('Error refreshing data:', error);
+    } finally {
+        // Always reset the refreshing flag
+        state.isRefreshing = false;
     }
 }
 
@@ -1758,9 +1778,12 @@ async function initialize() {
         console.warn('Wallet system not ready after maximum attempts');
     }
     
-    await refreshData(); // Start data refresh
-    state.refreshTimer = setInterval(refreshData, REFRESH_INTERVAL); // Set a timer to refresh data periodically
-    updateCountdowns(); // Start the countdown loop *once* after initial setup
+    // Initial data load (only once during startup)
+    console.log('Performing initial data load...');
+    await refreshData(true); // Pass true to indicate this is initial load
+    
+    // Set up periodic refresh timer (but not immediate)
+    state.refreshTimer = setInterval(() => refreshData(false), REFRESH_INTERVAL);
     
     // Ensure advanced view is properly initialized
     state.viewMode = 'advanced';
@@ -1776,13 +1799,6 @@ async function initialize() {
         populateOptionsTable();
     } else {
         console.log('No orders available yet or populateOptionsTable not defined');
-        // Retry populating the table after a short delay
-        setTimeout(() => {
-            if (state.orders && state.orders.length > 0 && typeof populateOptionsTable === 'function') {
-                console.log('Retrying to populate table...');
-                populateOptionsTable();
-            }
-        }, 1000);
     }
     
     // Enable the trade button now that app is fully loaded
@@ -1798,6 +1814,14 @@ async function initialize() {
     $('#history-asset, #history-type, #history-status, #history-date-range').on('change', function() {
         loadTradeHistory();
     });
+    
+    // Initialize scoreboard module (but don't load data yet - wait for user to actually visit)
+    if (window.scoreboard && typeof window.scoreboard.init === 'function') {
+        console.log('Initializing scoreboard module...');
+        window.scoreboard.init(false); // Pass false to not auto-load data
+    } else {
+        console.warn('Scoreboard module not available');
+    }
 
     // Position asset filter handler
     const positionAssetDropdown = $('#positionAssetDropdown');
@@ -1818,16 +1842,4 @@ async function initialize() {
 $(document).ready(() => {
     console.log('Document ready, initializing...');
     initialize();
-    
-    // Additional initialization to ensure advanced view is properly set up
-    setTimeout(() => {
-        console.log('Additional initialization check...');
-        if (state.viewMode === 'advanced') {
-            $('.options-table-container').show();
-            if (state.orders && state.orders.length > 0 && typeof populateOptionsTable === 'function') {
-                console.log('Populating table in additional initialization...');
-                populateOptionsTable();
-            }
-        }
-    }, 2000);
 });
