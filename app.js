@@ -83,28 +83,10 @@ async function refreshData() {
             if (currentAssetPrice) {
                 updateDualUI('current-price', currentAssetPrice, 'text', formatNumber);
                 
-                // Dispatch price update event for price alerts system
-                const priceUpdateEvent = new CustomEvent('priceUpdated', {
-                    detail: {
-                        asset: state.selectedAsset,
-                        price: currentAssetPrice
-                    }
-                });
-                document.dispatchEvent(priceUpdateEvent);
-                
-                // Update price alerts manager if available
-                if (window.priceAlertsManager) {
-                    window.priceAlertsManager.updatePrice(state.selectedAsset, currentAssetPrice);
-                }
+
             }
             
-            // Also dispatch price updates for all assets in market_prices
-            Object.keys(state.market_prices).forEach(asset => {
-                const price = state.market_prices[asset];
-                if (price && window.priceAlertsManager) {
-                    window.priceAlertsManager.updatePrice(asset, price);
-                }
-            });
+
         }
         
         // Rest of the function remains the same
@@ -1130,7 +1112,9 @@ function setupHistoryFilters() {
         e.preventDefault();
         showSection('trade');
         document.getElementById('nav-trade').classList.add('active');
+        document.getElementById('nav-trade-bottom').classList.add('active');
         document.getElementById('nav-history').classList.remove('active');
+        document.getElementById('nav-history-bottom').classList.remove('active');
     });
 }
 

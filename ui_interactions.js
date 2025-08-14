@@ -48,6 +48,12 @@ function setupEventListeners() {
     $('#go-to-trade').on('click', () => showSection('trade'));
     $('#go-to-trade-from-history').on('click', () => showSection('trade'));
     
+    // Bottom navigation event handlers
+    $('#nav-trade-bottom').on('click', () => showSection('trade'));
+    $('#nav-positions-bottom').on('click', () => showSection('positions'));
+    $('#nav-history-bottom').on('click', () => showSection('history'));
+    $('#nav-scoreboard-bottom').on('click', () => showSection('scoreboard'));
+    
     // Asset selection
     $('input[name="asset-selection"]').on('change', function() {
         const asset = $(this).val();
@@ -144,30 +150,35 @@ function showSection(section) {
     // Hide all sections
     $('.content-section').hide();
     
-    // Remove active class from all nav links
+    // Remove active class from all nav links (both top and bottom)
     $('.nav-link').removeClass('active');
+    $('#nav-trade-bottom, #nav-positions-bottom, #nav-history-bottom, #nav-scoreboard-bottom').removeClass('active');
     
     // Show the selected section and mark its nav link as active
     if (section === 'trade') {
         $('#trade-section').show();
         $('#nav-trade').addClass('active');
+        $('#nav-trade-bottom').addClass('active');
         // Ensure advanced view is shown by default
         switchView('advanced');
     } else if (section === 'positions') {
         $('#positions-section').show();
         $('#nav-positions').addClass('active');
+        $('#nav-positions-bottom').addClass('active');
         
         // Refresh positions data
         refreshPositions();
     } else if (section === 'history') {
         $('#history-section').show();
         $('#nav-history').addClass('active');
+        $('#nav-history-bottom').addClass('active');
         
         // Load history data
         loadTradeHistory();
     } else if (section === 'scoreboard-section') {
         $('#scoreboard-section').show();
         $('#nav-scoreboard').addClass('active');
+        $('#nav-scoreboard-bottom').addClass('active');
     }
 }
 
@@ -188,13 +199,7 @@ function selectAsset(asset) {
     // Update radio button state
     $(`input[name="asset-selection"][value="${asset}"]`).prop('checked', true);
     
-    // Dispatch asset change event for price alerts system
-    const assetChangeEvent = new CustomEvent('assetChanged', {
-        detail: {
-            asset: asset
-        }
-    });
-    document.dispatchEvent(assetChangeEvent);
+
     
     refreshData();
 }

@@ -45,9 +45,10 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Header & Navigation */
 header {
-    background-color: var(--secondary);
-    border-bottom: 1px solid var(--border-color);
+    background-color: transparent;
+    border-bottom: none;
     padding: 1rem 0;
+    color: var(--text-primary);
 }
 
 .navbar {
@@ -99,6 +100,77 @@ header {
 /* Wallet Connection */
 .wallet-section {
     margin-left: 1.5rem;
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--secondary);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-around;
+    padding: 0.75rem 0;
+    z-index: 1000;
+}
+
+.bottom-nav .nav-item {
+    flex: 1;
+    text-align: center;
+}
+
+.bottom-nav .nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--text-secondary);
+    text-decoration: none;
+    padding: 0.5rem;
+    transition: all 0.2s ease;
+    font-size: 0.8rem;
+}
+
+.bottom-nav .nav-link:hover,
+.bottom-nav .nav-link.active {
+    color: var(--primary);
+}
+
+.bottom-nav .nav-link i {
+    font-size: 1.2rem;
+    margin-bottom: 0.25rem;
+}
+
+.bottom-nav .nav-link span {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* Add bottom padding to main content to account for bottom nav */
+main {
+    padding-bottom: 5rem;
+}
+
+/* Mobile-specific bottom navigation adjustments */
+@media (max-width: 768px) {
+    .bottom-nav {
+        padding: 0.5rem 0;
+    }
+    
+    .bottom-nav .nav-link {
+        font-size: 0.7rem;
+        padding: 0.4rem;
+    }
+    
+    .bottom-nav .nav-link i {
+        font-size: 1.1rem;
+        margin-bottom: 0.2rem;
+    }
+    
+    .bottom-nav .nav-link span {
+        font-size: 0.7rem;
+    }
 }
 
 .wallet-section #connect-wallet {
