@@ -364,6 +364,17 @@ const optionCalculator = {
 
 // Global configuration object
 const CONFIG = {
+    // RPC endpoints - read from local config or fallback to public endpoints
+    RPC_ENDPOINTS: {
+        BASE: window.ANKR_API_KEY 
+            ? `https://rpc.ankr.com/base/${window.ANKR_API_KEY}`
+            : 'https://mainnet.base.org', // Fallback to public endpoint
+        BASE_SEPOLIA: 'https://sepolia.base.org', // Public Base Sepolia RPC endpoint
+        // Alternative public endpoints if needed:
+        // 'https://rpc.ankr.com/base',
+        // 'https://base.blockpi.network/v1/rpc/public'
+    },
+    
     // Kyber contract address
     KYBER_CONTRACT_ADDRESS: '0x6131B5fae19EA4f9D964eAc0408E4408b66337b5',
     

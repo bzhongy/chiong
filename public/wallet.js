@@ -128,8 +128,8 @@ if (!window.ethereumClient) {
 if (!window.WagmiCore) {
     window.WagmiCore = {
         readContract: async ({ address, abi, functionName, args = [], chainId }) => {
-            // Force all calls through custom RPC endpoint
-            const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+            // Use configured RPC endpoint
+            const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
             const contract = new ethers.Contract(address, abi, directProvider);
             return await contract[functionName](...(args || []));
         },
@@ -143,8 +143,8 @@ if (!window.WagmiCore) {
             
             // Fallback to sequential calls if real Wagmi not available
             const { contracts = [] } = params;
-            // Force all calls through custom RPC endpoint
-            const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+            // Use configured RPC endpoint
+            const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
             
             console.warn('Using fallback sequential calls - real Wagmi multicall not available');
             const results = [];
@@ -171,13 +171,13 @@ if (!window.WagmiCore) {
             return tx;
         },
         waitForTransaction: async ({ hash }) => {
-            // Force all calls through custom RPC endpoint
-            const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+            // Use configured RPC endpoint
+            const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
             return await directProvider.waitForTransaction(hash);
         },
         getETHBalance: async (address) => {
-            // Force all calls through custom RPC endpoint
-            const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+            // Use configured RPC endpoint
+            const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
             return await directProvider.getBalance(address);
         },
         wrapETH: async (amount) => {
@@ -224,8 +224,8 @@ if (!window.WagmiCore) {
             return tx;
         },
         getNetwork: async () => {
-            // Force all calls through custom RPC endpoint
-            const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+            // Use configured RPC endpoint
+            const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
             const net = await directProvider.getNetwork();
             // Normalize to shape expected by callers: { chain: { id } }
             const chainId = net?.chainId ?? net?.id;
@@ -274,8 +274,8 @@ function setupOnboardCompatibility() {
         // WagmiCore shim
         window.WagmiCore = {
             readContract: async ({ address, abi, functionName, args = [], chainId }) => {
-                // Force all calls through custom RPC endpoint
-                const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+                // Use configured RPC endpoint
+                const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
                 const contract = new ethers.Contract(address, abi, directProvider);
                 return await contract[functionName](...(args || []));
             },
@@ -289,8 +289,8 @@ function setupOnboardCompatibility() {
                 
                 // Fallback to sequential calls if real Wagmi not available
                 const { contracts = [] } = params;
-                // Force all calls through custom RPC endpoint
-                const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+                // Use configured RPC endpoint
+                const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
                 
                 console.warn('Using fallback sequential calls - real Wagmi multicall not available');
                 const results = [];
@@ -315,13 +315,13 @@ function setupOnboardCompatibility() {
                 return tx;
             },
             waitForTransaction: async ({ hash }) => {
-                // Force all calls through custom RPC endpoint
-                const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+                // Use configured RPC endpoint
+                const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
                 return await directProvider.waitForTransaction(hash);
             },
             getETHBalance: async (address) => {
-                // Force all calls through custom RPC endpoint
-                const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+                // Use configured RPC endpoint
+                const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
                 return await directProvider.getBalance(address);
             },
             wrapETH: async (amount) => {
@@ -368,8 +368,8 @@ function setupOnboardCompatibility() {
                 return tx;
             },
             getNetwork: async () => {
-                // Force all calls through custom RPC endpoint
-                const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+                // Use configured RPC endpoint
+                const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
                 const net = await directProvider.getNetwork();
                 // Normalize to shape expected by callers: { chain: { id } }
                 const chainId = net?.chainId ?? net?.id;

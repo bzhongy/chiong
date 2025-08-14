@@ -231,12 +231,12 @@ async function refreshData(isInitialLoad = false) {
             refreshPositions();
         }
         
-        // Update the Beta flag liquidity information (always on initial load, or when positions are visible)
+        // Update the Beta flag liquidity information (only on initial load or when positions are visible)
         if (isInitialLoad || $('#positions-section').is(':visible')) {
             await updateLiquidityInfo();
         }
         
-        // Update the user wallet balance (always on initial load, or when positions are visible)
+        // Update the user wallet balance (only on initial load or when positions are visible)
         if (isInitialLoad || $('#positions-section').is(':visible')) {
             updateWalletBalance();
         }
@@ -1711,7 +1711,7 @@ async function initialize() {
         }
     }
     
-    // Initial data load (only once during startup) - this will load allowances and balances
+    // Initial data load (only once during startup)
     await refreshData(true); // Pass true to indicate this is initial load
     
     // Set up periodic refresh timer (but not immediate)

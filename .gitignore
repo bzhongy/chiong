@@ -42,7 +42,6 @@ pids
 *.pid
 *.seed
 *.pid.lock
-
 # Coverage directory used by tools like istanbul
 coverage/
 
@@ -58,3 +57,4 @@ __pycache__/
 # Backup files
 *.bak
 *.backup
+
