@@ -82,11 +82,12 @@ async function refreshData() {
             const currentAssetPrice = state.market_prices[state.selectedAsset];
             if (currentAssetPrice) {
                 updateDualUI('current-price', currentAssetPrice, 'text', formatNumber);
-                
-
             }
             
-
+            // Update ETH balance display with new market prices
+            if (typeof updateETHBalance === 'function') {
+                updateETHBalance();
+            }
         }
         
         // Rest of the function remains the same
@@ -1318,6 +1319,11 @@ async function updateWalletBalance() {
         // Check fund status after balance update (debounced)
         if (typeof refreshFundStatus === 'function') {
             refreshFundStatus();
+        }
+        
+        // Update ETH balance display after wallet balance update
+        if (typeof updateETHBalance === 'function') {
+            updateETHBalance();
         }
     } catch (error) {
         console.error('Error updating payment asset balances:', error);

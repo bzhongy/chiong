@@ -1539,12 +1539,25 @@ async function updateETHBalance() {
     try {
         if (!state.connectedAddress) {
             $('#eth-balance-display').text('--');
+            $('#eth-balance-display-main').text('--');
+            $('#eth-usd-value').text('($--)');
             return;
         }
         
         const balance = await WagmiCore.getETHBalance(state.connectedAddress);
         const ethBalance = parseFloat(ethers.utils.formatEther(balance));
         $('#eth-balance-display').text(ethBalance.toFixed(4));
+        
+        // Update main ETH balance display
+        $('#eth-balance-display-main').text(ethBalance.toFixed(4));
+        
+        // Update USD value if market prices are available
+        if (state.market_prices && state.market_prices['ETH']) {
+            const usdValue = (ethBalance * state.market_prices['ETH']).toFixed(2);
+            $('#eth-usd-value').text(`($${usdValue})`);
+        } else {
+            $('#eth-usd-value').text('($--)');
+        }
         
         // Show/hide wrap section based on whether WETH is selected and user has ETH
         const selectedPayment = getSelectedPaymentAsset();
@@ -1557,6 +1570,8 @@ async function updateETHBalance() {
     } catch (error) {
         console.error('Error updating ETH balance:', error);
         $('#eth-balance-display').text('Error');
+        $('#eth-balance-display-main').text('Error');
+        $('#eth-usd-value').text('($--)');
     }
 }
 

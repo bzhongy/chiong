@@ -629,6 +629,29 @@ main .container {
     font-style: italic;
 }
 
+/* ETH Balance Display */
+.eth-balance-info {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    text-align: center;
+}
+
+.eth-balance-info .text-muted {
+    color: var(--text-secondary) !important;
+}
+
+.eth-balance-info #eth-balance-display-main {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.eth-balance-info #eth-usd-value {
+    color: var(--text-secondary);
+    font-size: 0.875em;
+}
+
 .payment-balance-display .balance-amount {
     color: var(--primary);
     font-weight: 600;
