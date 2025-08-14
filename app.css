@@ -3394,3 +3394,128 @@ datalist option::before {
         font-size: 0.9rem;
     }
 }
+
+/* Swap Button and Modal Styles */
+.swap-button-container {
+    text-align: center;
+}
+
+.swap-button-container .btn {
+    border-radius: 20px;
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.swap-button-container .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 184, 212, 0.3);
+}
+
+/* Swap Modal Styles */
+#swapModal .modal-content {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+
+#swapModal .modal-header {
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+    border-radius: 12px 12px 0 0;
+}
+
+#swapModal .modal-title {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+#swapModal .modal-body {
+    background-color: var(--card-bg);
+    padding: 1.5rem;
+}
+
+#swapModal .modal-footer {
+    border-top: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+    border-radius: 0 0 12px 12px;
+}
+
+/* Swap Form Styles */
+.swap-form .form-label {
+    color: var(--text-primary);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.swap-form .form-select,
+.swap-form .form-control {
+    background-color: var(--background);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 8px;
+}
+
+.swap-form .form-select:focus,
+.swap-form .form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 0.2rem rgba(0, 184, 212, 0.25);
+    background-color: var(--background);
+    color: var(--text-primary);
+}
+
+.swap-form .form-text {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+/* Swap Rate Info */
+.swap-rate-info .alert {
+    background-color: rgba(0, 184, 212, 0.1);
+    border: 1px solid rgba(0, 184, 212, 0.3);
+    color: var(--text-primary);
+    border-radius: 8px;
+}
+
+/* Quick Amount Buttons */
+.quick-amounts .btn {
+    border-radius: 16px;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    margin-right: 0.25rem;
+    margin-bottom: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.quick-amounts .btn:hover {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: var(--background);
+}
+
+/* Modal Close Button */
+.btn-close {
+    filter: invert(1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #swapModal .modal-dialog {
+        margin: 1rem;
+        max-width: calc(100% - 2rem);
+    }
+    
+    .swap-form .row {
+        flex-direction: column;
+    }
+    
+    .swap-form .col-md-6 {
+        margin-bottom: 1rem;
+    }
+    
+    .quick-amounts .btn {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+    }
+}

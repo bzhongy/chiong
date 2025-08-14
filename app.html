@@ -492,6 +492,13 @@
                                                 <label class="btn btn-outline-primary" for="payment-cbbtc">CBBTC</label>
                                             </div>
                                             
+                                            <!-- Swap Button -->
+                                            <div class="swap-button-container mt-2">
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" id="swap-assets-btn">
+                                                    <i class="bi bi-arrow-repeat me-1"></i>Swap Assets
+                                                </button>
+                                            </div>
+                                            
                                             <!-- Balance display below buttons -->
                                             <div class="payment-balance-display mt-2" id="payment-balance-display">
                                                 <span class="balance-text">Loading balances...</span>
@@ -518,6 +525,81 @@
                                                     When unchecked, approves up to $1000 worth of tokens to reduce future approval transactions. 
                                                     When checked, approves only the exact amount needed for this trade.
                                                 </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Swap Modal -->
+                                    <div class="modal fade" id="swapModal" tabindex="-1" aria-labelledby="swapModalLabel" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="swapModalLabel">
+                                                        <i class="bi bi-arrow-repeat me-2"></i>Swap Assets
+                                                    </h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="swap-form">
+                                                        <div class="row">
+                                                            <!-- From Asset -->
+                                                            <div class="col-md-6">
+                                                                <label for="swap-from-asset" class="form-label">From:</label>
+                                                                <select class="form-select" id="swap-from-asset">
+                                                                    <option value="WETH">WETH</option>
+                                                                    <option value="CBBTC">CBBTC</option>
+                                                                </select>
+                                                                <div class="mt-2">
+                                                                    <label for="swap-from-amount" class="form-label">Amount:</label>
+                                                                    <input type="number" class="form-control" id="swap-from-amount" placeholder="0.0" step="0.000001" min="0">
+                                                                    <div class="form-text">
+                                                                        Balance: <span id="swap-from-balance">--</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <!-- To Asset -->
+                                                            <div class="col-md-6">
+                                                                <label for="swap-to-asset" class="form-label">To:</label>
+                                                                <select class="form-select" id="swap-to-asset">
+                                                                    <option value="USDC" selected>USDC</option>
+                                                                </select>
+                                                                <div class="mt-2">
+                                                                    <label for="swap-to-amount" class="form-label">You'll Receive:</label>
+                                                                    <input type="number" class="form-control" id="swap-to-amount" placeholder="0.0" readonly>
+                                                                    <div class="form-text">
+                                                                        Rate: <span id="swap-rate">--</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Swap Rate Info -->
+                                                        <div class="swap-rate-info mt-3" id="swap-rate-info" style="display: none;">
+                                                            <div class="alert alert-info">
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <span><i class="bi bi-info-circle me-2"></i>Swap Rate</span>
+                                                                    <span id="swap-rate-display">--</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Quick Amount Buttons -->
+                                                        <div class="quick-amounts mt-3">
+                                                            <small class="text-muted">Quick amounts: </small>
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-amount="0.01">0.01</button>
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-amount="0.1">0.1</button>
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-amount="0.5">0.5</button>
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary" data-amount="1.0">1.0</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <button type="button" class="btn btn-primary" id="execute-swap-btn" disabled>
+                                                        <i class="bi bi-arrow-repeat me-1"></i>Execute Swap
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

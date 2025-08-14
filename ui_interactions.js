@@ -41,12 +41,8 @@ function setupEventListeners() {
     // Wallet connection
     const connectWalletBtn = $('#connect-wallet');
     if (connectWalletBtn.length > 0) {
-        connectWalletBtn.on('click', connectWallet);
+        connectWalletBtn.on('click', () => showSection('trade'));
     }
-    
-    // Navigation
-    $('#go-to-trade').on('click', () => showSection('trade'));
-    $('#go-to-trade-from-history').on('click', () => showSection('trade'));
     
     // Bottom navigation event handlers
     $('#nav-trade-bottom').on('click', () => showSection('trade'));
@@ -90,11 +86,9 @@ function setupEventListeners() {
     // Exact Approval checkbox event listener
     $('#exact-approval-checkbox').on('change', function() {
         const isChecked = $(this).is(':checked');
-        
-        // Save preference to localStorage
         localStorage.setItem('exactApprovalEnabled', isChecked);
         
-        // Update UI feedback if needed
+        // Update help text based on checkbox state
         const helpText = $(this).siblings('.form-text').find('small');
         if (isChecked) {
             helpText.text('Only the exact amount needed for this trade will be approved. You may need to approve again for future trades.');
@@ -103,76 +97,11 @@ function setupEventListeners() {
         }
     });
     
-    // Auto refresh toggle
-    const autoRefresh = $('#auto-refresh');
-    if (autoRefresh.length > 0) {
-        autoRefresh.on('change', function() {
-            const isChecked = $(this).is(':checked');
-            $(this).next().text(`Auto-refresh: ${isChecked ? 'ON' : 'OFF'}`);
-            
-            if (isChecked) {
-                if (!state.refreshTimer) {
-                    state.refreshTimer = setInterval(refreshData, REFRESH_INTERVAL);
-                }
-            } else {
-                if (state.refreshTimer) {
-                    clearInterval(state.refreshTimer);
-                    state.refreshTimer = null;
-                }
-            }
-        });
-    }
+    // Swap modal event listeners
+    setupSwapModalListeners();
     
-    // Advanced view option selection
-    $(document).on('click', '.option-row', function() {
-        const index = $(this).data('index');
-        selectOption(index);
-    });
-    
-    // Specific handler for Select button clicks
-    $(document).on('click', '.select-option-btn', function(e) {
-        e.stopPropagation(); // Prevent row click from also firing
-        const index = $(this).closest('.option-row').data('index');
-        selectOption(index);
-    });
-    
-    // Position detail view
-    $(document).on('click', '.view-position-btn', function() {
-        const index = $(this).data('position-index');
-        showPositionDetails(index);
-    });
-
-    // History navigation
-    const navHistory = document.getElementById('nav-history-bottom');
-    if (navHistory) {
-        navHistory.addEventListener('click', function(e) {
-            e.preventDefault();
-            showSection('history');
-            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
-            this.classList.add('active');
-            loadTradeHistory(); // Load history when tab is selected
-        });
-    }
-    
-    // Setup history filters
-    setupHistoryFilters();
-    
-    // Add event listener for the settle option button
-    const settleOptionBtn = document.getElementById('settle-option-btn');
-    if (settleOptionBtn) {
-        settleOptionBtn.addEventListener('click', settleOption);
-    }
-
-    // Payment asset selection is now handled by button group event listeners in setupEventListeners
-
-    // Add scoreboard navigation
-    window.scoreboard.init();
-
-    // ETH to WETH Wrapping Functions
+    // Setup ETH wrapping listeners
     setupWrapETHListeners();
-    
-    // ETH wrap section toggle
-    $('#toggle-eth-wrap-section').on('click', toggleEthWrapSection);
 }
 
 // Show a specific section (trade, positions, history)
@@ -2124,4 +2053,326 @@ async function refreshFundStatus() {
             refreshFundStatusTimer = null;
         }
     }, 100); // 100ms debounce delay
+}
+
+// Swap Modal Functionality
+function setupSwapModalListeners() {
+    // Open swap modal
+    $('#swap-assets-btn').on('click', openSwapModal);
+    
+    // Handle from asset selection change
+    $('#swap-from-asset').on('change', function() {
+        updateSwapFromBalance();
+        updateSwapCalculations();
+    });
+    
+    // Handle amount input change
+    $('#swap-from-amount').on('input', updateSwapCalculations);
+    
+    // Quick amount buttons
+    $('.quick-amounts .btn').on('click', function() {
+        const amount = $(this).data('amount');
+        $('#swap-from-amount').val(amount);
+        updateSwapCalculations();
+    });
+    
+    // Execute swap button
+    $('#execute-swap-btn').on('click', executeSwap);
+}
+
+// Test function for debugging Kyber API
+window.testKyberAPI = async function() {
+    console.log('Testing Kyber API...');
+    
+    try {
+        // Test with a simple case: 0.1 WETH to USDC
+        const testAmount = '0.1';
+        const fromAsset = 'WETH';
+        const toAsset = 'USDC';
+        
+        console.log(`Testing swap: ${testAmount} ${fromAsset} to ${toAsset}`);
+        
+        // Get token details
+        const fromTokenAddress = CONFIG.collateralMap[fromAsset];
+        const fromTokenDecimals = CONFIG.getCollateralDetails(fromTokenAddress).decimals;
+        
+        console.log('Token details:', {
+            fromTokenAddress,
+            fromTokenDecimals
+        });
+        
+        // Convert to raw units
+        const amountInRaw = ethers.utils.parseUnits(testAmount, fromTokenDecimals).toString();
+        console.log('Raw amount:', amountInRaw);
+        
+        // Test the API call
+        const quote = await kyberSwap.getQuote(fromAsset, toAsset, amountInRaw);
+        console.log('Quote result:', quote);
+        
+        if (quote && quote.outputAmount) {
+            const outputAmount = ethers.utils.formatUnits(quote.outputAmount, 6);
+            console.log(`Success! ${testAmount} ${fromAsset} = ${outputAmount} ${toAsset}`);
+            alert(`Test successful!\n${testAmount} ${fromAsset} = ${outputAmount} ${toAsset}`);
+        } else {
+            console.error('No quote received');
+            alert('Test failed: No quote received');
+        }
+        
+    } catch (error) {
+        console.error('Test failed:', error);
+        alert(`Test failed: ${error.message}`);
+    }
+};
+
+// Add test button to the swap modal for easy testing
+function addTestButton() {
+    const modalFooter = document.querySelector('#swapModal .modal-footer');
+    if (modalFooter && !document.getElementById('test-kyber-btn')) {
+        const testBtn = document.createElement('button');
+        testBtn.type = 'button';
+        testBtn.className = 'btn btn-warning me-auto';
+        testBtn.id = 'test-kyber-btn';
+        testBtn.innerHTML = '<i class="bi bi-bug me-1"></i>Test API';
+        testBtn.onclick = window.testKyberAPI;
+        
+        modalFooter.insertBefore(testBtn, modalFooter.firstChild);
+    }
+}
+
+// Update the openSwapModal function to include the test button
+function openSwapModal() {
+    // Reset form
+    $('#swap-from-amount').val('');
+    $('#swap-to-amount').val('');
+    $('#swap-rate').text('--');
+    $('#swap-rate-info').hide();
+    $('#execute-swap-btn').prop('disabled', true);
+    
+    // Update balances
+    updateSwapFromBalance();
+    
+    // Add test button
+    addTestButton();
+    
+    // Show modal
+    const swapModal = new bootstrap.Modal(document.getElementById('swapModal'));
+    swapModal.show();
+}
+
+function updateSwapFromBalance() {
+    const fromAsset = $('#swap-from-asset').val();
+    if (!state.connectedAddress) {
+        $('#swap-from-balance').text('Connect wallet');
+        return;
+    }
+    
+    // Get balance using kyberSwap function
+    kyberSwap.getUserBalance(fromAsset).then(balance => {
+        $('#swap-from-balance').text(`${parseFloat(balance).toFixed(6)} ${fromAsset}`);
+    }).catch(error => {
+        console.error('Error fetching balance:', error);
+        $('#swap-from-balance').text('Error');
+    });
+}
+
+async function updateSwapCalculations() {
+    const fromAsset = $('#swap-from-asset').val();
+    const toAsset = $('#swap-to-asset').val();
+    const fromAmount = $('#swap-from-amount').val();
+    
+    if (!fromAmount || parseFloat(fromAmount) <= 0) {
+        $('#swap-to-amount').val('');
+        $('#swap-rate').text('--');
+        $('#swap-rate-info').hide();
+        $('#execute-swap-btn').prop('disabled', true);
+        return;
+    }
+    
+    // Validate amount is reasonable
+    const amountFloat = parseFloat(fromAmount);
+    if (amountFloat < 0.000001) {
+        $('#swap-to-amount').val('Amount too small');
+        $('#swap-rate').text('Min: 0.000001');
+        $('#swap-rate-info').hide();
+        $('#execute-swap-btn').prop('disabled', true);
+        return;
+    }
+    
+    // Show loading state
+    $('#swap-to-amount').val('Calculating...');
+    $('#swap-rate').text('Loading...');
+    $('#execute-swap-btn').prop('disabled', true);
+    
+    try {
+        // Get token decimals for proper formatting
+        const fromTokenAddress = CONFIG.collateralMap[fromAsset];
+        const toTokenAddress = CONFIG.collateralMap[toAsset];
+        
+        if (!fromTokenAddress || !toTokenAddress) {
+            throw new Error('Invalid token addresses');
+        }
+        
+        // Get token decimals to properly format the input amount
+        const fromTokenDecimals = CONFIG.getCollateralDetails(fromTokenAddress).decimals;
+        
+        // Convert human-readable amount to raw units (wei/satoshi)
+        const amountInRaw = ethers.utils.parseUnits(fromAmount, fromTokenDecimals).toString();
+        
+        console.log(`Swap calculation details:`, {
+            fromAsset,
+            toAsset,
+            fromAmount,
+            fromTokenAddress,
+            toTokenAddress,
+            fromTokenDecimals,
+            amountInRaw,
+            amountInRawBigInt: BigInt(amountInRaw).toString()
+        });
+        
+        // Validate the raw amount
+        if (BigInt(amountInRaw) <= 0n) {
+            throw new Error(`Invalid raw amount: ${amountInRaw}`);
+        }
+        
+        // Get quote from Kyber with properly formatted amount
+        const quote = await kyberSwap.getQuote(fromAsset, toAsset, amountInRaw);
+        
+        if (quote && quote.outputAmount) {
+            // Format output amount
+            const outputAmount = ethers.utils.formatUnits(quote.outputAmount, 6); // USDC has 6 decimals
+            $('#swap-to-amount').val(parseFloat(outputAmount).toFixed(6));
+            
+            // Calculate and display rate
+            const rate = parseFloat(outputAmount) / parseFloat(fromAmount);
+            let formattedRate;
+            if (rate < 0.01) formattedRate = rate.toFixed(6);
+            else if (rate < 1) formattedRate = rate.toFixed(4);
+            else formattedRate = rate.toFixed(2);
+            
+            $('#swap-rate').text(`1 ${fromAsset} = ${formattedRate} ${toAsset}`);
+            $('#swap-rate-display').text(`1 ${fromAsset} = ${formattedRate} ${toAsset}`);
+            $('#swap-rate-info').show();
+            
+            // Enable execute button
+            $('#execute-swap-btn').prop('disabled', false);
+        } else {
+            throw new Error('Invalid quote response');
+        }
+    } catch (error) {
+        console.error('Error calculating swap:', error);
+        $('#swap-to-amount').val('Error');
+        $('#swap-rate').text('Error');
+        $('#swap-rate-info').hide();
+        $('#execute-swap-btn').prop('disabled', true);
+        
+        // Show error message to user
+        if (error.message.includes('Kyber API error') || error.message.includes('bad request')) {
+            $('#swap-to-amount').val('API Error');
+            $('#swap-rate').text('Invalid amount or service error');
+        } else if (error.message.includes('Invalid token addresses')) {
+            $('#swap-to-amount').text('Invalid tokens');
+            $('#swap-rate').text('Configuration error');
+        } else if (error.message.includes('Invalid raw amount')) {
+            $('#swap-to-amount').val('Amount Error');
+            $('#swap-rate').text('Invalid amount format');
+        } else {
+            $('#swap-to-amount').val('Calculation failed');
+            $('#swap-rate').text('Try again later');
+        }
+    }
+}
+
+async function executeSwap() {
+    const fromAsset = $('#swap-from-asset').val();
+    const toAsset = $('#swap-to-asset').val();
+    const fromAmount = $('#swap-from-amount').val();
+    
+    if (!fromAmount || parseFloat(fromAmount) <= 0) {
+        alert('Please enter a valid amount');
+        return;
+    }
+    
+    if (!state.connectedAddress) {
+        alert('Please connect your wallet first');
+        return;
+    }
+    
+    // Disable button and show loading state
+    const executeBtn = $('#execute-swap-btn');
+    const originalText = executeBtn.html();
+    executeBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status"></span>Executing...');
+    
+    try {
+        // For now, just show a success message
+        // In a real implementation, you would call the actual swap function
+        const outputAmount = $('#swap-to-amount').val();
+        
+        // Show success message
+        const successMessage = `Swap initiated successfully!\n\n${fromAmount} ${fromAsset} → ${outputAmount} ${toAsset}\n\nNote: This is a demo. In production, the actual swap transaction would be executed.`;
+        alert(successMessage);
+        
+        // Close modal
+        const swapModal = bootstrap.Modal.getInstance(document.getElementById('swapModal'));
+        if (swapModal) {
+            swapModal.hide();
+        }
+        
+        // Refresh balances
+        updateSwapFromBalance();
+        if (typeof updatePaymentAssetBalanceDisplay === 'function') {
+            updatePaymentAssetBalanceDisplay(getSelectedPaymentAsset());
+        }
+        
+        // Reset form
+        $('#swap-from-amount').val('');
+        $('#swap-to-amount').val('');
+        $('#swap-rate').text('--');
+        $('#swap-rate-info').hide();
+        
+    } catch (error) {
+        console.error('Error executing swap:', error);
+        alert(`Swap failed: ${error.message}`);
+    } finally {
+        // Restore button state
+        executeBtn.prop('disabled', false).html(originalText);
+    }
+}
+
+// Update the balance display for the selected payment asset
+window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
+    const balanceDisplay = document.getElementById('payment-balance-display');
+    
+    if (!state.paymentAssetBalances || !selectedAsset) {
+        balanceDisplay.innerHTML = '<span class="balance-text no-balance">No balance data available</span>';
+        return;
+    }
+    
+    const balance = state.paymentAssetBalances[selectedAsset];
+    
+    if (!balance || balance === '0') {
+        balanceDisplay.innerHTML = '<span class="balance-text no-balance">0.00 ${selectedAsset}</span>';
+    } else {
+        // Get USD value if we have market prices
+        let usdValue = '';
+        if (state.market_prices && state.market_prices[selectedAsset]) {
+            const price = state.market_prices[selectedAsset];
+            const usdAmount = (parseFloat(balance) * price).toFixed(2);
+            usdValue = `($${usdAmount})`;
+        }
+        
+        balanceDisplay.innerHTML = `
+            <span class="balance-amount">${balance} ${selectedAsset}</span>
+            <span class="balance-usd">${usdValue}</span>
+        `;
+    }
+    
+    // Update swap button text to be more contextual
+    const swapBtn = document.getElementById('swap-assets-btn');
+    if (swapBtn) {
+        if (selectedAsset === 'USDC') {
+            swapBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Swap Assets';
+        } else {
+            swapBtn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i>Swap to USDC`;
+        }
+    }
 }

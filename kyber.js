@@ -117,6 +117,16 @@ const kyberSwap = {
             const tokenIn = this.getTokenAddress(tokenInSymbol);
             const tokenOut = this.getTokenAddress(tokenOutSymbol);
             
+            // Validate token addresses
+            if (!tokenIn || !tokenOut) {
+                throw new Error(`Invalid token addresses: ${tokenInSymbol}(${tokenIn}), ${tokenOutSymbol}(${tokenOut})`);
+            }
+            
+            // Validate amount
+            if (!amountIn || BigInt(amountIn) <= 0n) {
+                throw new Error(`Invalid amount: ${amountIn}`);
+            }
+            
             // Set the recipient to the connected wallet
             const to = state.connectedAddress;
             
@@ -134,17 +144,33 @@ const kyberSwap = {
             // Add recipient address if available
             if (to) url.searchParams.append("to", to);
             
+            console.log(`Kyber API call:`, {
+                url: url.toString(),
+                tokenIn,
+                tokenOut,
+                amountIn,
+                chainId: CHAIN_ID
+            });
+            
             const response = await fetch(url.toString());
+            
             if (!response.ok) {
-                throw new Error(`Kyber API error: ${response.statusText}`);
+                const errorText = await response.text();
+                console.error('Kyber API response error:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    body: errorText
+                });
+                throw new Error(`Kyber API error: ${response.status} ${response.statusText} - ${errorText}`);
             }
             
             const data = await response.json();
+            console.log('Kyber API response:', data);
             
             return data;
         } catch (error) {
             console.error("Error getting Kyber quote:", error);
-            return null;
+            throw error; // Re-throw to let caller handle it
         }
     },
     /**
