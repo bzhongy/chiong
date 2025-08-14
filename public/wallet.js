@@ -185,8 +185,8 @@ if (!window.WagmiCore) {
             const signer = b && b.getSigner ? b.getSigner() : null;
             if (!signer) throw new Error('No signer available');
             
-            // WETH contract address on Base
-            const WETH_ADDRESS = '0x4200000000000000000000000000000000000006';
+            // Get WETH contract address from config
+            const WETH_ADDRESS = CONFIG.collateralMap.WETH;
             const WETH_ABI = [
                 'function deposit() payable',
                 'function withdraw(uint256 amount)',
@@ -207,8 +207,8 @@ if (!window.WagmiCore) {
             const signer = b && b.getSigner ? b.getSigner() : null;
             if (!signer) throw new Error('No signer available');
             
-            // WETH contract address on Base
-            const WETH_ADDRESS = '0x4200000000000000000000000000000000000006';
+            // Get WETH contract address from config
+            const WETH_ADDRESS = CONFIG.collateralMap.WETH;
             const WETH_ABI = [
                 'function deposit() payable',
                 'function withdraw(uint256 amount)',
@@ -504,6 +504,8 @@ function updateUIForConnectedState(address) {
     
     const connectionAlert = document.getElementById('connection-alert');
     if (connectionAlert) connectionAlert.style.display = 'none';
+    
+    // Allowances will be refreshed by refreshData() after wallet connection
 }
 
 function updateUIForDisconnectedState() {
@@ -534,6 +536,8 @@ async function verifyAndSwitchNetwork() {
             console.log("Wrong network detected, switching to Base...");
             await switchNetwork({ chainId: 8453 });
         }
+        
+        // Allowances will be refreshed by refreshData() after network verification
     } catch (error) {
         console.error("Failed to verify/switch network:", error);
         $('#connection-alert').text("Please switch to Base network in your wallet.").show();
@@ -634,7 +638,7 @@ async function disconnectWallet() {
         updateUIForDisconnectedState();
         state.connectedAddress = null;
         
-        console.log('Wallet disconnected successfully');
+        
     } catch (error) {
         console.error('Error disconnecting wallet:', error);
     }
@@ -643,22 +647,24 @@ async function disconnectWallet() {
 // Add this function for manual auto-connect attempts
 async function attemptAutoConnect() {
     try {
-        console.log('Attempting auto-connect...');
         if (window.Web3OnboardBridge && window.Web3OnboardBridge.autoConnect) {
             const autoConnectResult = await window.Web3OnboardBridge.autoConnect();
             if (autoConnectResult && autoConnectResult.address) {
-                console.log('Auto-connect successful:', autoConnectResult.address);
                 updateUIForConnectedState(autoConnectResult.address);
                 state.connectedAddress = autoConnectResult.address;
+                
+                // Trigger a data refresh to load allowances and balances
+                if (typeof refreshData === 'function') {
+                    setTimeout(() => refreshData(false), 1000);
+                }
+                
                 return true;
             } else {
-                console.log('Auto-connect failed or no previous connection');
                 return false;
             }
         }
         return false;
     } catch (error) {
-        console.log('Auto-connect error:', error);
         return false;
     }
 }
@@ -669,54 +675,23 @@ window.attemptAutoConnect = attemptAutoConnect;
 // Add test function for debugging auto-connect
 window.testAutoConnect = function() {
     if (window.Web3OnboardBridge && window.Web3OnboardBridge.testAutoConnect) {
-        window.Web3OnboardBridge.testAutoConnect();
+        return window.Web3OnboardBridge.testAutoConnect();
     } else {
-        console.log('Web3OnboardBridge.testAutoConnect not available');
+        return null;
     }
 };
 
 // Add test function for debugging multicall
 window.testMulticall = async function() {
-    console.log('Testing multicall functionality...');
-    
     if (window.__WAGMI_READ_CONTRACTS__) {
-        console.log('✅ Real Wagmi readContracts available - multicall should work automatically');
+        return 'Real Wagmi readContracts available - multicall should work automatically';
     } else {
-        console.log('❌ Real Wagmi readContracts not available - using fallback sequential calls');
-    }
-    
-    // Test with a simple multicall
-    try {
-        const testContracts = [
-            {
-                address: '0x4200000000000000000000000000000000000006', // WETH on Base
-                abi: ['function name() view returns (string)'],
-                functionName: 'name'
-            },
-            {
-                address: '0x4200000000000000000000000000000000000006', // WETH on Base
-                abi: ['function symbol() view returns (string)'],
-                functionName: 'symbol'
-            }
-        ];
-        
-        const result = await window.WagmiCore.readContracts({ contracts: testContracts });
-        console.log('Multicall test result:', result);
-        
-        if (result.length === 2 && result[0].result && result[1].result) {
-            console.log('✅ Multicall test successful!');
-        } else {
-            console.log('❌ Multicall test failed');
-        }
-    } catch (error) {
-        console.error('Multicall test error:', error);
+        return 'Real Wagmi readContracts not available - using fallback sequential calls';
     }
 };
 
 // Initialize wallet system when page loads
 $(document).ready(function() {
-    console.log('Initializing wallet system...');
-    
     // Show the connect button
     $('#connect-web3modal-btn').show();
     
@@ -728,13 +703,9 @@ $(document).ready(function() {
     
     // Try to initialize Web3Onboard in background, but don't block UI
     setupWeb3Onboard().then(success => {
-        if (success) {
-            console.log('Web3Onboard initialized successfully on page load');
-        } else {
-            console.log('Web3Onboard initialization failed on page load, will retry on connect');
-        }
+        // Web3Onboard initialization completed
     }).catch(error => {
-        console.log('Web3Onboard initialization error on page load:', error);
+        // Web3Onboard initialization failed, will retry on connect
     });
 });
 

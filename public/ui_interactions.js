@@ -79,6 +79,14 @@ function setupEventListeners() {
     // Conviction sliders - use one handler for both sliders
     $(document).on('input', '#conviction-slider', updateConviction);
     
+    // Option rows - make entire rows clickable for selection
+    $(document).on('click', '.option-row', function() {
+        const index = parseInt($(this).attr('data-index'));
+        if (!isNaN(index)) {
+            selectOption(index);
+        }
+    });
+    
     // Trade buttons
     $('#trade-now-btn').on('click', showTradeConfirmation);
     $('#confirm-trade-btn').on('click', executeTrade);
@@ -179,8 +187,17 @@ function showSection(section) {
         // Load history data
         loadTradeHistory();
     } else if (section === 'scoreboard-section') {
+        console.log('Showing scoreboard section...');
         $('#scoreboard-section').show();
         $('#nav-scoreboard-bottom').addClass('active');
+        
+        // Load scoreboard data when user actually visits the section
+        if (window.scoreboard && typeof window.scoreboard.loadData === 'function') {
+            console.log('Loading scoreboard data for user visit');
+            window.scoreboard.loadData();
+        } else {
+            console.warn('Scoreboard module not available');
+        }
     }
 }
 
@@ -495,6 +512,13 @@ async function selectOption(index) {
     // Get the required amount for smart asset selection
     const orderData = state.orders[index];
     const order = orderData.order;
+    
+    // Debug: Log what order we're actually selecting
+    console.log('Selecting option at index:', index, 'Order data:', {
+        strike: formatUnits(order.strikes[0], PRICE_DECIMALS),
+        type: order.isCall ? 'CALL' : 'PUT',
+        expiry: new Date(parseInt(order.expiry) * 1000).toISOString()
+    });
     const collateral = CONFIG.getCollateralDetails(order.collateral);
     
     // Calculate required amount in USD for this trade
@@ -1001,7 +1025,7 @@ async function executeTrade() {
                     CONFIG.collateralMap[key] === inputTokenAddress
                 );
                 if (inputTokenSymbol) {
-                    await refreshTokenAllowance(inputTokenAddress, inputTokenSymbol);
+                    await refreshTokenAllowance(inputTokenAddress, inputTokenSymbol, OPTION_BOOK_ADDRESS, 'OptionBook');
                 }
             }
         }
@@ -1053,7 +1077,7 @@ async function executeTrade() {
                 CONFIG.collateralMap[key] === order.collateral
             );
             if (collateralTokenSymbol) {
-                await refreshTokenAllowance(order.collateral, collateralTokenSymbol);
+                await refreshTokenAllowance(order.collateral, collateralTokenSymbol, OPTION_BOOK_ADDRESS, 'OptionBook');
             }
         }
 
@@ -2176,7 +2200,7 @@ function openSwapModal() {
     // Get the currently selected payment asset from the main UI
     const currentPaymentAsset = getSelectedPaymentAsset();
     console.log('Current payment asset:', currentPaymentAsset);
-    console.log('Available payment assets:', $("input[name='payment-asset-selection']:checked").length);
+    console.log('Available payment assets:', $('input[name="payment-asset-selection"]:checked').length);
     
     // Set the "From" asset to ETH (default)
     $('#swap-from-asset').val('ETH');
@@ -2840,11 +2864,11 @@ async function approveSwapToken() {
         approveBtn.prop('disabled', false).text(`Approve ${fromAmount} ${fromAsset}`);
         
         // Wait a bit before refreshing to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 20000));
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         // Refresh only the Kyber allowance for this specific token (no heavy multicall needed!)
         console.log('Using targeted Kyber allowance refresh instead of heavy multicall');
-        await refreshKyberAllowance(tokenAddress, fromAsset);
+        await refreshTokenAllowance(tokenAddress, fromAsset, CONFIG.KYBER_CONTRACT_ADDRESS, 'Kyber');
         
         // Check approval status immediately
         try {
@@ -2958,20 +2982,21 @@ if (!document.getElementById('simple-notification-styles')) {
     document.head.appendChild(style);
 }
 
-// Function to refresh allowance for a specific token after approval
-async function refreshTokenAllowance(tokenAddress, tokenSymbol) {
+// Unified function to refresh allowance for a specific token after approval
+// This replaces the old separate functions for OptionBook and Kyber allowances
+async function refreshTokenAllowance(tokenAddress, tokenSymbol, spenderAddress, spenderType = 'OptionBook') {
     try {
-        console.log(`Refreshing allowance for ${tokenSymbol} at address ${tokenAddress}`);
+        console.log(`Refreshing ${spenderType} allowance for ${tokenSymbol} at address ${tokenAddress}`);
         
         // Get fresh allowance from blockchain for this specific token
         const { readContract } = WagmiCore;
         
-        // Get user's OptionBook allowance
+        // Get user's allowance for the specified spender
         const userAllowance = await readContract({
             address: tokenAddress,
             abi: ERC20ABI,
             functionName: 'allowance',
-            args: [state.connectedAddress, OPTION_BOOK_ADDRESS],
+            args: [state.connectedAddress, spenderAddress],
             chainId: 8453
         });
         
@@ -2979,89 +3004,57 @@ async function refreshTokenAllowance(tokenAddress, tokenSymbol) {
         const tokenDetails = CONFIG.getCollateralDetails(tokenAddress);
         const formattedAllowance = ethers.utils.formatUnits(userAllowance, tokenDetails.decimals);
         
-        console.log(`Fresh allowance for ${tokenSymbol}:`, {
+        console.log(`Fresh ${spenderType} allowance for ${tokenSymbol}:`, {
             rawAmount: userAllowance.toString(),
             formattedAmount: formattedAllowance,
             decimals: tokenDetails.decimals
         });
         
-        // Update the stored allowance in state
-        if (!state.userOptionBookAllowances) {
-            state.userOptionBookAllowances = {};
-        }
-        state.userOptionBookAllowances[tokenSymbol] = formattedAllowance;
-        
-        // Update the UI display if this token is currently selected as payment asset
-        const selectedPaymentAsset = getSelectedPaymentAsset();
-        if (selectedPaymentAsset === tokenSymbol) {
-            const allowanceDisplay = document.getElementById('payment-allowance-amount');
-            if (allowanceDisplay) {
-                allowanceDisplay.textContent = formattedAllowance;
+        // Update the appropriate allowance state based on spender type
+        if (spenderType === 'Kyber') {
+            if (!state.userKyberAllowances) {
+                state.userKyberAllowances = {};
+            }
+            state.userKyberAllowances[tokenSymbol] = formattedAllowance;
+            
+            // Update the UI display in the swap modal
+            const kyberAllowanceElement = $('#swap-from-kyber-allowance');
+            if (kyberAllowanceElement.length > 0) {
+                kyberAllowanceElement.text(formattedAllowance);
+            }
+            
+            // Also update the liquidity display element if it exists
+            const liquidityElement = document.getElementById(`${tokenSymbol.toLowerCase()}-kyber-liquidity`);
+            if (liquidityElement) {
+                liquidityElement.textContent = formattedAllowance;
+            }
+        } else {
+            // OptionBook allowance
+            if (!state.userOptionBookAllowances) {
+                state.userOptionBookAllowances = {};
+            }
+            state.userOptionBookAllowances[tokenSymbol] = formattedAllowance;
+            
+            // Update the UI display if this token is currently selected as payment asset
+            const selectedPaymentAsset = getSelectedPaymentAsset();
+            if (selectedPaymentAsset === tokenSymbol) {
+                const allowanceDisplay = document.getElementById('payment-allowance-amount');
+                if (allowanceDisplay) {
+                    allowanceDisplay.textContent = formattedAllowance;
+                }
+            }
+            
+            // Also update the liquidity display element if it exists
+            const liquidityElement = document.getElementById(`${tokenSymbol.toLowerCase()}-liquidity`);
+            if (liquidityElement) {
+                liquidityElement.textContent = formattedAllowance;
             }
         }
         
-        // Also update the liquidity display element if it exists
-        const liquidityElement = document.getElementById(`${tokenSymbol.toLowerCase()}-liquidity`);
-        if (liquidityElement) {
-            liquidityElement.textContent = formattedAllowance;
-        }
-        
-        console.log(`Successfully refreshed allowance for ${tokenSymbol}: ${formattedAllowance}`);
+        console.log(`Successfully refreshed ${spenderType} allowance for ${tokenSymbol}: ${formattedAllowance}`);
         
     } catch (error) {
-        console.error(`Error refreshing allowance for ${tokenSymbol}:`, error);
-    }
-}
-
-// Function to refresh Kyber allowance for a specific token after approval
-async function refreshKyberAllowance(tokenAddress, tokenSymbol) {
-    try {
-        console.log(`Refreshing Kyber allowance for ${tokenSymbol} at address ${tokenAddress}`);
-        
-        // Get fresh Kyber allowance from blockchain for this specific token
-        const { readContract } = WagmiCore;
-        
-        // Get user's Kyber allowance
-        const userAllowance = await readContract({
-            address: tokenAddress,
-            abi: ERC20ABI,
-            functionName: 'allowance',
-            args: [state.connectedAddress, CONFIG.KYBER_CONTRACT_ADDRESS],
-            chainId: 8453
-        });
-        
-        // Get token details for formatting
-        const tokenDetails = CONFIG.getCollateralDetails(tokenAddress);
-        const formattedAllowance = ethers.utils.formatUnits(userAllowance, tokenDetails.decimals);
-        
-        console.log(`Fresh Kyber allowance for ${tokenSymbol}:`, {
-            rawAmount: userAllowance.toString(),
-            formattedAmount: formattedAllowance,
-            decimals: tokenDetails.decimals
-        });
-        
-        // Update the stored allowance in state
-        if (!state.userKyberAllowances) {
-            state.userKyberAllowances = {};
-        }
-        state.userKyberAllowances[tokenSymbol] = formattedAllowance;
-        
-        // Update the UI display in the swap modal
-        const kyberAllowanceElement = $('#swap-from-kyber-allowance');
-        if (kyberAllowanceElement.length > 0) {
-            kyberAllowanceElement.text(formattedAllowance);
-        }
-        
-        // Also update the liquidity display element if it exists
-        const liquidityElement = document.getElementById(`${tokenSymbol.toLowerCase()}-kyber-liquidity`);
-        if (liquidityElement) {
-            liquidityElement.textContent = formattedAllowance;
-        }
-        
-        console.log(`Successfully refreshed Kyber allowance for ${tokenSymbol}: ${formattedAllowance}`);
-        
-    } catch (error) {
-        console.error(`Error refreshing Kyber allowance for ${tokenSymbol}:`, error);
+        console.error(`Error refreshing ${spenderType} allowance for ${tokenSymbol}:`, error);
     }
 }
 

@@ -16,7 +16,6 @@ let connectedAddress: string | null = null
 
 function init() {
   if (onboard) return onboard
-  console.log('Initializing web3-onboard...')
   
   const injected = injectedModule()
   const walletConnect = walletConnectModule({
@@ -24,13 +23,6 @@ function init() {
   })
   const coinbase = coinbaseModule()
   
-  console.log('Wallet modules created:', {
-    injected: !!injected,
-    walletConnect: !!walletConnect,
-    coinbase: !!coinbase
-  })
-  
-  console.log('Creating web3-onboard instance with auto-connect enabled...')
   onboard = Onboard({
     wallets: [injected, walletConnect, coinbase],
     chains: [
@@ -62,12 +54,9 @@ function init() {
       showSidebar: false,
     }
   })
-
-  console.log('Web3-onboard instance created, setting up state subscription...')
   
   // Wait for initial state to settle (including auto-connect attempts)
   onboard.state.select('wallets').subscribe(wallets => {
-    console.log('Web3-onboard state update - wallets:', wallets.length)
     if (wallets.length > 0) {
       const w = wallets[0]
       const provider = w.provider
@@ -79,60 +68,23 @@ function init() {
       if (connectedAddress) {
         localStorage.setItem('lastConnectedWallet', w.label)
         localStorage.setItem('lastConnectedAddress', connectedAddress)
-        console.log('Wallet connected via web3-onboard:', connectedAddress, 'Label:', w.label)
       }
     } else {
       ethersProvider = null
       ethersSigner = null
       connectedAddress = null
-      console.log('No wallets connected')
     }
   })
 
-  // Also monitor the connect state
-  onboard.state.select('connect').subscribe(connectState => {
-    console.log('Web3-onboard connect state:', connectState)
-  })
-  
   // Monitor available wallets
   onboard.state.select('walletModules').subscribe(walletModules => {
-    console.log('Available wallet modules:', walletModules.map(m => m.label))
-    
     // Check if injected wallets are available
     const injectedModule = walletModules.find(m => m.label === 'Injected')
     if (injectedModule) {
-      console.log('Injected wallet module found, checking for available wallets...')
       // This will help debug if the injected wallet module is working
     }
   })
   
-  // Monitor chains state
-  onboard.state.select('chains').subscribe(chains => {
-    console.log('Available chains:', chains.map(c => ({ id: c.id, label: c.label, rpcUrl: c.rpcUrl })))
-  })
-  
-  // Check if we have any stored connection info
-  const storedWallet = localStorage.getItem('lastConnectedWallet')
-  const storedAddress = localStorage.getItem('lastConnectedAddress')
-  if (storedWallet && storedAddress) {
-    console.log('Found stored connection info - Wallet:', storedWallet, 'Address:', storedAddress)
-    console.log('Web3-onboard should attempt to auto-connect to this wallet')
-    
-    // Check if the wallet is actually available in the browser
-    if (storedWallet === 'Injected' && typeof (window as any).ethereum !== 'undefined') {
-      console.log('MetaMask/Injected wallet detected in browser')
-    } else if (storedWallet === 'WalletConnect') {
-      console.log('WalletConnect was previously used')
-    } else if (storedWallet === 'Coinbase') {
-      console.log('Coinbase wallet was previously used')
-    } else {
-      console.log('Unknown wallet type or wallet not available:', storedWallet)
-    }
-  } else {
-    console.log('No stored connection info found - auto-connect will not be attempted')
-  }
-
-  console.log('Web3-onboard initialization complete')
   return onboard
 }
 
@@ -159,10 +111,7 @@ async function autoConnect(): Promise<ConnectResult | null> {
   const lastWallet = localStorage.getItem('lastConnectedWallet')
   const lastAddress = localStorage.getItem('lastConnectedAddress')
   
-  console.log('Auto-connect check - Last wallet:', lastWallet, 'Last address:', lastAddress)
-  
   if (!lastWallet || !lastAddress) {
-    console.log('No previous wallet connection found in localStorage')
     return null
   }
   
@@ -171,9 +120,6 @@ async function autoConnect(): Promise<ConnectResult | null> {
   const ob = init()
   
   // Wait for web3-onboard to fully initialize and attempt auto-connect
-  console.log('Waiting for web3-onboard auto-connect to complete...')
-  
-  // Wait longer for web3-onboard to complete auto-connect
   let attempts = 0
   const maxAttempts = 10
   
@@ -182,16 +128,13 @@ async function autoConnect(): Promise<ConnectResult | null> {
     const provider = getProvider()
     
     if (address && provider) {
-      console.log('Auto-connect successful via web3-onboard:', address)
       return { address, provider }
     }
     
-    console.log(`Auto-connect attempt ${attempts + 1}/${maxAttempts} - waiting...`)
     await new Promise(resolve => setTimeout(resolve, 500))
     attempts++
   }
   
-  console.log('Auto-connect failed - web3-onboard did not auto-connect after maximum attempts')
   return null
 }
 
@@ -204,22 +147,16 @@ export { init, connect, disconnect, autoConnect, getSigner, getProvider, getAddr
 
 // Add a test function for debugging
 export function testAutoConnect() {
-  console.log('=== Testing Auto-Connect ===')
-  console.log('LocalStorage state:')
-  console.log('- lastConnectedWallet:', localStorage.getItem('lastConnectedWallet'))
-  console.log('- lastConnectedAddress:', localStorage.getItem('lastConnectedAddress'))
-  
   if (onboard) {
     const state = onboard.state.get()
-    console.log('Web3-onboard state:')
-    console.log('- wallets:', state.wallets.length)
-    console.log('- connect:', state.connect)
-    console.log('- chains:', state.chains.length)
+    return {
+      wallets: state.wallets.length,
+      connect: state.connect,
+      chains: state.chains.length
+    }
   } else {
-    console.log('Web3-onboard not initialized')
+    return null
   }
-  
-  console.log('=== End Test ===')
 }
 
 

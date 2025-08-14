@@ -222,11 +222,8 @@ async function refreshData(isInitialLoad = false) {
         await selectOptionBasedOnConviction();
         
         // Populate advanced view options table (always show since advanced is now default)
-        console.log('Refreshing data, populating options table...');
         if (typeof populateOptionsTable === 'function') {
             populateOptionsTable();
-        } else {
-            console.warn('populateOptionsTable function not available');
         }
         
         // Update positions if on positions tab
@@ -236,19 +233,16 @@ async function refreshData(isInitialLoad = false) {
         
         // Update the Beta flag liquidity information (only on initial load or when positions are visible)
         if (isInitialLoad || $('#positions-section').is(':visible')) {
-            console.log('Updating liquidity info...');
             await updateLiquidityInfo();
         }
         
         // Update the user wallet balance (only on initial load or when positions are visible)
         if (isInitialLoad || $('#positions-section').is(':visible')) {
-            console.log('Updating wallet balance...');
             updateWalletBalance();
         }
 
         // Update ETH balance for wrapping functionality (only on initial load)
         if (isInitialLoad && typeof updateETHBalance === 'function') {
-            console.log('Updating ETH balance...');
             updateETHBalance();
         }
 
@@ -1361,7 +1355,6 @@ async function updateLiquidityInfo() {
             console.log('Is using real Wagmi multicall:', !!window.__WAGMI_READ_CONTRACTS__);
 
             // Process results and update UI
-            console.log('Multicall results:', approvalAmounts);
             approvalAmounts.forEach((approvalAmountResult, index) => {
                 if (index < tokens.length) {
                     // OptionBook allowances
@@ -1370,16 +1363,6 @@ async function updateLiquidityInfo() {
                     try {
                         // Format the amount with full decimal precision for UI display
                         const formattedAmount = ethers.utils.formatUnits(approvalAmount, tokenInfo.decimals);
-                        
-                        // Log OptionBook allowance for debugging
-                        console.log(`OptionBook Allowance - ${tokenInfo.symbol}:`, {
-                            symbol: tokenInfo.symbol,
-                            address: tokenInfo.address,
-                            rawAmount: approvalAmount.toString(),
-                            formattedAmount: formattedAmount,
-                            decimals: tokenInfo.decimals,
-                            uiElement: tokenInfo.element
-                        });
                         
                         // Update the UI element
                         $(tokenInfo.element).text(formattedAmount);
@@ -1394,16 +1377,6 @@ async function updateLiquidityInfo() {
                     try {
                         // Format the amount with full decimal precision for UI display
                         const formattedAmount = ethers.utils.formatUnits(userApprovalAmount, tokenInfo.decimals);
-                        
-                        // Log user's OptionBook allowance for debugging
-                        console.log(`User OptionBook Allowance - ${tokenInfo.symbol}:`, {
-                            symbol: tokenInfo.symbol,
-                            address: tokenInfo.address,
-                            rawAmount: userApprovalAmount.toString(),
-                            formattedAmount: formattedAmount,
-                            decimals: tokenInfo.decimals,
-                            userAddress: state.connectedAddress
-                        });
                         
                         // Store user's OptionBook allowance for the payment asset display
                         if (!state.userOptionBookAllowances) {
@@ -1423,18 +1396,9 @@ async function updateLiquidityInfo() {
                     const tokenInfo = tokens[index - tokens.length * 2];
                     const kyberApprovalAmount = approvalAmountResult.result;
                     
-                    // Debug logging to see what's happening
-                    console.log(`Processing Kyber allowance at index ${index}:`, {
-                        index,
-                        tokensLength: tokens.length,
-                        calculatedIndex: index - tokens.length * 2,
-                        tokenInfo,
-                        rawAmount: kyberApprovalAmount?.toString() || 'null'
-                    });
                     try {
                         // Check if we have a valid result
                         if (!kyberApprovalAmount || kyberApprovalAmount.toString() === '0') {
-                            console.log(`Kyber allowance is 0 or null for ${tokenInfo.symbol}`);
                             const formattedAmount = '0';
                             
                             // Store user's Kyber allowance for the swap modal
@@ -1461,24 +1425,11 @@ async function updateLiquidityInfo() {
                         // Format the amount with full decimal precision for UI display
                         const formattedAmount = ethers.utils.formatUnits(kyberApprovalAmount, tokenInfo.decimals);
                         
-                        // Log Kyber allowance for debugging
-                        console.log(`Kyber Allowance - ${tokenInfo.symbol}:`, {
-                            symbol: tokenInfo.symbol,
-                            address: tokenInfo.address,
-                            rawAmount: kyberApprovalAmount.toString(),
-                            formattedAmount: formattedAmount,
-                            decimals: tokenInfo.decimals,
-                            uiElement: `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`
-                        });
-                        
                         // Store user's Kyber allowance for the swap modal
                         if (!state.userKyberAllowances) {
                             state.userKyberAllowances = {};
                         }
                         state.userKyberAllowances[tokenInfo.symbol] = formattedAmount;
-                        
-                        console.log(`Stored Kyber allowance for ${tokenInfo.symbol}:`, formattedAmount);
-                        console.log(`Full state.userKyberAllowances:`, state.userKyberAllowances);
                         
                         // Update Kyber allowance display (create if doesn't exist)
                         const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
@@ -1501,28 +1452,7 @@ async function updateLiquidityInfo() {
                     }
                 }
             });
-            
-            // Log summary of all allowances
-            console.log('=== ALLOWANCE SUMMARY ===');
-            console.log('OptionBook Allowances:', tokens.map(tokenInfo => ({
-                symbol: tokenInfo.symbol,
-                element: tokenInfo.element,
-                displayValue: $(tokenInfo.element).text()
-            })));
-            console.log('User OptionBook Allowances:', tokens.map(tokenInfo => ({
-                symbol: tokenInfo.symbol,
-                element: tokenInfo.element,
-                displayValue: $(tokenInfo.element).text()
-            })));
-            console.log('Kyber Allowances:', tokens.map(tokenInfo => {
-                const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
-                return {
-                    symbol: tokenInfo.symbol,
-                    element: kyberElement,
-                    displayValue: $(kyberElement).length > 0 ? $(kyberElement).text() : 'Element not found'
-                };
-            }));
-            console.log('========================');
+
         } catch (error) {
             console.error('Error in multicall:', error);
             // Set all to '--' if multicall fails
@@ -1725,6 +1655,22 @@ window.debugAllowances = function() {
     console.log('========================');
 };
 
+// Add manual refresh function for allowances
+window.refreshAllowances = async function() {
+    if (typeof updateLiquidityInfo === 'function') {
+        try {
+            await updateLiquidityInfo();
+            console.log('Allowances manually refreshed successfully');
+            showNotification('Allowances refreshed successfully', 'success');
+        } catch (error) {
+            console.error('Failed to manually refresh allowances:', error);
+            showNotification('Failed to refresh allowances: ' + error.message, 'error');
+        }
+    } else {
+        showNotification('Allowance refresh function not available', 'error');
+    }
+};
+
 // Initialize the application
 async function initialize() {
     setupEventListeners(); // Assign event listeners to the UI elements
@@ -1750,30 +1696,22 @@ async function initialize() {
     }
     
     // Wait for wallet system to be ready and attempt auto-connect
-    console.log('Waiting for wallet system to initialize...');
     let walletReady = false;
     let attempts = 0;
     const maxAttempts = 10;
     
     while (!walletReady && attempts < maxAttempts) {
         if (window.Web3OnboardBridge && typeof window.Web3OnboardBridge.init === 'function') {
-            console.log('Wallet system ready, attempting auto-connect...');
             walletReady = true;
             // Give the wallet system a moment to complete auto-connect
             await new Promise(resolve => setTimeout(resolve, 1500));
         } else {
-            console.log(`Waiting for wallet system... (attempt ${attempts + 1}/${maxAttempts})`);
             await new Promise(resolve => setTimeout(resolve, 500));
             attempts++;
         }
     }
     
-    if (!walletReady) {
-        console.warn('Wallet system not ready after maximum attempts');
-    }
-    
     // Initial data load (only once during startup)
-    console.log('Performing initial data load...');
     await refreshData(true); // Pass true to indicate this is initial load
     
     // Set up periodic refresh timer (but not immediate)
@@ -1782,17 +1720,13 @@ async function initialize() {
     // Ensure advanced view is properly initialized
     state.viewMode = 'advanced';
     $('.options-table-container').show();
-    console.log('Advanced view initialized, options table container shown');
     
     // Ensure trade section is shown by default
     showSection('trade');
     
     // Populate the options table after data is loaded
     if (state.orders && state.orders.length > 0 && typeof populateOptionsTable === 'function') {
-        console.log('Orders available, populating table...');
         populateOptionsTable();
-    } else {
-        console.log('No orders available yet or populateOptionsTable not defined');
     }
     
     // Enable the trade button now that app is fully loaded
@@ -1811,10 +1745,7 @@ async function initialize() {
     
     // Initialize scoreboard module (but don't load data yet - wait for user to actually visit)
     if (window.scoreboard && typeof window.scoreboard.init === 'function') {
-        console.log('Initializing scoreboard module...');
         window.scoreboard.init(false); // Pass false to not auto-load data
-    } else {
-        console.warn('Scoreboard module not available');
     }
 
     // Position asset filter handler
@@ -1834,6 +1765,5 @@ async function initialize() {
 }
 
 $(document).ready(() => {
-    console.log('Document ready, initializing...');
     initialize();
 });

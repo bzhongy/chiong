@@ -109,14 +109,11 @@ function updateFilterDescription(filterType) {
     const sliderContainer = $('.conviction-slider-container');
     sliderContainer.removeClass('filter-mode puts-mode calls-mode');
     
-    console.log(`Updating filter to: ${filterType}`); // Debug log
     
     if (filterType === 'puts') {
         sliderContainer.addClass('puts-mode');
-        console.log('Added puts-mode class'); // Debug log
     } else if (filterType === 'calls') {
         sliderContainer.addClass('calls-mode');
-        console.log('Added calls-mode class'); // Debug log
     }
     
     // Force a repaint to ensure styles are applied
