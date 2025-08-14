@@ -2139,8 +2139,8 @@ function populateSwapDropdowns() {
     });
     
     // Set default selections
-    fromAssetSelect.val('USDC'); // Default "From" to USDC
-    toAssetSelect.val('ETH');    // Default "To" to ETH
+    fromAssetSelect.val('ETH'); // Default "From" to ETH
+    toAssetSelect.val('USDC');  // Default "To" to USDC (will be overridden in openSwapModal)
 }
 
 // Ensure approve button is properly initialized and ready
@@ -2176,12 +2176,15 @@ function openSwapModal() {
     // Get the currently selected payment asset from the main UI
     const currentPaymentAsset = getSelectedPaymentAsset();
     console.log('Current payment asset:', currentPaymentAsset);
-    console.log('Available payment assets:', $('input[name="payment-asset-selection"]:checked').length);
+    console.log('Available payment assets:', $("input[name='payment-asset-selection']:checked").length);
     
-    // Set the "From" asset to the currently selected payment asset, default to USDC if none selected
-    const fromAsset = currentPaymentAsset || 'USDC';
-    console.log('Setting from asset to:', fromAsset);
-    $('#swap-from-asset').val(fromAsset);
+    // Set the "From" asset to ETH (default)
+    $('#swap-from-asset').val('ETH');
+    
+    // Set the "To" asset to the currently selected payment asset (the one they want to get more of)
+    const toAsset = currentPaymentAsset || 'USDC';
+    console.log('Setting to asset to:', toAsset);
+    $('#swap-to-asset').val(toAsset);
     
     // Reset form
     $('#swap-from-amount').val('');
@@ -2330,6 +2333,24 @@ async function updateSwapCalculations() {
     $('#swap-rate').text('Loading...');
     
     try {
+        // Check if this is an ETH/WETH swap (wrapping/unwrapping)
+        const isETHWETHSwap = (fromAsset === 'ETH' && toAsset === 'WETH') || (fromAsset === 'WETH' && toAsset === 'ETH');
+        
+        if (isETHWETHSwap) {
+            // For ETH/WETH swaps, the exchange rate is 1:1
+            $('#swap-to-amount').val(fromAmount);
+            $('#swap-rate').text(`1 ${fromAsset} = 1 ${toAsset}`);
+            $('#swap-rate-display').text(`1 ${fromAsset} = 1 ${toAsset}`);
+            $('#swap-rate-info').show();
+            
+            // Enable execute button
+            $('#execute-swap-btn').prop('disabled', false);
+            
+            // No approval needed for ETH/WETH wrapping/unwrapping
+            return;
+        }
+        
+        // Regular swap logic for non-ETH/WETH pairs
         // Get token decimals for proper formatting
         const fromTokenAddress = CONFIG.collateralMap[fromAsset];
         const toTokenAddress = CONFIG.collateralMap[toAsset];
@@ -2430,7 +2451,63 @@ async function executeSwap() {
     executeBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status"></span>Executing...');
     
     try {
-        // Get the current quote to get the encodedSwapData
+        // Check if this is an ETH/WETH swap (wrapping/unwrapping)
+        const isETHWETHSwap = (fromAsset === 'ETH' && toAsset === 'WETH') || (fromAsset === 'WETH' && toAsset === 'ETH');
+        
+        if (isETHWETHSwap) {
+            // Handle ETH/WETH wrapping/unwrapping
+            let result;
+            
+            if (fromAsset === 'ETH' && toAsset === 'WETH') {
+                // Wrap ETH to WETH
+                result = await WagmiCore.wrapETH(fromAmount);
+                showNotification(`ETH wrapping transaction submitted successfully!\n\nTransaction Hash: ${result.hash}\n\n${fromAmount} ETH → ${fromAmount} WETH`, 'success');
+            } else {
+                // Unwrap WETH to ETH
+                result = await WagmiCore.unwrapWETH(fromAmount);
+                showNotification(`WETH unwrapping transaction submitted successfully!\n\nTransaction Hash: ${result.hash}\n\n${fromAmount} WETH → ${fromAmount} ETH`, 'success');
+            }
+            
+            // Wait for transaction confirmation
+            executeBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status"></span>Waiting for confirmation...');
+            try {
+                await WagmiCore.waitForTransaction({ hash: result.hash });
+                showNotification(`Transaction confirmed! ${fromAmount} ${fromAsset} → ${fromAmount} ${toAsset}`, 'success');
+            } catch (error) {
+                console.error('Error waiting for transaction confirmation:', error);
+                showNotification(`Transaction submitted but confirmation failed: ${error.message}`, 'warning');
+            }
+            
+            // Close modal
+            const swapModal = bootstrap.Modal.getInstance(document.getElementById('swapModal'));
+            if (swapModal) {
+                swapModal.hide();
+            }
+            
+            // Refresh balances after transaction
+            await updateSwapFromBalance();
+            if (typeof updatePaymentAssetBalanceDisplay === 'function') {
+                updatePaymentAssetBalanceDisplay(getSelectedPaymentAsset());
+            }
+            
+            // Refresh wallet balances
+            if (typeof updateWalletBalance === 'function') {
+                await updateWalletBalance();
+            }
+            
+            // Reset form
+            $('#swap-from-amount').val('');
+            $('#swap-to-amount').val('');
+            $('#swap-rate').text('--');
+            $('#swap-rate-info').hide();
+            
+            // Restore button state
+            executeBtn.prop('disabled', false).html(originalText);
+            
+            return;
+        }
+        
+        // Regular swap logic for non-ETH/WETH pairs
         const fromTokenAddress = CONFIG.collateralMap[fromAsset];
         const fromTokenDecimals = CONFIG.getCollateralDetails(fromTokenAddress).decimals;
         const amountInRaw = ethers.utils.parseUnits(fromAmount, fromTokenDecimals).toString();
@@ -2466,16 +2543,31 @@ async function executeSwap() {
         const successMessage = `Swap transaction submitted successfully!\n\nTransaction Hash: ${result.hash}\n\n${fromAmount} ${fromAsset} → ${$('#swap-to-amount').val()} ${toAsset}`;
         showNotification(successMessage, 'success');
         
+        // Wait for transaction confirmation
+        executeBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status"></span>Waiting for confirmation...');
+        try {
+            await WagmiCore.waitForTransaction({ hash: result.hash });
+            showNotification(`Transaction confirmed! ${fromAmount} ${fromAsset} → ${$('#swap-to-amount').val()} ${toAsset}`, 'success');
+        } catch (error) {
+            console.error('Error waiting for transaction confirmation:', error);
+            showNotification(`Transaction submitted but confirmation failed: ${error.message}`, 'warning');
+        }
+        
         // Close modal
         const swapModal = bootstrap.Modal.getInstance(document.getElementById('swapModal'));
         if (swapModal) {
             swapModal.hide();
         }
         
-        // Refresh balances
-        updateSwapFromBalance();
+        // Refresh balances after transaction
+        await updateSwapFromBalance();
         if (typeof updatePaymentAssetBalanceDisplay === 'function') {
             updatePaymentAssetBalanceDisplay(getSelectedPaymentAsset());
+        }
+        
+        // Refresh wallet balances
+        if (typeof updateWalletBalance === 'function') {
+            await updateWalletBalance();
         }
         
         // Reset form
@@ -2484,10 +2576,12 @@ async function executeSwap() {
         $('#swap-rate').text('--');
         $('#swap-rate-info').hide();
         
+        // Restore button state
+        executeBtn.prop('disabled', false).html(originalText);
+        
     } catch (error) {
         console.error('Error executing swap:', error);
         showNotification(`Swap failed: ${error.message}`, 'error');
-    } finally {
         // Restore button state
         executeBtn.prop('disabled', false).html(originalText);
     }
@@ -2524,13 +2618,7 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
     // Update swap button text to be more contextual
     const swapBtn = document.getElementById('swap-assets-btn');
     if (swapBtn) {
-        if (selectedAsset === 'USDC') {
-            swapBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Swap Assets';
-        } else if (selectedAsset === 'ETH') {
-            swapBtn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i>Swap ETH to USDC`;
-        } else {
-            swapBtn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i>Swap to USDC`;
-        }
+        swapBtn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i>Get more ${selectedAsset}`;
     }
 }
 
@@ -2556,9 +2644,19 @@ async function checkSwapApprovalNeeded() {
         return;
     }
     
-    // Skip approval check for ETH (native token)
+    // Skip approval check for ETH (native token) and ETH/WETH swaps
     if (fromAsset === 'ETH') {
         console.log('ETH selected, no approval needed');
+        approveBtn.hide();
+        executeBtn.prop('disabled', false);
+        return;
+    }
+    
+    // Skip approval check for ETH/WETH swaps (wrapping/unwrapping)
+    const toAsset = $('#swap-to-asset').val();
+    const isETHWETHSwap = (fromAsset === 'ETH' && toAsset === 'WETH') || (fromAsset === 'WETH' && toAsset === 'ETH');
+    if (isETHWETHSwap) {
+        console.log('ETH/WETH swap detected, no approval needed');
         approveBtn.hide();
         executeBtn.prop('disabled', false);
         return;

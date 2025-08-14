@@ -1695,13 +1695,7 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
     // Update swap button text to be more contextual
     const swapBtn = document.getElementById('swap-assets-btn');
     if (swapBtn) {
-        if (selectedAsset === 'USDC') {
-            swapBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Swap Assets';
-        } else if (selectedAsset === 'ETH') {
-            swapBtn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i>Swap ETH to USDC`;
-        } else {
-            swapBtn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i>Swap to USDC`;
-        }
+        swapBtn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i>Get more ${selectedAsset}`;
     }
 }
 

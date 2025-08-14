@@ -184,8 +184,44 @@ if (!window.WagmiCore) {
             const b = __getBridge();
             const signer = b && b.getSigner ? b.getSigner() : null;
             if (!signer) throw new Error('No signer available');
-            // No WETH address provided in context; if needed, inject WETH contract here.
-            throw new Error('wrapETH not implemented in web3-onboard bridge');
+            
+            // WETH contract address on Base
+            const WETH_ADDRESS = '0x4200000000000000000000000000000000000006';
+            const WETH_ABI = [
+                'function deposit() payable',
+                'function withdraw(uint256 amount)',
+                'function balanceOf(address owner) view returns (uint256)',
+                'function transfer(address to, uint256 amount) returns (bool)'
+            ];
+            
+            const wethContract = new ethers.Contract(WETH_ADDRESS, WETH_ABI, signer);
+            const amountWei = ethers.utils.parseEther(amount.toString());
+            
+            // Call deposit() with ETH value
+            const tx = await wethContract.deposit({ value: amountWei });
+            return tx;
+        },
+        
+        unwrapWETH: async (amount) => {
+            const b = __getBridge();
+            const signer = b && b.getSigner ? b.getSigner() : null;
+            if (!signer) throw new Error('No signer available');
+            
+            // WETH contract address on Base
+            const WETH_ADDRESS = '0x4200000000000000000000000000000000000006';
+            const WETH_ABI = [
+                'function deposit() payable',
+                'function withdraw(uint256 amount)',
+                'function balanceOf(address owner) view returns (uint256)',
+                'function transfer(address to, uint256 amount) returns (bool)'
+            ];
+            
+            const wethContract = new ethers.Contract(WETH_ADDRESS, WETH_ABI, signer);
+            const amountWei = ethers.utils.parseEther(amount.toString());
+            
+            // Call withdraw() to get ETH back
+            const tx = await wethContract.withdraw(amountWei);
+            return tx;
         },
         getNetwork: async () => {
             // Force all calls through custom RPC endpoint
@@ -292,8 +328,44 @@ function setupOnboardCompatibility() {
                 const b = __getBridge();
                 const signer = b && b.getSigner ? b.getSigner() : null;
                 if (!signer) throw new Error('No signer available');
-                // No WETH address provided in context; if needed, inject WETH contract here.
-                throw new Error('wrapETH not implemented in web3-onboard bridge');
+                
+                // WETH contract address on Base
+                const WETH_ADDRESS = '0x4200000000000000000000000000000000000006';
+                const WETH_ABI = [
+                    'function deposit() payable',
+                    'function withdraw(uint256 amount)',
+                    'function balanceOf(address owner) view returns (uint256)',
+                    'function transfer(address to, uint256 amount) returns (bool)'
+                ];
+                
+                const wethContract = new ethers.Contract(WETH_ADDRESS, WETH_ABI, signer);
+                const amountWei = ethers.utils.parseEther(amount.toString());
+                
+                // Call deposit() with ETH value
+                const tx = await wethContract.deposit({ value: amountWei });
+                return tx;
+            },
+            
+            unwrapWETH: async (amount) => {
+                const b = __getBridge();
+                const signer = b && b.getSigner ? b.getSigner() : null;
+                if (!signer) throw new Error('No signer available');
+                
+                // WETH contract address on Base
+                const WETH_ADDRESS = '0x4200000000000000000000000000000000000006';
+                const WETH_ABI = [
+                    'function deposit() payable',
+                    'function withdraw(uint256 amount)',
+                    'function balanceOf(address owner) view returns (uint256)',
+                    'function transfer(address to, uint256 amount) returns (bool)'
+                ];
+                
+                const wethContract = new ethers.Contract(WETH_ADDRESS, WETH_ABI, signer);
+                const amountWei = ethers.utils.parseEther(amount.toString());
+                
+                // Call withdraw() to get ETH back
+                const tx = await wethContract.withdraw(amountWei);
+                return tx;
             },
             getNetwork: async () => {
                 // Force all calls through custom RPC endpoint
