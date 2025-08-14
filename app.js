@@ -34,6 +34,16 @@
  * State management: 
  * The global 'state' object in config.js maintains application-wide state
  * and is accessed by all modules.
+ * 
+ * PERFORMANCE OPTIMIZATIONS:
+ * - Option selection is now immediate using cached balance data
+ * - Smart asset selection runs in background to avoid blocking UI
+ * - Slider responses are immediate with deferred calculations
+ * - Swap info updates are deferred to background
+ * - Critical UI updates happen first, non-critical updates follow
+ * - Balance and allowance loading shows cached data immediately
+ * - Fresh data loads in background for progressive enhancement
+ * - Background preloading of balances/allowances on app startup
  */
 
 // Simple notification function for basic messages
@@ -119,6 +129,39 @@ if (!document.getElementById('simple-notification-styles')) {
             to {
                 transform: translateX(0);
                 opacity: 1;
+            }
+        }
+        
+        /* Loading state styling */
+        .balance-text.loading {
+            color: #6c757d;
+            font-style: italic;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        .balance-text.no-balance {
+            color: #dc3545;
+            font-weight: 500;
+        }
+        
+        /* Button label loading states */
+        label[data-balance*="Loading..."] {
+            color: #6c757d !important;
+            font-style: italic !important;
+            animation: pulse 1.5s ease-in-out infinite !important;
+        }
+        
+        label[data-balance*="Error"] {
+            color: #dc3545 !important;
+            font-weight: 500 !important;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.6;
             }
         }
     `;
@@ -1312,158 +1355,226 @@ async function updateLiquidityInfo() {
                 };
             });
         
-        // Prepare multicall data for both OptionBook and Kyber allowances
-        const optionBookCalls = tokens.map(tokenInfo => ({
-            address: tokenInfo.address,
-            abi: ERC20ABI,
-            functionName: 'allowance',
-            args: [MAKER_ADDRESS, OPTION_BOOK_ADDRESS]
-        }));
-        
-        // Add user's OptionBook allowances (for the payment asset display)
-        const userOptionBookCalls = tokens.map(tokenInfo => ({
-            address: tokenInfo.address,
-            abi: ERC20ABI,
-            functionName: 'allowance',
-            args: [state.connectedAddress, OPTION_BOOK_ADDRESS]
-        }));
-        
-        const kyberCalls = tokens.map(tokenInfo => ({
-            address: tokenInfo.address,
-            abi: ERC20ABI,
-            functionName: 'allowance',
-            args: [state.connectedAddress, CONFIG.KYBER_CONTRACT_ADDRESS]
-        }));
-        
-        // Combine all calls: MAKER_ADDRESS allowances, USER allowances, then Kyber allowances
-        const allCalls = [...optionBookCalls, ...userOptionBookCalls, ...kyberCalls];
-
-        try {
-            // Execute multicall
-            const { readContracts } = WagmiCore;
-            console.log('Executing multicall with', allCalls.length, 'contracts');
-            console.log('Using multicall address:', MULTICALL_ADDRESS);
-            console.log('All calls:', allCalls);
-            
-            const approvalAmounts = await readContracts({
-                contracts: allCalls,
-                multicallAddress: MULTICALL_ADDRESS,
-                chainId: 8453 // Base chain ID
+        // OPTIMIZATION: Show cached allowances immediately if available
+        if (state.userOptionBookAllowances) {
+            tokens.forEach(tokenInfo => {
+                const cachedAllowance = state.userOptionBookAllowances[tokenInfo.symbol];
+                if (cachedAllowance && cachedAllowance !== '--') {
+                    $(tokenInfo.element).text(cachedAllowance);
+                }
             });
             
-            console.log('Multicall execution completed. Results type:', typeof approvalAmounts);
-            console.log('Is using real Wagmi multicall:', !!window.__WAGMI_READ_CONTRACTS__);
+            // OPTIMIZATION: Update main payment allowance display immediately with cached data
+            const selectedAsset = getSelectedPaymentAsset();
+            if (selectedAsset && selectedAsset !== 'ETH' && state.userOptionBookAllowances[selectedAsset]) {
+                const allowanceDisplay = document.getElementById('payment-allowance-amount');
+                if (allowanceDisplay) {
+                    allowanceDisplay.textContent = state.userOptionBookAllowances[selectedAsset];
+                }
+            }
+        }
+        
+        // OPTIMIZATION: Show loading placeholders for missing data
+        tokens.forEach(tokenInfo => {
+            if (!state.userOptionBookAllowances || !state.userOptionBookAllowances[tokenInfo.symbol]) {
+                $(tokenInfo.element).text('Loading...');
+            }
+        });
+        
+        // OPTIMIZATION: Show loading placeholder in main allowance display if no cached data
+        const selectedAsset = getSelectedPaymentAsset();
+        if (selectedAsset && selectedAsset !== 'ETH' && (!state.userOptionBookAllowances || !state.userOptionBookAllowances[selectedAsset])) {
+            const allowanceDisplay = document.getElementById('payment-allowance-amount');
+            if (allowanceDisplay) {
+                allowanceDisplay.textContent = 'Loading...';
+            }
+        }
+        
+        // OPTIMIZATION: Load fresh allowances in background (non-blocking)
+        setTimeout(async () => {
+            try {
+                // Prepare multicall data for both OptionBook and Kyber allowances
+                const optionBookCalls = tokens.map(tokenInfo => ({
+                    address: tokenInfo.address,
+                    abi: ERC20ABI,
+                    functionName: 'allowance',
+                    args: [MAKER_ADDRESS, OPTION_BOOK_ADDRESS]
+                }));
+                
+                // Add user's OptionBook allowances (for the payment asset display)
+                const userOptionBookCalls = tokens.map(tokenInfo => ({
+                    address: tokenInfo.address,
+                    abi: ERC20ABI,
+                    functionName: 'allowance',
+                    args: [state.connectedAddress, OPTION_BOOK_ADDRESS]
+                }));
+                
+                const kyberCalls = tokens.map(tokenInfo => ({
+                    address: tokenInfo.address,
+                    abi: ERC20ABI,
+                    functionName: 'allowance',
+                    args: [state.connectedAddress, CONFIG.KYBER_CONTRACT_ADDRESS]
+                }));
+                
+                // Combine all calls: MAKER_ADDRESS allowances, USER allowances, then Kyber allowances
+                const allCalls = [...optionBookCalls, ...userOptionBookCalls, ...kyberCalls];
 
-            // Process results and update UI
-            approvalAmounts.forEach((approvalAmountResult, index) => {
-                if (index < tokens.length) {
-                    // OptionBook allowances
-                    const tokenInfo = tokens[index];
-                    const approvalAmount = approvalAmountResult.result;
-                    try {
-                        // Format the amount with full decimal precision for UI display
-                        const formattedAmount = ethers.utils.formatUnits(approvalAmount, tokenInfo.decimals);
-                        
-                        // Update the UI element
-                        $(tokenInfo.element).text(formattedAmount);
-                    } catch (error) {
-                        console.error(`Error processing approval for ${tokenInfo.symbol}:`, error);
-                        $(tokenInfo.element).text('--');
-                    }
-                } else if (index < tokens.length * 2) {
-                    // User's OptionBook allowances (for the payment asset display)
-                    const tokenInfo = tokens[index - tokens.length];
-                    const userApprovalAmount = approvalAmountResult.result;
-                    try {
-                        // Format the amount with full decimal precision for UI display
-                        const formattedAmount = ethers.utils.formatUnits(userApprovalAmount, tokenInfo.decimals);
-                        
-                        // Store user's OptionBook allowance for the payment asset display
-                        if (!state.userOptionBookAllowances) {
-                            state.userOptionBookAllowances = {};
-                        }
-                        state.userOptionBookAllowances[tokenInfo.symbol] = formattedAmount;
-                        
-                    } catch (error) {
-                        console.error(`Error processing user OptionBook approval for ${tokenInfo.symbol}:`, error);
-                        if (!state.userOptionBookAllowances) {
-                            state.userOptionBookAllowances = {};
-                        }
-                        state.userOptionBookAllowances[tokenInfo.symbol] = '--';
-                    }
-                } else {
-                    // Kyber allowances
-                    const tokenInfo = tokens[index - tokens.length * 2];
-                    const kyberApprovalAmount = approvalAmountResult.result;
+                try {
+                    // Execute multicall
+                    const { readContracts } = WagmiCore;
+                    console.log('Executing multicall with', allCalls.length, 'contracts');
+                    console.log('Using multicall address:', MULTICALL_ADDRESS);
+                    console.log('All calls:', allCalls);
                     
-                    try {
-                        // Check if we have a valid result
-                        if (!kyberApprovalAmount || kyberApprovalAmount.toString() === '0') {
-                            const formattedAmount = '0';
-                            
-                            // Store user's Kyber allowance for the swap modal
-                            if (!state.userKyberAllowances) {
-                                state.userKyberAllowances = {};
+                    const approvalAmounts = await readContracts({
+                        contracts: allCalls,
+                        multicallAddress: MULTICALL_ADDRESS,
+                        chainId: 8453 // Base chain ID
+                    });
+                    
+                    console.log('Multicall execution completed. Results type:', typeof approvalAmounts);
+                    console.log('Is using real Wagmi multicall:', !!window.__WAGMI_READ_CONTRACTS__);
+
+                    // Process results and update UI
+                    approvalAmounts.forEach((approvalAmountResult, index) => {
+                        if (index < tokens.length) {
+                            // OptionBook allowances
+                            const tokenInfo = tokens[index];
+                            const approvalAmount = approvalAmountResult.result;
+                            try {
+                                // Format the amount with full decimal precision for UI display
+                                const formattedAmount = ethers.utils.formatUnits(approvalAmount, tokenInfo.decimals);
+                                
+                                // Update the UI element
+                                $(tokenInfo.element).text(formattedAmount);
+                            } catch (error) {
+                                console.error(`Error processing approval for ${tokenInfo.symbol}:`, error);
+                                $(tokenInfo.element).text('--');
                             }
-                            state.userKyberAllowances[tokenInfo.symbol] = formattedAmount;
-                            
-                            // Update Kyber allowance display
-                            const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
-                            if ($(kyberElement).length === 0) {
-                                // Create Kyber allowance display if it doesn't exist
-                                const optionBookElement = $(tokenInfo.element);
-                                const kyberDisplay = optionBookElement.clone();
-                                kyberDisplay.attr('id', tokenInfo.symbol.toLowerCase() + '-kyber-liquidity');
-                                kyberDisplay.text(formattedAmount);
-                                optionBookElement.after(kyberDisplay);
-                            } else {
-                                $(kyberElement).text(formattedAmount);
+                        } else if (index < tokens.length * 2) {
+                            // User's OptionBook allowances (for the payment asset display)
+                            const tokenInfo = tokens[index - tokens.length];
+                            const userApprovalAmount = approvalAmountResult.result;
+                            try {
+                                // Format the amount with full decimal precision for UI display
+                                const formattedAmount = ethers.utils.formatUnits(userApprovalAmount, tokenInfo.decimals);
+                                
+                                // Store user's OptionBook allowance for the payment asset display
+                                if (!state.userOptionBookAllowances) {
+                                    state.userOptionBookAllowances = {};
+                                }
+                                state.userOptionBookAllowances[tokenInfo.symbol] = formattedAmount;
+                                
+                                // OPTIMIZATION: Update main payment allowance display immediately when data arrives
+                                const selectedAsset = getSelectedPaymentAsset();
+                                if (selectedAsset === tokenInfo.symbol) {
+                                    const allowanceDisplay = document.getElementById('payment-allowance-amount');
+                                    if (allowanceDisplay) {
+                                        allowanceDisplay.textContent = formattedAmount;
+                                    }
+                                }
+                                
+                            } catch (error) {
+                                console.error(`Error processing user OptionBook approval for ${tokenInfo.symbol}:`, error);
+                                if (!state.userOptionBookAllowances) {
+                                    state.userOptionBookAllowances = {};
+                                }
+                                state.userOptionBookAllowances[tokenInfo.symbol] = '--';
                             }
-                            return;
-                        }
-                        
-                        // Format the amount with full decimal precision for UI display
-                        const formattedAmount = ethers.utils.formatUnits(kyberApprovalAmount, tokenInfo.decimals);
-                        
-                        // Store user's Kyber allowance for the swap modal
-                        if (!state.userKyberAllowances) {
-                            state.userKyberAllowances = {};
-                        }
-                        state.userKyberAllowances[tokenInfo.symbol] = formattedAmount;
-                        
-                        // Update Kyber allowance display (create if doesn't exist)
-                        const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
-                        if ($(kyberElement).length === 0) {
-                            // Create Kyber allowance display if it doesn't exist
-                            const optionBookElement = $(tokenInfo.element);
-                            const kyberDisplay = optionBookElement.clone();
-                            kyberDisplay.attr('id', tokenInfo.symbol.toLowerCase() + '-kyber-liquidity');
-                            kyberDisplay.text(formattedAmount);
-                            optionBookElement.after(kyberDisplay);
                         } else {
-                            $(kyberElement).text(formattedAmount);
+                            // Kyber allowances
+                            const tokenInfo = tokens[index - tokens.length * 2];
+                            const kyberApprovalAmount = approvalAmountResult.result;
+                            
+                            try {
+                                // Check if we have a valid result
+                                if (!kyberApprovalAmount || kyberApprovalAmount.toString() === '0') {
+                                    const formattedAmount = '0';
+                                    
+                                    // Store user's Kyber allowance for the swap modal
+                                    if (!state.userKyberAllowances) {
+                                        state.userKyberAllowances = {};
+                                    }
+                                    state.userKyberAllowances[tokenInfo.symbol] = formattedAmount;
+                                    
+                                    // Update Kyber allowance display
+                                    const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
+                                    if ($(kyberElement).length === 0) {
+                                        // Create Kyber allowance display if it doesn't exist
+                                        const optionBookElement = $(tokenInfo.element);
+                                        const kyberDisplay = optionBookElement.clone();
+                                        kyberDisplay.attr('id', tokenInfo.symbol.toLowerCase() + '-kyber-liquidity');
+                                        kyberDisplay.text(formattedAmount);
+                                        optionBookElement.after(kyberDisplay);
+                                    } else {
+                                        $(kyberElement).text(formattedAmount);
+                                    }
+                                    return;
+                                }
+                                
+                                // Format the amount with full decimal precision for UI display
+                                const formattedAmount = ethers.utils.formatUnits(kyberApprovalAmount, tokenInfo.decimals);
+                                
+                                // Store user's Kyber allowance for the swap modal
+                                if (!state.userKyberAllowances) {
+                                    state.userKyberAllowances = {};
+                                }
+                                state.userKyberAllowances[tokenInfo.symbol] = formattedAmount;
+                                
+                                // Update Kyber allowance display (create if doesn't exist)
+                                const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
+                                if ($(kyberElement).length === 0) {
+                                    // Create Kyber allowance display if it doesn't exist
+                                    const optionBookElement = $(tokenInfo.element);
+                                    const kyberDisplay = optionBookElement.clone();
+                                    kyberDisplay.attr('id', tokenInfo.symbol.toLowerCase() + '-kyber-liquidity');
+                                    kyberDisplay.text(formattedAmount);
+                                    optionBookElement.after(kyberDisplay);
+                                } else {
+                                    $(kyberElement).text(formattedAmount);
+                                }
+                            } catch (error) {
+                                console.error(`Error processing Kyber approval for ${tokenInfo.symbol}:`, error);
+                                const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
+                                if ($(kyberElement).length > 0) {
+                                    $(kyberElement).text('--');
+                                }
+                            }
                         }
-                    } catch (error) {
-                        console.error(`Error processing Kyber approval for ${tokenInfo.symbol}:`, error);
+                    });
+
+                } catch (error) {
+                    console.error('Error in multicall:', error);
+                    // Set all to '--' if multicall fails
+                    tokens.forEach(tokenInfo => {
+                        $(tokenInfo.element).text('--');
                         const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
                         if ($(kyberElement).length > 0) {
                             $(kyberElement).text('--');
                         }
+                    });
+                    
+                    // Also show error in main allowance display
+                    const allowanceDisplay = document.getElementById('payment-allowance-amount');
+                    if (allowanceDisplay) {
+                        allowanceDisplay.textContent = 'Failed';
                     }
                 }
-            });
-
-        } catch (error) {
-            console.error('Error in multicall:', error);
-            // Set all to '--' if multicall fails
-            tokens.forEach(tokenInfo => {
-                $(tokenInfo.element).text('--');
-                const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
-                if ($(kyberElement).length > 0) {
-                    $(kyberElement).text('--');
+            } catch (error) {
+                console.error('Error in background liquidity update:', error);
+                // Show error state for failed tokens
+                tokens.forEach(tokenInfo => {
+                    $(tokenInfo.element).text('Failed');
+                });
+                
+                // Also show error in main allowance display
+                const allowanceDisplay = document.getElementById('payment-allowance-amount');
+                if (allowanceDisplay) {
+                    allowanceDisplay.textContent = 'Failed';
                 }
-            });
-        }
+            }
+        }, 150); // Small delay to ensure UI updates are shown first
+        
     } catch (error) {
         console.error('Error updating liquidity information:', error);
     }
@@ -1501,45 +1612,98 @@ async function updateWalletBalance() {
         // Store current selection to preserve user preference
         const currentSelection = getSelectedPaymentAsset();
         
-        // Get ERC20 token balances
-        const { readContracts } = WagmiCore;
-        const contracts = erc20Tokens.map(token => ({
-            address: CONFIG.collateralMap[token],
-            abi: ERC20ABI,
-            functionName: 'balanceOf',
-            args: [state.connectedAddress],
-            chainId: 8453
-        }));
-        const balances = await readContracts({ contracts });
-        
-        // Store balances for display
-        state.paymentAssetBalances = {};
-        
-        // Process ERC20 token balances
-        erc20Tokens.forEach((token, i) => {
-            const balance = formatUnits(balances[i].result, CONFIG.getCollateralDetails(CONFIG.collateralMap[token]).decimals);
-            state.paymentAssetBalances[token] = balance;
-            
-            // Update button tooltips with balance information
-            const button = document.querySelector(`input[name="payment-asset-selection"][value="${token}"]`);
-            if (button) {
-                const label = button.nextElementSibling;
-                if (label) {
-                    // Get USD value if we have market prices
-                    let usdValue = '';
-                    if (state.market_prices && state.market_prices[token]) {
-                        const price = state.market_prices[token];
-                        const usdAmount = (parseFloat(balance) * price).toFixed(2);
-                        usdValue = ` ($${usdAmount})`;
-                    }
-                    label.setAttribute('data-balance', `${balance} ${token}${usdValue}`);
+        // OPTIMIZATION: Show cached balances immediately if available
+        if (state.paymentAssetBalances) {
+            // Update UI with cached data first for instant response
+            erc20Tokens.forEach(token => {
+                const cachedBalance = state.paymentAssetBalances[token];
+                if (cachedBalance && cachedBalance !== 'Loading...' && cachedBalance !== 'Error' && cachedBalance !== 'Failed') {
+                    updateBalanceDisplay(token, cachedBalance);
                 }
+            });
+        }
+        
+        // OPTIMIZATION: Show loading placeholders for missing data
+        erc20Tokens.forEach(token => {
+            if (!state.paymentAssetBalances || !state.paymentAssetBalances[token] || 
+                state.paymentAssetBalances[token] === 'Loading...' || 
+                state.paymentAssetBalances[token] === 'Error' || 
+                state.paymentAssetBalances[token] === 'Failed') {
+                // Set loading state in state
+                if (!state.paymentAssetBalances) {
+                    state.paymentAssetBalances = {};
+                }
+                state.paymentAssetBalances[token] = 'Loading...';
+                
+                // Update UI to show loading
+                updateBalanceDisplay(token, 'Loading...');
             }
         });
+        
+        // OPTIMIZATION: Load fresh balances in background (non-blocking)
+        setTimeout(async () => {
+            try {
+                // Get ERC20 token balances using multicall
+                const { readContracts } = WagmiCore;
+                const contracts = erc20Tokens.map(token => ({
+                    address: CONFIG.collateralMap[token],
+                    abi: ERC20ABI,
+                    functionName: 'balanceOf',
+                    args: [state.connectedAddress],
+                    chainId: 8453
+                }));
+                
+                const balances = await readContracts({ contracts });
+                
+                // Store balances for display
+                if (!state.paymentAssetBalances) {
+                    state.paymentAssetBalances = {};
+                }
+                
+                // Process ERC20 token balances and update UI
+                erc20Tokens.forEach((token, i) => {
+                    try {
+                        const balance = formatUnits(balances[i].result, CONFIG.getCollateralDetails(CONFIG.collateralMap[token]).decimals);
+                        state.paymentAssetBalances[token] = balance;
+                        
+                        // Update UI with fresh balance
+                        updateBalanceDisplay(token, balance);
+                        
+                        // Update button tooltips with balance information
+                        updateBalanceTooltip(token, balance);
+                        
+                    } catch (error) {
+                        console.error(`Error processing balance for ${token}:`, error);
+                        state.paymentAssetBalances[token] = 'Error';
+                        updateBalanceDisplay(token, 'Error');
+                    }
+                });
+                
+                // Update balance display for currently selected asset
+                updatePaymentAssetBalanceDisplay(currentSelection);
+                
+                // Check fund status after balance update (debounced)
+                if (typeof refreshFundStatus === 'function') {
+                    refreshFundStatus();
+                }
+                
+            } catch (error) {
+                console.error('Error updating payment asset balances:', error);
+                // Show error state for failed tokens
+                erc20Tokens.forEach(token => {
+                    if (!state.paymentAssetBalances) {
+                        state.paymentAssetBalances = {};
+                    }
+                    state.paymentAssetBalances[token] = 'Failed';
+                    updateBalanceDisplay(token, 'Failed');
+                });
+            }
+        }, 100); // Small delay to ensure UI updates are shown first
         
         // Handle ETH balance separately (native token)
         // ETH balance is already handled by updateETHBalance() function
         // We'll set a placeholder here and let the existing ETH balance display handle it
+        state.paymentAssetBalances = state.paymentAssetBalances || {};
         state.paymentAssetBalances['ETH'] = '0'; // Placeholder, actual balance shown elsewhere
         
         // Update balance display for currently selected asset
@@ -1554,8 +1718,59 @@ async function updateWalletBalance() {
         if (typeof updateETHBalance === 'function') {
             updateETHBalance();
         }
+        
     } catch (error) {
         console.error('Error updating payment asset balances:', error);
+    }
+}
+
+// Helper function to update balance display for a specific token
+function updateBalanceDisplay(token, balance) {
+    const button = document.querySelector(`input[name="payment-asset-selection"][value="${token}"]`);
+    if (button) {
+        const label = button.nextElementSibling;
+        if (label) {
+            if (balance === 'Loading...') {
+                label.setAttribute('data-balance', `Loading...`);
+                // Add loading class for styling
+                label.classList.add('loading');
+            } else if (balance === 'Error' || balance === 'Failed') {
+                label.setAttribute('data-balance', `Error loading balance`);
+                // Remove loading class and add error styling
+                label.classList.remove('loading');
+                label.classList.add('error');
+            } else {
+                // Remove any special classes for normal balance display
+                label.classList.remove('loading', 'error');
+                
+                // Get USD value if we have market prices
+                let usdValue = '';
+                if (state.market_prices && state.market_prices[token]) {
+                    const price = state.market_prices[token];
+                    const usdAmount = (parseFloat(balance) * price).toFixed(2);
+                    usdValue = ` ($${usdAmount})`;
+                }
+                label.setAttribute('data-balance', `${balance} ${token}${usdValue}`);
+            }
+        }
+    }
+}
+
+// Helper function to update balance tooltip
+function updateBalanceTooltip(token, balance) {
+    const button = document.querySelector(`input[name="payment-asset-selection"][value="${token}"]`);
+    if (button) {
+        const label = button.nextElementSibling;
+        if (label) {
+            // Get USD value if we have market prices
+            let usdValue = '';
+            if (state.market_prices && state.market_prices[token]) {
+                const price = state.market_prices[token];
+                const usdAmount = (parseFloat(balance) * price).toFixed(2);
+                usdValue = ` ($${usdAmount})`;
+            }
+            label.setAttribute('data-balance', `${balance} ${token}${usdValue}`);
+        }
     }
 }
 
@@ -1587,26 +1802,38 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
     
     const balance = state.paymentAssetBalances[selectedAsset];
     
-    if (!balance || balance === '0') {
-        balanceDisplay.innerHTML = '<span class="balance-text no-balance">0.00 ${selectedAsset}</span>';
+    // OPTIMIZATION: Show loading state instead of zero balance while loading
+    if (!balance || balance === 'Loading...' || balance === 'Error' || balance === 'Failed') {
+        if (balance === 'Loading...') {
+            balanceDisplay.innerHTML = '<span class="balance-text loading">Loading balance...</span>';
+        } else if (balance === 'Error' || balance === 'Failed') {
+            balanceDisplay.innerHTML = '<span class="balance-text no-balance">Failed to load balance</span>';
+        } else {
+            balanceDisplay.innerHTML = '<span class="balance-text loading">Loading balance...</span>';
+        }
         if (allowanceDisplay) allowanceDisplay.textContent = '--';
         return;
     }
     
-    // Get USD value if we have market prices
-    let usdValue = '';
-    if (state.market_prices && state.market_prices[selectedAsset]) {
-        const price = state.market_prices[selectedAsset];
-        const usdAmount = (parseFloat(balance) * price).toFixed(2);
-        usdValue = `($${usdAmount})`;
+    // Only show actual balance if it's a valid number greater than 0
+    if (parseFloat(balance) === 0) {
+        balanceDisplay.innerHTML = '<span class="balance-text no-balance">0.00 ${selectedAsset}</span>';
+    } else {
+        // Get USD value if we have market prices
+        let usdValue = '';
+        if (state.market_prices && state.market_prices[selectedAsset]) {
+            const price = state.market_prices[selectedAsset];
+            const usdAmount = (parseFloat(balance) * price).toFixed(2);
+            usdValue = `($${usdAmount})`;
+        }
+        
+        balanceDisplay.innerHTML = `
+            <span class="balance-amount">${balance} ${selectedAsset}</span>
+            <span class="balance-usd">${usdValue}</span>
+        `;
     }
     
-    balanceDisplay.innerHTML = `
-        <span class="balance-amount">${balance} ${selectedAsset}</span>
-        <span class="balance-usd">${usdValue}</span>
-    `;
-    
-    // Update allowance display
+    // OPTIMIZATION: Update allowance display immediately with cached data
     if (allowanceDisplay) {
         // Get the user's OptionBook allowance from state if available
         if (state.userOptionBookAllowances && state.userOptionBookAllowances[selectedAsset]) {
@@ -1614,10 +1841,11 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
         } else {
             // Fallback to the liquidity info if user allowances not available yet
             const liquidityElement = document.getElementById(`${selectedAsset.toLowerCase()}-liquidity`);
-            if (liquidityElement && liquidityElement.textContent !== '--') {
+            if (liquidityElement && liquidityElement.textContent !== '--' && liquidityElement.textContent !== 'Loading...') {
                 allowanceDisplay.textContent = liquidityElement.textContent;
             } else {
-                allowanceDisplay.textContent = '--';
+                // Show loading state if no cached data available
+                allowanceDisplay.textContent = 'Loading...';
             }
         }
     }
@@ -1626,6 +1854,25 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
     const swapBtn = document.getElementById('swap-assets-btn');
     if (swapBtn) {
         swapBtn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i>Get more ${selectedAsset}`;
+    }
+}
+
+// OPTIMIZATION: Add function to immediately update allowance display when asset changes
+window.updateAllowanceDisplay = function(selectedAsset) {
+    const allowanceDisplay = document.getElementById('payment-allowance-amount');
+    if (!allowanceDisplay) return;
+    
+    if (selectedAsset === 'ETH') {
+        allowanceDisplay.textContent = 'N/A (Native)';
+        return;
+    }
+    
+    // Show cached allowance immediately if available
+    if (state.userOptionBookAllowances && state.userOptionBookAllowances[selectedAsset]) {
+        allowanceDisplay.textContent = state.userOptionBookAllowances[selectedAsset];
+    } else {
+        // Show loading state
+        allowanceDisplay.textContent = 'Loading...';
     }
 }
 
@@ -1713,6 +1960,37 @@ async function initialize() {
     
     // Initial data load (only once during startup)
     await refreshData(true); // Pass true to indicate this is initial load
+    
+    // OPTIMIZATION: Show initial allowance display immediately with cached data
+    setTimeout(() => {
+        try {
+            const selectedAsset = getSelectedPaymentAsset();
+            if (selectedAsset && typeof updateAllowanceDisplay === 'function') {
+                updateAllowanceDisplay(selectedAsset);
+            }
+        } catch (error) {
+            console.warn('Initial allowance display update failed:', error);
+        }
+    }, 100); // Small delay to ensure app is fully initialized
+    
+    // OPTIMIZATION: Preload balances and allowances in background for faster subsequent loads
+    setTimeout(async () => {
+        try {
+            if (state.connectedAddress) {
+                console.log('Preloading balances and allowances in background...');
+                // Preload wallet balances
+                if (typeof updateWalletBalance === 'function') {
+                    updateWalletBalance();
+                }
+                // Preload liquidity info (allowances)
+                if (typeof updateLiquidityInfo === 'function') {
+                    updateLiquidityInfo();
+                }
+            }
+        } catch (error) {
+            console.warn('Background preload failed:', error);
+        }
+    }, 2000); // Wait 2 seconds after initial load to avoid overwhelming the RPC
     
     // Set up periodic refresh timer (but not immediate)
     state.refreshTimer = setInterval(() => refreshData(false), REFRESH_INTERVAL);
