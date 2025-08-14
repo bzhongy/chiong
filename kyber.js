@@ -388,7 +388,7 @@ const kyberSwap = {
         
         // Check if swap is needed
         const orderCollateral = CONFIG.getCollateralDetails(order.collateral);
-        const selectedCollateral = document.getElementById('payment-asset').value;
+        const selectedCollateral = getSelectedPaymentAsset();
         const needsSwap = selectedCollateral !== orderCollateral.name;
         
         if (!needsSwap) {

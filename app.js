@@ -1277,7 +1277,7 @@ async function updateWalletBalance() {
         const tokens = ['USDC', 'CBBTC', 'WETH'];
         
         // Store current selection to preserve user preference
-        const currentSelection = $('#payment-asset').val();
+        const currentSelection = getSelectedPaymentAsset();
         
         const { readContracts } = WagmiCore;
         const contracts = tokens.map(token => ({
@@ -1289,16 +1289,31 @@ async function updateWalletBalance() {
         }));
         const balances = await readContracts({ contracts });
         
-        // Update each option's text individually without recreating HTML
+        // Store balances for display
+        state.paymentAssetBalances = {};
         tokens.forEach((token, i) => {
             const balance = formatUnits(balances[i].result, CONFIG.getCollateralDetails(CONFIG.collateralMap[token]).decimals);
-            $(`#payment-asset option[value="${token}"]`).text(`${token} (Wallet Balance: ${balance} ${token})`);
+            state.paymentAssetBalances[token] = balance;
+            
+            // Update button tooltips with balance information
+            const button = document.querySelector(`input[name="payment-asset-selection"][value="${token}"]`);
+            if (button) {
+                const label = button.nextElementSibling;
+                if (label) {
+                    // Get USD value if we have market prices
+                    let usdValue = '';
+                    if (state.market_prices && state.market_prices[token]) {
+                        const price = state.market_prices[token];
+                        const usdAmount = (parseFloat(balance) * price).toFixed(2);
+                        usdValue = ` ($${usdAmount})`;
+                    }
+                    label.setAttribute('data-balance', `${balance} ${token}${usdValue}`);
+                }
+            }
         });
         
-        // Restore the user's selection if it was valid
-        if (currentSelection && currentSelection !== 'init') {
-            $('#payment-asset').val(currentSelection);
-        }
+        // Update balance display for currently selected asset
+        updatePaymentAssetBalanceDisplay(currentSelection);
         
         // Check fund status after balance update (debounced)
         if (typeof refreshFundStatus === 'function') {
@@ -1307,6 +1322,42 @@ async function updateWalletBalance() {
     } catch (error) {
         console.error('Error updating payment asset balances:', error);
     }
+}
+
+// Get the currently selected payment asset from the button group
+window.getSelectedPaymentAsset = function() {
+    const selectedButton = document.querySelector('input[name="payment-asset-selection"]:checked');
+    return selectedButton ? selectedButton.value : 'USDC';
+}
+
+// Update the balance display for the selected payment asset
+window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
+    const balanceDisplay = document.getElementById('payment-balance-display');
+    
+    if (!state.paymentAssetBalances || !selectedAsset) {
+        balanceDisplay.innerHTML = '<span class="balance-text no-balance">No balance data available</span>';
+        return;
+    }
+    
+    const balance = state.paymentAssetBalances[selectedAsset];
+    
+    if (!balance || balance === '0') {
+        balanceDisplay.innerHTML = '<span class="balance-text no-balance">0.00 ${selectedAsset}</span>';
+        return;
+    }
+    
+    // Get USD value if we have market prices
+    let usdValue = '';
+    if (state.market_prices && state.market_prices[selectedAsset]) {
+        const price = state.market_prices[selectedAsset];
+        const usdAmount = (parseFloat(balance) * price).toFixed(2);
+        usdValue = `($${usdAmount})`;
+    }
+    
+    balanceDisplay.innerHTML = `
+        <span class="balance-amount">${balance} ${selectedAsset}</span>
+        <span class="balance-usd">${usdValue}</span>
+    `;
 }
 
 // Initialize the application
@@ -1318,6 +1369,12 @@ async function initialize() {
     // Restore exact approval preference from localStorage
     const exactApprovalEnabled = localStorage.getItem('exactApprovalEnabled') === 'true';
     $('#exact-approval-checkbox').prop('checked', exactApprovalEnabled);
+    
+    // Initialize payment asset balance display with loading state
+    const balanceDisplay = document.getElementById('payment-balance-display');
+    if (balanceDisplay) {
+        balanceDisplay.innerHTML = '<span class="balance-text loading">Loading balances...</span>';
+    }
     
     // Update help text based on saved preference
     const helpText = $('#exact-approval-checkbox').siblings('.form-text').find('small');

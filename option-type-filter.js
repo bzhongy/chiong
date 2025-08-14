@@ -374,10 +374,7 @@ async function selectOptionBasedOnConvictionWithFilter(updatePaymentAsset = fals
         }
     }
     
-    // Handle initialization case
-    if ($('#payment-asset').val() == "init") {
-        $('#payment-asset option[value="init"]').remove();
-    }
+    // Handle initialization case - no longer needed with button-based selection
     
     // Update position size display with contracts
     setTimeout(updatePositionSizeWithContracts, 200);

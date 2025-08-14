@@ -60,6 +60,20 @@ function setupEventListeners() {
         selectAsset(asset);
     });
     
+    // Payment asset selection
+    $('input[name="payment-asset-selection"]').on('change', function() {
+        const asset = $(this).val();
+        updatePaymentAssetBalanceDisplay(asset);
+        
+        // Update ETH wrapping interface visibility if WETH is selected
+        if (asset === 'WETH') {
+            updateETHBalance();
+            $('#eth-wrap-section').show();
+        } else {
+            $('#eth-wrap-section').hide();
+        }
+    });
+    
     // Advanced view is now the default and only view
     // Note: View toggle buttons don't exist in the main app.html, so we skip those event listeners
     
@@ -149,11 +163,7 @@ function setupEventListeners() {
         settleOptionBtn.addEventListener('click', settleOption);
     }
 
-    // Add event listener for payment asset selection
-    const paymentAsset = document.getElementById('payment-asset');
-    if (paymentAsset) {
-        paymentAsset.addEventListener('change', updatePaymentAsset);
-    }
+    // Payment asset selection is now handled by button group event listeners in setupEventListeners
 
     // Add scoreboard navigation
     window.scoreboard.init();
@@ -288,7 +298,7 @@ let isSelectingOption = false;
 
 // Update the payment asset selection to check swap requirements
 function updatePaymentAsset(skipPreviewUpdate = false) {
-    const selectedCollateral = document.getElementById('payment-asset').value;
+    const selectedCollateral = getSelectedPaymentAsset();
     const orderIndex = state.selectedOrderIndex;
     
     if (orderIndex === null) return;
@@ -478,9 +488,7 @@ async function selectOptionBasedOnConviction(updatePaymentAsset = false) {
     await selectOption(bestOrderIndex);
 
     // Handle initialization case - remove the init option after first selection
-    if ($('#payment-asset').val() == "init") {
-        $('#payment-asset option[value="init"]').remove();
-    }
+    // Remove init check since we're using buttons now
     
     // Note: Smart asset selection in selectOption() now handles payment asset selection automatically
     // The old manual reset logic is no longer needed
@@ -956,7 +964,7 @@ async function executeTrade() {
         $('#confirm-trade-btn').text('Processing...').prop('disabled', true);
 
         // Determine if a swap is needed
-        const selectedPaymentAssetName = $('#payment-asset').val();
+        const selectedPaymentAssetName = getSelectedPaymentAsset();
         const isSwapRequired = selectedPaymentAssetName !== CONFIG.getCollateralDetails(order.collateral).name;
         
         let swapInfo = null;
@@ -1539,7 +1547,7 @@ async function updateETHBalance() {
         $('#eth-balance-display').text(ethBalance.toFixed(4));
         
         // Show/hide wrap section based on whether WETH is selected and user has ETH
-        const selectedPayment = $('#payment-asset').val();
+        const selectedPayment = getSelectedPaymentAsset();
         if (selectedPayment === 'WETH' && ethBalance > 0.00001) {
             $('#eth-wrap-section').slideDown();
         } else if (selectedPayment !== 'WETH') {
@@ -1630,10 +1638,7 @@ function setupWrapETHListeners() {
     // ETH wrapping
     $('#wrap-eth-btn').on('click', wrapETH);
     
-    // Update ETH balance when payment asset changes
-    $('#payment-asset').on('change', function() {
-        updateETHBalance();
-    });
+    // Update ETH balance when payment asset changes - now handled by button group event listeners
     
     // Add quick amount buttons
     $(document).on('click', '[data-eth-amount]', function() {
@@ -1765,7 +1770,9 @@ async function selectBestPaymentAsset(order, requiredAmountUSD) {
         
         // Step 4: Update the UI to reflect the selected asset
         if (selectedAsset) {
-            $('#payment-asset').val(selectedAsset);
+            // Update button selection instead of dropdown
+        $(`input[name="payment-asset-selection"][value="${selectedAsset}"]`).prop('checked', true);
+        updatePaymentAssetBalanceDisplay(selectedAsset);
             
             // Trigger update to show swap information if needed (preview update will be skipped due to isSelectingOption flag)
             updatePaymentAsset();
@@ -1778,7 +1785,9 @@ async function selectBestPaymentAsset(order, requiredAmountUSD) {
         // Fallback to preferred asset
         try {
             const requiredCollateral = CONFIG.getCollateralDetails(order.collateral);
-            $('#payment-asset').val(requiredCollateral.name);
+            // Update button selection instead of dropdown
+        $(`input[name="payment-asset-selection"][value="${requiredCollateral.name}"]`).prop('checked', true);
+        updatePaymentAssetBalanceDisplay(requiredCollateral.name);
             return requiredCollateral.name;
         } catch (fallbackError) {
             console.error("Error in fallback asset selection:", fallbackError);
@@ -1878,7 +1887,7 @@ async function checkSufficientFunds() {
     const orderData = state.orders[state.selectedOrderIndex];
     const order = orderData.order;
     const requiredCollateral = CONFIG.getCollateralDetails(order.collateral);
-    const selectedPaymentAsset = $('#payment-asset').val();
+    const selectedPaymentAsset = getSelectedPaymentAsset();
     const tradeCostInCollateral = state.selectedPositionSize;
     
     // If payment asset is not yet loaded/selected, don't disable
