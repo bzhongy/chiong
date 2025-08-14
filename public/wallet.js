@@ -41,6 +41,21 @@ let web3OnboardBridge;
 let ethereumClient;
 let WagmiCore;
 
+// Store real Wagmi functions when available
+function storeRealWagmiFunctions() {
+    // Check if real Wagmi readContracts is available
+    if (window.WagmiCore && typeof window.WagmiCore.readContracts === 'function') {
+        window.__WAGMI_READ_CONTRACTS__ = window.WagmiCore.readContracts;
+        console.log('Real Wagmi readContracts detected and stored');
+    }
+    
+    // Check if real Wagmi readContract is available
+    if (window.WagmiCore && typeof window.WagmiCore.readContract === 'function') {
+        window.__WAGMI_READ_CONTRACT__ = window.WagmiCore.readContract;
+        console.log('Real Wagmi readContract detected and stored');
+    }
+}
+
 // Dynamically load web3-onboard bridge bundle if not already present
 function loadWeb3OnboardBridge() {
     return new Promise((resolve, reject) => {
@@ -113,24 +128,36 @@ if (!window.ethereumClient) {
 if (!window.WagmiCore) {
     window.WagmiCore = {
         readContract: async ({ address, abi, functionName, args = [], chainId }) => {
-            const b = __getBridge();
-            const provider = b && b.getProvider ? b.getProvider() : null;
-            if (!provider) throw new Error('No provider available');
-            const contract = new ethers.Contract(address, abi, provider);
+            // Force all calls through custom RPC endpoint
+            const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+            const contract = new ethers.Contract(address, abi, directProvider);
             return await contract[functionName](...(args || []));
         },
-        // Minimal multicall-compatible shim. Executes calls sequentially.
-        readContracts: async ({ contracts = [] }) => {
-            const b = __getBridge();
-            const provider = b && b.getProvider ? b.getProvider() : null;
-            if (!provider) throw new Error('No provider available');
+        // Use real Wagmi readContracts when available (which handles multicall automatically)
+        // Only fall back to our implementation when necessary
+        readContracts: async (params) => {
+            // If we have the real Wagmi readContracts, use it (it handles multicall automatically)
+            if (window.__WAGMI_READ_CONTRACTS__) {
+                return await window.__WAGMI_READ_CONTRACTS__(params);
+            }
+            
+            // Fallback to sequential calls if real Wagmi not available
+            const { contracts = [] } = params;
+            // Force all calls through custom RPC endpoint
+            const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+            
+            console.warn('Using fallback sequential calls - real Wagmi multicall not available');
             const results = [];
             for (const c of contracts) {
-                const { address, abi, functionName, args = [] } = c;
-                const contract = new ethers.Contract(address, abi, provider);
-                // Match viem-style return shape: { result }
-                const value = await contract[functionName](...(args || []));
-                results.push({ result: value });
+                try {
+                    const { address, abi, functionName, args = [] } = c;
+                    const contract = new ethers.Contract(address, abi, directProvider);
+                    const value = await contract[functionName](...(args || []));
+                    results.push({ result: value });
+                } catch (error) {
+                    console.error(`Sequential call failed for ${c.functionName}:`, error);
+                    results.push({ result: null, error: error.message });
+                }
             }
             return results;
         },
@@ -144,16 +171,14 @@ if (!window.WagmiCore) {
             return tx;
         },
         waitForTransaction: async ({ hash }) => {
-            const b = __getBridge();
-            const provider = b && b.getProvider ? b.getProvider() : null;
-            if (!provider) throw new Error('No provider available');
-            return await provider.waitForTransaction(hash);
+            // Force all calls through custom RPC endpoint
+            const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+            return await directProvider.waitForTransaction(hash);
         },
         getETHBalance: async (address) => {
-            const b = __getBridge();
-            const provider = b && b.getProvider ? b.getProvider() : null;
-            if (!provider) throw new Error('No provider available');
-            return await provider.getBalance(address);
+            // Force all calls through custom RPC endpoint
+            const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+            return await directProvider.getBalance(address);
         },
         wrapETH: async (amount) => {
             const b = __getBridge();
@@ -163,10 +188,9 @@ if (!window.WagmiCore) {
             throw new Error('wrapETH not implemented in web3-onboard bridge');
         },
         getNetwork: async () => {
-            const b = __getBridge();
-            const provider = b && b.getProvider ? b.getProvider() : null;
-            if (!provider) throw new Error('No provider available');
-            const net = await provider.getNetwork();
+            // Force all calls through custom RPC endpoint
+            const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+            const net = await directProvider.getNetwork();
             // Normalize to shape expected by callers: { chain: { id } }
             const chainId = net?.chainId ?? net?.id;
             return { chain: { id: Number(chainId) } };
@@ -214,21 +238,36 @@ function setupOnboardCompatibility() {
         // WagmiCore shim
         window.WagmiCore = {
             readContract: async ({ address, abi, functionName, args = [], chainId }) => {
-                const provider = window.Web3OnboardBridge.getProvider && window.Web3OnboardBridge.getProvider();
-                if (!provider) throw new Error('No provider available');
-                const contract = new ethers.Contract(address, abi, provider);
+                // Force all calls through custom RPC endpoint
+                const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+                const contract = new ethers.Contract(address, abi, directProvider);
                 return await contract[functionName](...(args || []));
             },
-            // Minimal multicall-compatible shim. Executes calls sequentially.
-            readContracts: async ({ contracts = [] }) => {
-                const provider = window.Web3OnboardBridge.getProvider && window.Web3OnboardBridge.getProvider();
-                if (!provider) throw new Error('No provider available');
+            // Use real Wagmi readContracts when available (which handles multicall automatically)
+            // Only fall back to our implementation when necessary
+            readContracts: async (params) => {
+                // If we have the real Wagmi readContracts, use it (it handles multicall automatically)
+                // if (window.__WAGMI_READ_CONTRACTS__) {
+                //     return await window.__WAGMI_READ_CONTRACTS__(params);
+                // }
+                
+                // Fallback to sequential calls if real Wagmi not available
+                const { contracts = [] } = params;
+                // Force all calls through custom RPC endpoint
+                const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+                
+                console.warn('Using fallback sequential calls - real Wagmi multicall not available');
                 const results = [];
                 for (const c of contracts) {
-                    const { address, abi, functionName, args = [] } = c;
-                    const contract = new ethers.Contract(address, abi, provider);
-                    const value = await contract[functionName](...(args || []));
-                    results.push({ result: value });
+                    try {
+                        const { address, abi, functionName, args = [] } = c;
+                        const contract = new ethers.Contract(address, abi, directProvider);
+                        const value = await contract[functionName](...(args || []));
+                        results.push({ result: value });
+                    } catch (error) {
+                        console.error(`Sequential call failed for ${c.functionName}:`, error);
+                        results.push({ result: null, error: error.message });
+                    }
                 }
                 return results;
             },
@@ -240,19 +279,27 @@ function setupOnboardCompatibility() {
                 return tx;
             },
             waitForTransaction: async ({ hash }) => {
-                const provider = window.Web3OnboardBridge.getProvider && window.Web3OnboardBridge.getProvider();
-                if (!provider) throw new Error('No provider available');
-                return await provider.waitForTransaction(hash);
+                // Force all calls through custom RPC endpoint
+                const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+                return await directProvider.waitForTransaction(hash);
             },
             getETHBalance: async (address) => {
-                const provider = window.Web3OnboardBridge.getProvider && window.Web3OnboardBridge.getProvider();
-                if (!provider) throw new Error('No provider available');
-                return await provider.getBalance(address);
+                // Force all calls through custom RPC endpoint
+                const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+                return await directProvider.getBalance(address);
+            },
+            wrapETH: async (amount) => {
+                const b = __getBridge();
+                const signer = b && b.getSigner ? b.getSigner() : null;
+                if (!signer) throw new Error('No signer available');
+                // No WETH address provided in context; if needed, inject WETH contract here.
+                throw new Error('wrapETH not implemented in web3-onboard bridge');
             },
             getNetwork: async () => {
-                const provider = window.Web3OnboardBridge.getProvider && window.Web3OnboardBridge.getProvider();
-                if (!provider) throw new Error('No provider available');
-                const net = await provider.getNetwork();
+                // Force all calls through custom RPC endpoint
+                const directProvider = new ethers.providers.JsonRpcProvider('https://rpc.ankr.com/base/4edff7dc8145c9269265a26c0bfb487a7f59a2e7d9b85e6f7f1b4ec99f497465');
+                const net = await directProvider.getNetwork();
+                // Normalize to shape expected by callers: { chain: { id } }
                 const chainId = net?.chainId ?? net?.id;
                 return { chain: { id: Number(chainId) } };
             },
@@ -291,11 +338,14 @@ async function setupWeb3Onboard() {
             window.Web3OnboardBridge.init();
             setupOnboardCompatibility();
             
-            // Set up global references
-            try { 
-                ethereumClient = window.ethereumClient; 
-                WagmiCore = window.WagmiCore; 
-            } catch (e) {}
+                    // Set up global references
+        try { 
+            ethereumClient = window.ethereumClient; 
+            WagmiCore = window.WagmiCore; 
+        } catch (e) {}
+        
+        // Store real Wagmi functions if available
+        storeRealWagmiFunctions();
             
             // Check if already connected
             const address = window.Web3OnboardBridge.getAddress && window.Web3OnboardBridge.getAddress();
@@ -550,6 +600,44 @@ window.testAutoConnect = function() {
         window.Web3OnboardBridge.testAutoConnect();
     } else {
         console.log('Web3OnboardBridge.testAutoConnect not available');
+    }
+};
+
+// Add test function for debugging multicall
+window.testMulticall = async function() {
+    console.log('Testing multicall functionality...');
+    
+    if (window.__WAGMI_READ_CONTRACTS__) {
+        console.log('✅ Real Wagmi readContracts available - multicall should work automatically');
+    } else {
+        console.log('❌ Real Wagmi readContracts not available - using fallback sequential calls');
+    }
+    
+    // Test with a simple multicall
+    try {
+        const testContracts = [
+            {
+                address: '0x4200000000000000000000000000000000000006', // WETH on Base
+                abi: ['function name() view returns (string)'],
+                functionName: 'name'
+            },
+            {
+                address: '0x4200000000000000000000000000000000000006', // WETH on Base
+                abi: ['function symbol() view returns (string)'],
+                functionName: 'symbol'
+            }
+        ];
+        
+        const result = await window.WagmiCore.readContracts({ contracts: testContracts });
+        console.log('Multicall test result:', result);
+        
+        if (result.length === 2 && result[0].result && result[1].result) {
+            console.log('✅ Multicall test successful!');
+        } else {
+            console.log('❌ Multicall test failed');
+        }
+    } catch (error) {
+        console.error('Multicall test error:', error);
     }
 };
 

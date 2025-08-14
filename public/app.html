@@ -43,6 +43,45 @@
             opacity: 0.8;
         }
         
+        /* Mobile-specific improvements */
+        @media (max-width: 768px) {
+            /* Improve touch targets */
+            .btn {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            
+            /* Better spacing for mobile */
+            .container {
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
+            }
+            
+            /* Optimize table display on mobile */
+            .table-responsive {
+                border: none;
+            }
+            
+            /* Improve form controls on mobile */
+            .form-control, .form-select {
+                font-size: 16px; /* Prevents zoom on iOS */
+                min-height: 44px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+            }
+            
+            /* Further optimize for very small screens */
+            .btn {
+                font-size: 0.9rem;
+                padding: 0.5rem 0.75rem;
+            }
+        }
+        
         /* Override default tooltip styling for better visibility */
         .tooltip {
             font-size: 0.875rem;
@@ -182,88 +221,60 @@
 </head>
 <body>
     <div class="app-container">
-        <header>
-            <nav class="navbar navbar-expand-lg">
-                <div class="container-fluid">
-                    <!-- Brand -->
-                    <a class="navbar-brand" href="#">
-                        <div class="brand-container">
-                        <div class="brand-text">
-                            <h1>Chiong<span>.fi</span></h1>
-                            <p class="brand-tagline">Zero-Day Lightning Trades</p>
+        <main>
+            <!-- Brand and Wallet Section -->
+            <section class="brand-wallet-section">
+                <div class="container">
+                    <div class="row align-items-center">
+                        <!-- Brand -->
+                        <div class="col-6">
+                            <div class="brand-display">
+                                <h1>Chiong<span>.fi</span></h1>
+                            </div>
                         </div>
-                        </div>
-                    </a>
-                    
-                    <!-- Toggle button for mobile -->
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
-                            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                    
-                    <!-- Navbar links -->
-                    <div class="collapse navbar-collapse" id="navbarNav">
-                        <ul class="navbar-nav ms-auto">
-                            <li class="nav-item">
-                                <a class="nav-link active" href="#" id="nav-trade">Trade</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#" id="nav-positions">Positions</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#" id="nav-history">History</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="#" id="nav-scoreboard">Scoreboard</a>
-                            </li>
-                            <!--<li class="nav-item">
-                                <a class="nav-link" href="https://docs.chiong.fi" target="_blank">Docs</a>
-                            </li>-->
-                        </ul>
                         
                         <!-- Wallet connection -->
-                        <div class="wallet-section">
-                            <div id="wallet-status" class="not-connected">
-                                <!-- Buttons for choosing connection type -->
-                                <button id="connect-web3modal-btn" class="btn btn-primary" style="display: none;">Connect Wallet</button>
-                                
-                                <span class="address-display" id="address-display" style="display: none;"></span>
-                                
-                                <button id="tx-history-btn" class="btn btn-sm btn-outline-secondary ms-1" style="display: none;" title="Transaction History">
-                                    <i class="bi bi-clock-history"></i>
-                                </button>
-                                
-                                <div id="tx-history-dropdown" class="tx-history-dropdown" style="display: none;"></div>
-                                
-                                <button id="save-private-key" class="btn btn-sm btn-outline-secondary ms-2" style="display: none;" title="Copy private key to clipboard">
-                                    <i class="bi bi-save"></i> Save Key
-                                </button>
-                                
-                                <button id="disconnect-wallet-btn" class="btn btn-sm btn-outline-danger ms-1" style="display: none; margin-top:1px">
-                                    <i class="bi bi-box-arrow-right"></i> Disconnect
-                                </button>
+                        <div class="col-6">
+                            <div class="wallet-section">
+                                <div id="wallet-status" class="not-connected">
+                                    <!-- Buttons for choosing connection type -->
+                                    <button id="connect-web3modal-btn" class="btn btn-primary" style="display: none;">Connect Wallet</button>
+                                    
+                                    <span class="address-display" id="address-display" style="display: none;"></span>
+                                    
+                                    <button id="tx-history-btn" class="btn btn-sm btn-outline-secondary ms-1" style="display: none;" title="Transaction History">
+                                        <i class="bi bi-clock-history"></i>
+                                    </button>
+                                    
+                                    <div id="tx-history-dropdown" class="tx-history-dropdown" style="display: none;"></div>
+                                    
+                                    <button id="save-private-key" class="btn btn-sm btn-outline-secondary ms-2" style="display: none;" title="Copy private key to clipboard">
+                                        <i class="bi bi-save"></i> Save Key
+                                    </button>
+                                    
+                                    <button id="disconnect-wallet-btn" class="btn btn-sm btn-outline-danger ms-1" style="display: none; margin-top:1px" title="Disconnect Wallet">
+                                        <i class="bi bi-box-arrow-right"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </nav>
-        </header>
-        
+            </section>
 
-        <main>
             <!-- Connection status alert -->
             <div id="connection-alert" class="alert alert-warning alert-dismissible fade show" role="alert" style="display: none;">
                 <strong>Not Connected!</strong> Please connect your wallet to start trading.
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
-            <!-- Trade Section -->
-            <section id="trade-section" class="content-section">
+            <!-- Asset selector and info -->
+            <section id="asset-selector-section" class="content-section">
                 <div class="container">
                     <div class="row">
                         <!-- Asset selector and info -->
                         <div class="col-12 mb-4">
-                            <div class="asset-header d-flex justify-content-between align-items-center">
+                            <div class="d-flex justify-content-between align-items-center">
                                 <div class="asset-selector">
                                     <div class="btn-group" role="group" aria-label="Asset selection">
                                         <input type="radio" class="btn-check" name="asset-selection" id="asset-eth" value="ETH" checked>
@@ -277,65 +288,26 @@
                                 <div class="asset-info">
                                     <div class="price-display">
                                         <span id="current-price">0.00</span> / <span id="asset-symbol">ETH</span>
-                                        <button id="price-alert-btn" class="btn btn-sm btn-outline-warning ms-2" title="Set Price Alert">
-                                            <i class="bi bi-bell"></i>
-                                        </button>
-                                        <span id="active-alerts-count" class="badge bg-warning text-dark ms-1" style="display: none;">0</span>
-                                    </div>
-                                    <div class="time-display">
-                                        <span id="expiry-time">08:00 UTC EXPIRY</span> | <span id="time-left" class="countdown">--:--:--</span>
-                                    </div>
-                                </div>
-                                <div class="view-toggle">
-                                    <button id="basic-view" class="btn btn-sm btn-outline-primary active">Basic View</button>
-                                    <button id="advanced-view" class="btn btn-sm btn-outline-primary">Advanced View</button>
-                                    
-                                    <!-- Option Type Filter - smaller and positioned here -->
-                                    <div class="option-type-filter-compact mt-2">
-                                        <div class="btn-group btn-group-sm" role="group" aria-label="Option type filter">
-                                            <input type="radio" class="btn-check" name="option-type-filter" id="filter-all" value="all" checked>
-                                            <label class="btn btn-outline-secondary" for="filter-all">ALL</label>
-                                            
-                                            <input type="radio" class="btn-check" name="option-type-filter" id="filter-puts" value="puts">
-                                            <label class="btn btn-outline-danger" for="filter-puts">PUTS</label>
-                                            
-                                            <input type="radio" class="btn-check" name="option-type-filter" id="filter-calls" value="calls">
-                                            <label class="btn btn-outline-success" for="filter-calls">CALLS</label>
-                                        </div>
-                                        <div class="filter-description-compact mt-1">
-                                            <small class="text-muted" id="filter-description">Showing all options</small>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Trading Interface - Basic View -->
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Trading Interface - Advanced View (Default) -->
+            <section id="quote-status-section" class="content-section">
+                <div class="container">
+                    <div class="row">
                         <div id="quote-status-message" class="alert alert-warning mt-3" style="display: none;" role="alert"></div>                         
-                        <div class="col-12" id="basic-view-container">
-                            <div class="trade-card card">
-                                <div class="card-body">
-                                    <h5 class="card-title">Your Price Target:</h5>
-                                    <div class="conviction-slider-container">
-                                        <div class="leverage-indicator">
-                                            <span class="leverage-value">100x</span> LEVERAGE
-                                        </div>
-                                        
-                                        <div class="conviction-labels">
-                                            <span class="bearish-label">BEARISH</span>
-                                            <span class="bullish-label">BULLISH</span>
-                                        </div>
-                                        <input type="range" class="form-range" id="conviction-slider" min="0" max="100" value="50">
-                                        
-                                        <div class="price-targets">
-                                            <span class="price-target low" id="low-price">$---</span>
-                                            <span class="price-target current" id="current-target">$---</span>
-                                            <span class="price-target high" id="high-price">$---</span>
-                                        </div>
+                        <div class="col-12" id="advanced-view-container">
+                                    <div class="leverage-indicator">
+                                        <span class="leverage-value">100x</span> LEVERAGE
                                     </div>
                                     
                                     <!-- Analytics Dashboard -->
-                                    <div class="analytics-dashboard mt-4" id="analytics-dashboard">
+                                    <div class="analytics-dashboard mt-4" id="analytics-dashboard" style="display: none;">
                                         <div class="analytics-header d-flex justify-content-between align-items-center">
                                             <h6 class="analytics-title mb-0">
                                                 <i class="bi bi-graph-up"></i> Market Analytics
@@ -468,24 +440,13 @@
                                         </div>
                                     </div>
                                     
-                                    <h5 class="card-title mt-4">Position Size:</h5>
-                                    <div class="position-size-container">
-                                        <input type="range" class="form-range" id="position-size-slider" min="0" max="1" value="1" step="0.1">
-                                        <div class="position-size-labels">
-                                            <span class="size-label min">$10</span>
-                                            <span class="size-label max">$1000</span>
-                                        </div>
-                                        <div class="current-size-display">
-                                            <span id="current-size">100</span>
-                                        </div>
-                                    </div>
-                                    
                                     <div class="options-table-container">
                                         <table class="table options-table">
                                             <thead>
                                                 <tr>
                                                     <th>Strike</th>
                                                     <th>Type</th>
+                                                    <th>Expiry <i class="bi bi-sort-down" title="Sorted by expiry (earliest first)"></i></th>
                                                     <th>Premium</th>
                                                     <th>Payout Ratio</th>
                                                     <th>Break-even</th>
@@ -498,16 +459,68 @@
                                                 <!-- Options will be populated here dynamically -->
                                             </tbody>
                                         </table>
+                                        <div class="table-info mt-2">
+                                            <small class="text-muted">
+                                                <i class="bi bi-info-circle"></i> Table sorted by expiry time (earliest first)
+                                            </small>
+                                        </div>
+                                    </div>
+                                    
+                                    <h5 class="card-title mt-4">Position Size:</h5>
+                                    <div class="position-size-container">
+                                        <input type="range" class="form-range" id="position-size-slider" min="0" max="1" value="1" step="0.1">
+                                        <div class="position-size-labels">
+                                            <span class="size-label min">$10</span>
+                                            <span class="size-label max">$1000</span>
+                                        </div>
+                                        <div class="current-size-display">
+                                            <span id="current-size">100</span>
+                                        </div>
                                     </div>
                                     
                                     <div class="payment-selection mt-4">
                                         <label for="payment-asset">Pay With:</label>
-                                        <select class="form-select" id="payment-asset">
-                                            <option value="init" selected>Loading...</option>
-                                            <option value="USDC">USDC</option>
-                                            <option value="WETH">WETH</option>
-                                            <option value="CBBTC">CBBTC</option>
-                                        </select>
+                                        <div class="payment-asset-buttons">
+                                            <div class="btn-group" role="group" aria-label="Payment asset selection">
+                                                <input type="radio" class="btn-check" name="payment-asset-selection" id="payment-usdc" value="USDC" checked>
+                                                <label class="btn btn-outline-primary" for="payment-usdc">USDC</label>
+                                                
+                                                <input type="radio" class="btn-check" name="payment-asset-selection" id="payment-weth" value="WETH">
+                                                <label class="btn btn-outline-primary" for="payment-weth">WETH</label>
+                                                
+                                                <input type="radio" class="btn-check" name="payment-asset-selection" id="payment-cbbtc" value="CBBTC">
+                                                <label class="btn btn-outline-primary" for="payment-cbbtc">CBBTC</label>
+                                            </div>
+                                            
+                                            <!-- Swap Button -->
+                                            <div class="swap-button-container mt-2">
+                                                <button type="button" class="btn btn-outline-secondary btn-sm" id="swap-assets-btn">
+                                                    <i class="bi bi-arrow-repeat me-1"></i>Swap Assets
+                                                </button>
+                                            </div>
+                                            
+                                            <!-- Balance display below buttons -->
+                                            <div class="payment-balance-display mt-2" id="payment-balance-display">
+                                                <span class="balance-text">Loading balances...</span>
+                                            </div>
+                                            
+                                            <!-- Allowance display below balance -->
+                                            <div class="payment-allowance-display mt-1" id="payment-allowance-display">
+                                                <small class="text-muted">
+                                                    <i class="bi bi-shield-check"></i>
+                                                    OptionBook Allowance: <span id="payment-allowance-amount">--</span>
+                                                </small>
+                                            </div>
+                                            
+                                            <!-- ETH Balance Display -->
+                                            <div class="eth-balance-info mt-2" id="eth-balance-info">
+                                                <small class="text-muted">
+                                                    <i class="bi bi-info-circle"></i>
+                                                    ETH Balance: <span id="eth-balance-display-main">--</span> ETH
+                                                    <span id="eth-usd-value" class="ms-2">($--)</span>
+                                                </small>
+                                            </div>
+                                        </div>
                                         
                                         <!-- Add Exact Approval Checkbox -->
                                         <div class="form-check mt-3">
@@ -520,6 +533,87 @@
                                                     When unchecked, approves up to $1000 worth of tokens to reduce future approval transactions. 
                                                     When checked, approves only the exact amount needed for this trade.
                                                 </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Swap Modal -->
+                                    <div class="modal fade" id="swapModal" tabindex="-1" aria-labelledby="swapModalLabel" aria-hidden="true">
+                                        <div class="modal-dialog modal-lg">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="swapModalLabel">
+                                                        <i class="bi bi-arrow-repeat me-2"></i>Swap Assets
+                                                    </h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="swap-form">
+                                                        <div class="row">
+                                                            <!-- From Asset -->
+                                                            <div class="col-md-6">
+                                                                <label for="swap-from-asset" class="form-label">From:</label>
+                                                                <select class="form-select" id="swap-from-asset">
+                                                                    <!-- Will be populated dynamically from CONFIG -->
+                                                                </select>
+                                                                <div class="mt-2">
+                                                                    <label for="swap-from-amount" class="form-label">Amount:</label>
+                                                                    <input type="number" class="form-control" id="swap-from-amount" placeholder="0.0" step="0.000001" min="0">
+                                                                    <div class="form-text">
+                                                                        Balance: <span id="swap-from-balance">--</span>
+                                                                    </div>
+                                                                    <div class="form-text">
+                                                                        Kyber Allowance: <span id="swap-from-kyber-allowance">--</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <!-- To Asset -->
+                                                            <div class="col-md-6">
+                                                                <label for="swap-to-asset" class="form-label">To:</label>
+                                                                <select class="form-select" id="swap-to-asset">
+                                                                    <!-- Will be populated dynamically from CONFIG -->
+                                                                </select>
+                                                                <div class="mt-2">
+                                                                    <label for="swap-to-amount" class="form-label">You'll Receive:</label>
+                                                                    <input type="number" class="form-control" id="swap-to-amount" placeholder="0.0" readonly>
+                                                                    <div class="form-text">
+                                                                        Rate: <span id="swap-rate">--</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Swap Rate Info -->
+                                                        <div class="swap-rate-info mt-3" id="swap-rate-info" style="display: none;">
+                                                            <div class="alert alert-info">
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <span><i class="bi bi-info-circle me-2"></i>Swap Rate</span>
+                                                                    <span id="swap-rate-display">--</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <!-- Quick Amount Buttons -->
+                                                        <div class="quick-amounts mt-3">
+                                                            <small class="text-muted">Quick amounts: </small>
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-amount="0.01">0.01</button>
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-amount="0.1">0.1</button>
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-amount="0.5">0.5</button>
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary" data-amount="1.0">1.0</button>
+                                                            <button type="button" class="btn btn-sm btn-outline-primary ms-2" data-amount="0.01" data-eth-specific="true">0.01 ETH</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <button type="button" class="btn btn-warning" id="approve-swap-btn" style="display: none;">
+                                                        <i class="bi bi-shield-check me-1"></i>Approve
+                                                    </button>
+                                                    <button type="button" class="btn btn-primary" id="execute-swap-btn" disabled>
+                                                        <i class="bi bi-arrow-repeat me-1"></i>Execute Swap
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -586,6 +680,18 @@
                                                         <span class="detail-value">$<span id="payout-ratio">---</span> for every $1 <span id="payout-direction">above</span> <span id="payout-threshold">---</span></span>
                                                     </div>
                                                     <div class="detail-row">
+                                                        <span class="detail-label">Break-even Price:</span>
+                                                        <span class="detail-value">$<span id="option-breakeven">---</span></span>
+                                                    </div>
+                                                    <div class="detail-row">
+                                                        <span class="detail-label">Delta:</span>
+                                                        <span class="detail-value"><span id="option-delta">---</span></span>
+                                                    </div>
+                                                    <div class="detail-row">
+                                                        <span class="detail-label">Implied Volatility:</span>
+                                                        <span class="detail-value"><span id="option-iv">---</span></span>
+                                                    </div>
+                                                    <div class="detail-row">
                                                         <span class="detail-label">Expires in:</span>
                                                         <span class="detail-value countdown" id="option-expiry">--:--:--</span>
                                                     </div>
@@ -621,8 +727,6 @@
                                     <div class="trade-actions mt-4">
                                         <button id="trade-now-btn" class="btn btn-secondary btn-lg w-100" disabled>LOADING...</button>
                                     </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -1018,90 +1122,7 @@
 
 
 
-        <!-- Price Alert Modal -->
-        <div class="modal fade" id="price-alert-modal" tabindex="-1" aria-labelledby="priceAlertModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="priceAlertModalLabel">
-                            <i class="bi bi-bell-fill"></i> Price Alerts
-                        </h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <!-- Notification Permission Status -->
-                        <div id="notification-status" class="alert alert-info mb-3">
-                            <i class="bi bi-info-circle-fill me-2"></i>
-                            <span id="notification-status-text">Checking notification permissions...</span>
-                            <button id="enable-notifications-btn" class="btn btn-sm btn-primary ms-2" style="display: none;">
-                                Enable Notifications
-                            </button>
-                        </div>
 
-                        <!-- Test Notification -->
-                        <div class="test-notification-section mb-4">
-                            <h6><i class="bi bi-bell-fill"></i> Test Notifications</h6>
-                            <p class="text-muted">Send a test notification to see how it will appear:</p>
-                            <button id="test-notification-btn" class="btn btn-outline-primary">
-                                <i class="bi bi-send"></i> Send Test Notification
-                            </button>
-                        </div>
-
-                        <!-- Create New Alert -->
-                        <div class="create-alert-section mb-4">
-                            <h6><i class="bi bi-plus-circle-fill"></i> Create New Alert</h6>
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <label for="alert-asset" class="form-label">Asset</label>
-                                    <select class="form-select" id="alert-asset">
-                                        <option value="ETH">ETH</option>
-                                        <option value="BTC">BTC</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="alert-direction" class="form-label">Alert When</label>
-                                    <select class="form-select" id="alert-direction">
-                                        <option value="above">Price Goes Above</option>
-                                        <option value="below">Price Goes Below</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <label for="alert-price" class="form-label">Target Price ($)</label>
-                                    <input type="number" class="form-control" id="alert-price" placeholder="2500" step="0.01" min="0">
-                                </div>
-                            </div>
-                            <div class="row mt-3">
-                                <div class="col-md-8">
-                                    <label for="alert-message" class="form-label">Custom Message (Optional)</label>
-                                    <input type="text" class="form-control" id="alert-message" placeholder="ETH hit your target price!">
-                                </div>
-                                <div class="col-md-4 d-flex align-items-end">
-                                    <button id="create-alert-btn" class="btn btn-success w-100">
-                                        <i class="bi bi-plus"></i> Create Alert
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="mt-2">
-                                <small class="text-muted">
-                                    Current <span id="current-asset-price-display">ETH</span> price: $<span id="current-price-in-modal">0.00</span>
-                                </small>
-                            </div>
-                        </div>
-
-                        <!-- Active Alerts -->
-                        <div class="active-alerts-section">
-                            <h6><i class="bi bi-list-check"></i> Active Alerts</h6>
-                            <div id="active-alerts-list">
-                                <div class="text-muted">No active alerts</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
     
@@ -1115,7 +1136,7 @@
     <script src="kyber.js"></script>
     <script src="score.js"></script>
     <script src="analytics.js"></script>
-    <script src="price-alerts.js"></script>
+
     <script src="trollbox.js"></script>
     <script src="app.js"></script>
     <script src="analytics-integration.js"></script>
@@ -1203,6 +1224,34 @@
                 </div>
             </div>
         </div>
+
+        <!-- Bottom Navigation Bar -->
+        <nav class="bottom-nav">
+            <div class="nav-item">
+                <a href="#" id="nav-trade-bottom" class="nav-link active">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Trade</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" id="nav-positions-bottom" class="nav-link">
+                    <i class="bi bi-list-ul"></i>
+                    <span>Positions</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" id="nav-history-bottom" class="nav-link">
+                    <i class="bi bi-clock-history"></i>
+                    <span>History</span>
+                </a>
+            </div>
+            <div class="nav-item">
+                <a href="#" id="nav-scoreboard-bottom" class="nav-link">
+                    <i class="bi bi-trophy"></i>
+                    <span>Scoreboard</span>
+                </a>
+            </div>
+        </nav>
 
 </body>
 </html> 

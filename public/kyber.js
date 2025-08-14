@@ -11,7 +11,7 @@
 
 const KYBER_API_BASE = "https://web.thetanuts.finance/kyber/";
 const CHAIN_ID = 8453; // Base chain
-const DEFAULT_SLIPPAGE = 10; // 0.1%
+const DEFAULT_SLIPPAGE = 20; // 0.1%
 const DEFAULT_GAS_PRICE = 1000000000; // 1 gwei
 
 // Debounce function to limit API calls
@@ -117,6 +117,16 @@ const kyberSwap = {
             const tokenIn = this.getTokenAddress(tokenInSymbol);
             const tokenOut = this.getTokenAddress(tokenOutSymbol);
             
+            // Validate token addresses
+            if (!tokenIn || !tokenOut) {
+                throw new Error(`Invalid token addresses: ${tokenInSymbol}(${tokenIn}), ${tokenOutSymbol}(${tokenOut})`);
+            }
+            
+            // Validate amount
+            if (!amountIn || BigInt(amountIn) <= 0n) {
+                throw new Error(`Invalid amount: ${amountIn}`);
+            }
+            
             // Set the recipient to the connected wallet
             const to = state.connectedAddress;
             
@@ -135,8 +145,10 @@ const kyberSwap = {
             if (to) url.searchParams.append("to", to);
             
             const response = await fetch(url.toString());
+            
             if (!response.ok) {
-                throw new Error(`Kyber API error: ${response.statusText}`);
+                const errorText = await response.text();
+                throw new Error(`Kyber API error: ${response.status} ${response.statusText} - ${errorText}`);
             }
             
             const data = await response.json();
@@ -144,7 +156,7 @@ const kyberSwap = {
             return data;
         } catch (error) {
             console.error("Error getting Kyber quote:", error);
-            return null;
+            throw error; // Re-throw to let caller handle it
         }
     },
     /**
@@ -388,7 +400,7 @@ const kyberSwap = {
         
         // Check if swap is needed
         const orderCollateral = CONFIG.getCollateralDetails(order.collateral);
-        const selectedCollateral = document.getElementById('payment-asset').value;
+        const selectedCollateral = getSelectedPaymentAsset();
         const needsSwap = selectedCollateral !== orderCollateral.name;
         
         if (!needsSwap) {

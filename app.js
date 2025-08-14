@@ -36,6 +36,95 @@
  * and is accessed by all modules.
  */
 
+// Simple notification function for basic messages
+function showNotification(message, type = 'info') {
+    // Create notification container if it doesn't exist
+    let container = document.getElementById('simple-notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'simple-notification-container';
+        container.className = 'simple-notification-container';
+        container.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+        `;
+        document.body.appendChild(container);
+    }
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show mb-2`;
+    notification.style.cssText = `
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border: none;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        animation: slideInRight 0.3s ease-out;
+    `;
+    
+    // Set icon based on type
+    let icon = '';
+    switch (type) {
+        case 'success':
+            icon = '<i class="bi bi-check-circle-fill me-2"></i>';
+            break;
+        case 'error':
+            icon = '<i class="bi bi-x-circle-fill me-2"></i>';
+            break;
+        case 'warning':
+            icon = '<i class="bi bi-exclamation-triangle-fill me-2"></i>';
+            break;
+        default:
+            icon = '<i class="bi bi-info-circle-fill me-2"></i>';
+    }
+    
+    notification.innerHTML = `
+        ${icon}
+        <span>${message}</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Add to container
+    container.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+    
+    // Add close button functionality
+    const closeBtn = notification.querySelector('.btn-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            notification.remove();
+        });
+    }
+}
+
+// Add CSS for slide-in animation
+if (!document.getElementById('simple-notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'simple-notification-styles';
+    style.textContent = `
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
 async function refreshData() {
     try {
         // Store current slider position before refresh
@@ -679,7 +768,7 @@ function showPositionDetails(index, type = 'open') {
 
         if (!positions || index < 0 || index >= positions.length) {
             console.error("Position index out of bounds or positions array empty:", index, type, positions);
-            alert("Could not load position details. Position not found.");
+            showNotification("Could not load position details. Position not found.", "error");
             return;
        }
         // Get the position from the array - make sure it's transformed
@@ -814,7 +903,7 @@ function showPositionDetails(index, type = 'open') {
         positionDetailModal.show();
     } catch (error) {
         console.error("Error showing position details:", error);
-        alert("There was an error displaying position details. Please try again.");
+        showNotification("There was an error displaying position details. Please try again.", "error");
     }
 }
 
@@ -1207,46 +1296,221 @@ async function updateLiquidityInfo() {
                 };
             });
         
-        // Prepare multicall data
-        const calls = tokens.map(tokenInfo => ({
+        // Prepare multicall data for both OptionBook and Kyber allowances
+        const optionBookCalls = tokens.map(tokenInfo => ({
             address: tokenInfo.address,
             abi: ERC20ABI,
             functionName: 'allowance',
             args: [MAKER_ADDRESS, OPTION_BOOK_ADDRESS]
         }));
+        
+        // Add user's OptionBook allowances (for the payment asset display)
+        const userOptionBookCalls = tokens.map(tokenInfo => ({
+            address: tokenInfo.address,
+            abi: ERC20ABI,
+            functionName: 'allowance',
+            args: [state.connectedAddress, OPTION_BOOK_ADDRESS]
+        }));
+        
+        const kyberCalls = tokens.map(tokenInfo => ({
+            address: tokenInfo.address,
+            abi: ERC20ABI,
+            functionName: 'allowance',
+            args: [state.connectedAddress, CONFIG.KYBER_CONTRACT_ADDRESS]
+        }));
+        
+        // Combine all calls: MAKER_ADDRESS allowances, USER allowances, then Kyber allowances
+        const allCalls = [...optionBookCalls, ...userOptionBookCalls, ...kyberCalls];
 
         try {
             // Execute multicall
             const { readContracts } = WagmiCore;
+            console.log('Executing multicall with', allCalls.length, 'contracts');
+            console.log('Using multicall address:', MULTICALL_ADDRESS);
+            console.log('All calls:', allCalls);
+            
             const approvalAmounts = await readContracts({
-                contracts: calls,
+                contracts: allCalls,
                 multicallAddress: MULTICALL_ADDRESS,
                 chainId: 8453 // Base chain ID
             });
+            
+            console.log('Multicall execution completed. Results type:', typeof approvalAmounts);
+            console.log('Is using real Wagmi multicall:', !!window.__WAGMI_READ_CONTRACTS__);
 
             // Process results and update UI
+            console.log('Multicall results:', approvalAmounts);
             approvalAmounts.forEach((approvalAmountResult, index) => {
-                const tokenInfo = tokens[index];
-                const approvalAmount = approvalAmountResult.result;
-                try {
-                    // Format the amount with proper decimals
-                    const formattedAmount = parseFloat(
-                        ethers.utils.formatUnits(approvalAmount, tokenInfo.decimals)
-                    ).toLocaleString(undefined, { 
-                        maximumFractionDigits: tokenInfo.symbol === 'WETH' ? 2 : (tokenInfo.symbol === 'CBBTC' ? 4 : 0)
-                    });
+                if (index < tokens.length) {
+                    // OptionBook allowances
+                    const tokenInfo = tokens[index];
+                    const approvalAmount = approvalAmountResult.result;
+                    try {
+                        // Format the amount with full decimal precision for UI display
+                        const formattedAmount = ethers.utils.formatUnits(approvalAmount, tokenInfo.decimals);
+                        
+                        // Log OptionBook allowance for debugging
+                        console.log(`OptionBook Allowance - ${tokenInfo.symbol}:`, {
+                            symbol: tokenInfo.symbol,
+                            address: tokenInfo.address,
+                            rawAmount: approvalAmount.toString(),
+                            formattedAmount: formattedAmount,
+                            decimals: tokenInfo.decimals,
+                            uiElement: tokenInfo.element
+                        });
+                        
+                        // Update the UI element
+                        $(tokenInfo.element).text(formattedAmount);
+                    } catch (error) {
+                        console.error(`Error processing approval for ${tokenInfo.symbol}:`, error);
+                        $(tokenInfo.element).text('--');
+                    }
+                } else if (index < tokens.length * 2) {
+                    // User's OptionBook allowances (for the payment asset display)
+                    const tokenInfo = tokens[index - tokens.length];
+                    const userApprovalAmount = approvalAmountResult.result;
+                    try {
+                        // Format the amount with full decimal precision for UI display
+                        const formattedAmount = ethers.utils.formatUnits(userApprovalAmount, tokenInfo.decimals);
+                        
+                        // Log user's OptionBook allowance for debugging
+                        console.log(`User OptionBook Allowance - ${tokenInfo.symbol}:`, {
+                            symbol: tokenInfo.symbol,
+                            address: tokenInfo.address,
+                            rawAmount: userApprovalAmount.toString(),
+                            formattedAmount: formattedAmount,
+                            decimals: tokenInfo.decimals,
+                            userAddress: state.connectedAddress
+                        });
+                        
+                        // Store user's OptionBook allowance for the payment asset display
+                        if (!state.userOptionBookAllowances) {
+                            state.userOptionBookAllowances = {};
+                        }
+                        state.userOptionBookAllowances[tokenInfo.symbol] = formattedAmount;
+                        
+                    } catch (error) {
+                        console.error(`Error processing user OptionBook approval for ${tokenInfo.symbol}:`, error);
+                        if (!state.userOptionBookAllowances) {
+                            state.userOptionBookAllowances = {};
+                        }
+                        state.userOptionBookAllowances[tokenInfo.symbol] = '--';
+                    }
+                } else {
+                    // Kyber allowances
+                    const tokenInfo = tokens[index - tokens.length * 2];
+                    const kyberApprovalAmount = approvalAmountResult.result;
                     
-                    // Update the UI element
-                    $(tokenInfo.element).text(formattedAmount);
-                } catch (error) {
-                    console.error(`Error processing approval for ${tokenInfo.symbol}:`, error);
-                    $(tokenInfo.element).text('--');
+                    // Debug logging to see what's happening
+                    console.log(`Processing Kyber allowance at index ${index}:`, {
+                        index,
+                        tokensLength: tokens.length,
+                        calculatedIndex: index - tokens.length * 2,
+                        tokenInfo,
+                        rawAmount: kyberApprovalAmount?.toString() || 'null'
+                    });
+                    try {
+                        // Check if we have a valid result
+                        if (!kyberApprovalAmount || kyberApprovalAmount.toString() === '0') {
+                            console.log(`Kyber allowance is 0 or null for ${tokenInfo.symbol}`);
+                            const formattedAmount = '0';
+                            
+                            // Store user's Kyber allowance for the swap modal
+                            if (!state.userKyberAllowances) {
+                                state.userKyberAllowances = {};
+                            }
+                            state.userKyberAllowances[tokenInfo.symbol] = formattedAmount;
+                            
+                            // Update Kyber allowance display
+                            const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
+                            if ($(kyberElement).length === 0) {
+                                // Create Kyber allowance display if it doesn't exist
+                                const optionBookElement = $(tokenInfo.element);
+                                const kyberDisplay = optionBookElement.clone();
+                                kyberDisplay.attr('id', tokenInfo.symbol.toLowerCase() + '-kyber-liquidity');
+                                kyberDisplay.text(formattedAmount);
+                                optionBookElement.after(kyberDisplay);
+                            } else {
+                                $(kyberElement).text(formattedAmount);
+                            }
+                            return;
+                        }
+                        
+                        // Format the amount with full decimal precision for UI display
+                        const formattedAmount = ethers.utils.formatUnits(kyberApprovalAmount, tokenInfo.decimals);
+                        
+                        // Log Kyber allowance for debugging
+                        console.log(`Kyber Allowance - ${tokenInfo.symbol}:`, {
+                            symbol: tokenInfo.symbol,
+                            address: tokenInfo.address,
+                            rawAmount: kyberApprovalAmount.toString(),
+                            formattedAmount: formattedAmount,
+                            decimals: tokenInfo.decimals,
+                            uiElement: `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`
+                        });
+                        
+                        // Store user's Kyber allowance for the swap modal
+                        if (!state.userKyberAllowances) {
+                            state.userKyberAllowances = {};
+                        }
+                        state.userKyberAllowances[tokenInfo.symbol] = formattedAmount;
+                        
+                        console.log(`Stored Kyber allowance for ${tokenInfo.symbol}:`, formattedAmount);
+                        console.log(`Full state.userKyberAllowances:`, state.userKyberAllowances);
+                        
+                        // Update Kyber allowance display (create if doesn't exist)
+                        const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
+                        if ($(kyberElement).length === 0) {
+                            // Create Kyber allowance display if it doesn't exist
+                            const optionBookElement = $(tokenInfo.element);
+                            const kyberDisplay = optionBookElement.clone();
+                            kyberDisplay.attr('id', tokenInfo.symbol.toLowerCase() + '-kyber-liquidity');
+                            kyberDisplay.text(formattedAmount);
+                            optionBookElement.after(kyberDisplay);
+                        } else {
+                            $(kyberElement).text(formattedAmount);
+                        }
+                    } catch (error) {
+                        console.error(`Error processing Kyber approval for ${tokenInfo.symbol}:`, error);
+                        const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
+                        if ($(kyberElement).length > 0) {
+                            $(kyberElement).text('--');
+                        }
+                    }
                 }
             });
+            
+            // Log summary of all allowances
+            console.log('=== ALLOWANCE SUMMARY ===');
+            console.log('OptionBook Allowances:', tokens.map(tokenInfo => ({
+                symbol: tokenInfo.symbol,
+                element: tokenInfo.element,
+                displayValue: $(tokenInfo.element).text()
+            })));
+            console.log('User OptionBook Allowances:', tokens.map(tokenInfo => ({
+                symbol: tokenInfo.symbol,
+                element: tokenInfo.element,
+                displayValue: $(tokenInfo.element).text()
+            })));
+            console.log('Kyber Allowances:', tokens.map(tokenInfo => {
+                const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
+                return {
+                    symbol: tokenInfo.symbol,
+                    element: kyberElement,
+                    displayValue: $(kyberElement).length > 0 ? $(kyberElement).text() : 'Element not found'
+                };
+            }));
+            console.log('========================');
         } catch (error) {
             console.error('Error in multicall:', error);
             // Set all to '--' if multicall fails
-            tokens.forEach(tokenInfo => $(tokenInfo.element).text('--'));
+            tokens.forEach(tokenInfo => {
+                $(tokenInfo.element).text('--');
+                const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
+                if ($(kyberElement).length > 0) {
+                    $(kyberElement).text('--');
+                }
+            });
         }
     } catch (error) {
         console.error('Error updating liquidity information:', error);
@@ -1352,9 +1616,11 @@ window.getSelectedPaymentAsset = function() {
 // Update the balance display for the selected payment asset
 window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
     const balanceDisplay = document.getElementById('payment-balance-display');
+    const allowanceDisplay = document.getElementById('payment-allowance-amount');
     
     if (!state.paymentAssetBalances || !selectedAsset) {
         balanceDisplay.innerHTML = '<span class="balance-text no-balance">No balance data available</span>';
+        if (allowanceDisplay) allowanceDisplay.textContent = '--';
         return;
     }
     
@@ -1363,6 +1629,7 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
         // For ETH, we don't have a balance in state.paymentAssetBalances
         // The ETH balance is displayed separately by the existing ETH balance display
         balanceDisplay.innerHTML = '<span class="balance-text">Native ETH balance shown above</span>';
+        if (allowanceDisplay) allowanceDisplay.textContent = 'N/A (Native)';
         return;
     }
     
@@ -1370,6 +1637,7 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
     
     if (!balance || balance === '0') {
         balanceDisplay.innerHTML = '<span class="balance-text no-balance">0.00 ${selectedAsset}</span>';
+        if (allowanceDisplay) allowanceDisplay.textContent = '--';
         return;
     }
     
@@ -1386,6 +1654,22 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
         <span class="balance-usd">${usdValue}</span>
     `;
     
+    // Update allowance display
+    if (allowanceDisplay) {
+        // Get the user's OptionBook allowance from state if available
+        if (state.userOptionBookAllowances && state.userOptionBookAllowances[selectedAsset]) {
+            allowanceDisplay.textContent = state.userOptionBookAllowances[selectedAsset];
+        } else {
+            // Fallback to the liquidity info if user allowances not available yet
+            const liquidityElement = document.getElementById(`${selectedAsset.toLowerCase()}-liquidity`);
+            if (liquidityElement && liquidityElement.textContent !== '--') {
+                allowanceDisplay.textContent = liquidityElement.textContent;
+            } else {
+                allowanceDisplay.textContent = '--';
+            }
+        }
+    }
+    
     // Update swap button text to be more contextual
     const swapBtn = document.getElementById('swap-assets-btn');
     if (swapBtn) {
@@ -1398,6 +1682,32 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
         }
     }
 }
+
+// Add debug function for checking stored allowances
+window.debugAllowances = function() {
+    console.log('=== DEBUG ALLOWANCES ===');
+    console.log('state.userKyberAllowances:', state.userKyberAllowances);
+    console.log('state.userOptionBookAllowances:', state.userOptionBookAllowances);
+    
+    // Check if the allowances are being stored correctly
+    if (state.userKyberAllowances) {
+        Object.entries(state.userKyberAllowances).forEach(([symbol, amount]) => {
+            console.log(`Kyber ${symbol}:`, amount, 'Type:', typeof amount);
+        });
+    }
+    
+    // Check the DOM elements
+    ['usdc', 'weth', 'cbbtc'].forEach(symbol => {
+        const kyberElement = document.getElementById(`${symbol}-kyber-liquidity`);
+        if (kyberElement) {
+            console.log(`${symbol} Kyber element:`, kyberElement.textContent);
+        } else {
+            console.log(`${symbol} Kyber element: not found`);
+        }
+    });
+    
+    console.log('========================');
+};
 
 // Initialize the application
 async function initialize() {

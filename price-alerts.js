@@ -1,3 +1,92 @@
+// Simple notification function for basic messages
+function showNotification(message, type = 'info') {
+    // Create notification container if it doesn't exist
+    let container = document.getElementById('simple-notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'simple-notification-container';
+        container.className = 'simple-notification-container';
+        container.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+        `;
+        document.body.appendChild(container);
+    }
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show mb-2`;
+    notification.style.cssText = `
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border: none;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        animation: slideInRight 0.3s ease-out;
+    `;
+    
+    // Set icon based on type
+    let icon = '';
+    switch (type) {
+        case 'success':
+            icon = '<i class="bi bi-check-circle-fill me-2"></i>';
+            break;
+        case 'error':
+            icon = '<i class="bi bi-x-circle-fill me-2"></i>';
+            break;
+        case 'warning':
+            icon = '<i class="bi bi-exclamation-triangle-fill me-2"></i>';
+            break;
+        default:
+            icon = '<i class="bi bi-info-circle-fill me-2"></i>';
+    }
+    
+    notification.innerHTML = `
+        ${icon}
+        <span>${message}</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Add to container
+    container.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+    
+    // Add close button functionality
+    const closeBtn = notification.querySelector('.btn-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            notification.remove();
+        });
+    }
+}
+
+// Add CSS for slide-in animation
+if (!document.getElementById('simple-notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'simple-notification-styles';
+    style.textContent = `
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
 // Price Alerts Management System
 class PriceAlertsManager {
     constructor() {
@@ -190,7 +279,7 @@ class PriceAlertsManager {
         if (this.notificationPermission !== 'granted') {
             const granted = await this.requestNotificationPermission();
             if (!granted) {
-                alert('Please enable notifications to receive price alerts.');
+                showNotification('Please enable notifications to receive price alerts.', 'warning');
                 return;
             }
         }
@@ -214,7 +303,7 @@ class PriceAlertsManager {
             
         } catch (error) {
             console.error('Error sending test notification:', error);
-            alert('Error sending test notification. Please check your browser settings.');
+            showNotification('Error sending test notification. Please check your browser settings.', 'error');
         }
     }
     
@@ -226,7 +315,7 @@ class PriceAlertsManager {
         const messageInput = document.getElementById('alert-message');
         
         if (!priceInput.value || isNaN(priceInput.value) || parseFloat(priceInput.value) <= 0) {
-            alert('Please enter a valid target price.');
+            showNotification('Please enter a valid target price.', 'error');
             priceInput.focus();
             return;
         }

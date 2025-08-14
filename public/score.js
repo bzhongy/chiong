@@ -31,7 +31,7 @@ const scoreboard = {
     // Set up event listeners for sort buttons
     setupEventListeners: function() {
         // Add event listener for navigation
-        const navScoreboard = document.getElementById('nav-scoreboard');
+        const navScoreboard = document.getElementById('nav-scoreboard-bottom');
         if (navScoreboard) {
             navScoreboard.addEventListener('click', (e) => {
                 e.preventDefault();

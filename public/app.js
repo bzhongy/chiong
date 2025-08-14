@@ -36,13 +36,102 @@
  * and is accessed by all modules.
  */
 
+// Simple notification function for basic messages
+function showNotification(message, type = 'info') {
+    // Create notification container if it doesn't exist
+    let container = document.getElementById('simple-notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'simple-notification-container';
+        container.className = 'simple-notification-container';
+        container.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+        `;
+        document.body.appendChild(container);
+    }
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show mb-2`;
+    notification.style.cssText = `
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border: none;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        animation: slideInRight 0.3s ease-out;
+    `;
+    
+    // Set icon based on type
+    let icon = '';
+    switch (type) {
+        case 'success':
+            icon = '<i class="bi bi-check-circle-fill me-2"></i>';
+            break;
+        case 'error':
+            icon = '<i class="bi bi-x-circle-fill me-2"></i>';
+            break;
+        case 'warning':
+            icon = '<i class="bi bi-exclamation-triangle-fill me-2"></i>';
+            break;
+        default:
+            icon = '<i class="bi bi-info-circle-fill me-2"></i>';
+    }
+    
+    notification.innerHTML = `
+        ${icon}
+        <span>${message}</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Add to container
+    container.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+    
+    // Add close button functionality
+    const closeBtn = notification.querySelector('.btn-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            notification.remove();
+        });
+    }
+}
+
+// Add CSS for slide-in animation
+if (!document.getElementById('simple-notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'simple-notification-styles';
+    style.textContent = `
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
 async function refreshData() {
     try {
         // Store current slider position before refresh
-        if ($('#basic-view-container').is(':visible')) {
-            lastSelectedSliderPosition = parseInt($('#conviction-slider').val());
-        } else {
+        if ($('#advanced-view-container').is(':visible')) {
             lastSelectedSliderPosition = parseInt($('#adv-conviction-slider').val());
+        } else {
+            lastSelectedSliderPosition = parseInt($('#conviction-slider').val());
         }
         
         // Fetch orders from API
@@ -82,29 +171,12 @@ async function refreshData() {
             const currentAssetPrice = state.market_prices[state.selectedAsset];
             if (currentAssetPrice) {
                 updateDualUI('current-price', currentAssetPrice, 'text', formatNumber);
-                
-                // Dispatch price update event for price alerts system
-                const priceUpdateEvent = new CustomEvent('priceUpdated', {
-                    detail: {
-                        asset: state.selectedAsset,
-                        price: currentAssetPrice
-                    }
-                });
-                document.dispatchEvent(priceUpdateEvent);
-                
-                // Update price alerts manager if available
-                if (window.priceAlertsManager) {
-                    window.priceAlertsManager.updatePrice(state.selectedAsset, currentAssetPrice);
-                }
             }
             
-            // Also dispatch price updates for all assets in market_prices
-            Object.keys(state.market_prices).forEach(asset => {
-                const price = state.market_prices[asset];
-                if (price && window.priceAlertsManager) {
-                    window.priceAlertsManager.updatePrice(asset, price);
-                }
-            });
+            // Update ETH balance display with new market prices
+            if (typeof updateETHBalance === 'function') {
+                updateETHBalance();
+            }
         }
         
         // Rest of the function remains the same
@@ -130,9 +202,12 @@ async function refreshData() {
         // Select the option based on slider position
         await selectOptionBasedOnConviction();
         
-        // Populate advanced view options table
-        if (state.viewMode === 'advanced') {
+        // Populate advanced view options table (always show since advanced is now default)
+        console.log('Refreshing data, populating options table...');
+        if (typeof populateOptionsTable === 'function') {
             populateOptionsTable();
+        } else {
+            console.warn('populateOptionsTable function not available');
         }
         
         // Update positions if on positions tab
@@ -165,10 +240,31 @@ async function refreshData() {
 // Populate the options table in advanced view
 function populateOptionsTable() {
     const tableBody = $('#options-table-body');
+    
+    if (!tableBody.length) {
+        console.error('Options table body not found');
+        return;
+    }
+    
     tableBody.empty();
     
-    for (let i = 0; i < state.orders.length; i++) {
-        const order = state.orders[i].order;
+    if (!state.orders || state.orders.length === 0) {
+        console.warn('No orders available to populate table');
+        tableBody.html('<tr><td colspan="9" class="text-center text-muted">No options available</td></tr>');
+        return;
+    }
+    
+    // Sort orders by expiry time (earliest first)
+    const sortedOrders = [...state.orders].sort((a, b) => {
+        const expiryA = parseInt(a.order.expiry) || 0;
+        const expiryB = parseInt(b.order.expiry) || 0;
+        return expiryA - expiryB; // Ascending order (earliest first)
+    });
+    
+    for (let i = 0; i < sortedOrders.length; i++) {
+        const order = sortedOrders[i].order;
+
+        
         const optionType = order.isCall ? "CALL" : "PUT";
         const collateral = CONFIG.getCollateralDetails(order.collateral);
         const strike = formatUnits(order.strikes[0], PRICE_DECIMALS);
@@ -185,10 +281,41 @@ function populateOptionsTable() {
         // Calculate Greeks using centralized calculator
         const { theta, delta, iv } = state.orders[i].greeks;
         
+        // Format expiry date from individual order
+        let expiryDisplay = 'N/A';
+        if (order.expiry) {
+            try {
+                const orderExpiryTimestamp = parseInt(order.expiry) * 1000; // Convert to milliseconds
+                if (!isNaN(orderExpiryTimestamp) && orderExpiryTimestamp > 0) {
+                    const expiryDate = new Date(orderExpiryTimestamp);
+                    const expiryTimeString = expiryDate.toLocaleTimeString('en-US', { 
+                        hour12: false, 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        timeZone: 'UTC'
+                    });
+                    const expiryDateString = expiryDate.toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        timeZone: 'UTC'
+                    });
+                    expiryDisplay = `${expiryDateString} ${expiryTimeString} UTC`;
+
+                }
+            } catch (error) {
+                console.warn('Error formatting expiry date for order:', order, error);
+                expiryDisplay = 'Invalid';
+            }
+        } else {
+            
+        }
+        
+        // Use the loop index directly for reliable row selection
         const row = `
             <tr class="option-row ${i === state.selectedOrderIndex ? 'selected' : ''}" data-index="${i}">
                 <td>$${formatNumber(strike)}</td>
                 <td>${optionType}</td>
+                <td title="Expires at ${expiryDisplay}">${expiryDisplay}</td>
                 <td>$${formatNumber(premium)}</td>
                 <td>${payoutRatio}x</td>
                 <td>$${breakeven}</td>
@@ -641,7 +768,7 @@ function showPositionDetails(index, type = 'open') {
 
         if (!positions || index < 0 || index >= positions.length) {
             console.error("Position index out of bounds or positions array empty:", index, type, positions);
-            alert("Could not load position details. Position not found.");
+            showNotification("Could not load position details. Position not found.", "error");
             return;
        }
         // Get the position from the array - make sure it's transformed
@@ -776,7 +903,7 @@ function showPositionDetails(index, type = 'open') {
         positionDetailModal.show();
     } catch (error) {
         console.error("Error showing position details:", error);
-        alert("There was an error displaying position details. Please try again.");
+        showNotification("There was an error displaying position details. Please try again.", "error");
     }
 }
 
@@ -1061,12 +1188,15 @@ function setupHistoryFilters() {
     });
     
     // Add event listener for "go to trade" link
-    document.getElementById('go-to-trade-from-history').addEventListener('click', function(e) {
-        e.preventDefault();
-        showSection('trade');
-        document.getElementById('nav-trade').classList.add('active');
-        document.getElementById('nav-history').classList.remove('active');
-    });
+    const goToTradeFromHistory = document.getElementById('go-to-trade-from-history');
+    if (goToTradeFromHistory) {
+        goToTradeFromHistory.addEventListener('click', function(e) {
+            e.preventDefault();
+            showSection('trade');
+            document.getElementById('nav-trade-bottom').classList.add('active');
+            document.getElementById('nav-history-bottom').classList.remove('active');
+        });
+    }
 }
 
 function getOptionTypeDisplay(optionType) {
@@ -1153,56 +1283,234 @@ async function updateLiquidityInfo() {
         }
                 
         // Set up token addresses and update elements using CONFIG.collateralMap
-        const tokens = Object.entries(CONFIG.collateralMap).map(([symbol, address]) => {
-            const details = CONFIG.getCollateralDetails(address);
-            return {
-                symbol,
-                address,
-                decimals: details.decimals,
-                element: `#${symbol.toLowerCase()}-liquidity`
-            };
-        });
+        // Exclude ETH since it's a native token and doesn't need allowance
+        const tokens = Object.entries(CONFIG.collateralMap)
+            .filter(([symbol, address]) => symbol !== 'ETH') // Exclude ETH
+            .map(([symbol, address]) => {
+                const details = CONFIG.getCollateralDetails(address);
+                return {
+                    symbol,
+                    address,
+                    decimals: details.decimals,
+                    element: `#${symbol.toLowerCase()}-liquidity`
+                };
+            });
         
-        // Prepare multicall data
-        const calls = tokens.map(tokenInfo => ({
+        // Prepare multicall data for both OptionBook and Kyber allowances
+        const optionBookCalls = tokens.map(tokenInfo => ({
             address: tokenInfo.address,
             abi: ERC20ABI,
             functionName: 'allowance',
             args: [MAKER_ADDRESS, OPTION_BOOK_ADDRESS]
         }));
+        
+        // Add user's OptionBook allowances (for the payment asset display)
+        const userOptionBookCalls = tokens.map(tokenInfo => ({
+            address: tokenInfo.address,
+            abi: ERC20ABI,
+            functionName: 'allowance',
+            args: [state.connectedAddress, OPTION_BOOK_ADDRESS]
+        }));
+        
+        const kyberCalls = tokens.map(tokenInfo => ({
+            address: tokenInfo.address,
+            abi: ERC20ABI,
+            functionName: 'allowance',
+            args: [state.connectedAddress, CONFIG.KYBER_CONTRACT_ADDRESS]
+        }));
+        
+        // Combine all calls: MAKER_ADDRESS allowances, USER allowances, then Kyber allowances
+        const allCalls = [...optionBookCalls, ...userOptionBookCalls, ...kyberCalls];
 
         try {
             // Execute multicall
             const { readContracts } = WagmiCore;
+            console.log('Executing multicall with', allCalls.length, 'contracts');
+            console.log('Using multicall address:', MULTICALL_ADDRESS);
+            console.log('All calls:', allCalls);
+            
             const approvalAmounts = await readContracts({
-                contracts: calls,
+                contracts: allCalls,
                 multicallAddress: MULTICALL_ADDRESS,
                 chainId: 8453 // Base chain ID
             });
+            
+            console.log('Multicall execution completed. Results type:', typeof approvalAmounts);
+            console.log('Is using real Wagmi multicall:', !!window.__WAGMI_READ_CONTRACTS__);
 
             // Process results and update UI
+            console.log('Multicall results:', approvalAmounts);
             approvalAmounts.forEach((approvalAmountResult, index) => {
-                const tokenInfo = tokens[index];
-                const approvalAmount = approvalAmountResult.result;
-                try {
-                    // Format the amount with proper decimals
-                    const formattedAmount = parseFloat(
-                        ethers.utils.formatUnits(approvalAmount, tokenInfo.decimals)
-                    ).toLocaleString(undefined, { 
-                        maximumFractionDigits: tokenInfo.symbol === 'WETH' ? 2 : (tokenInfo.symbol === 'CBBTC' ? 4 : 0)
-                    });
+                if (index < tokens.length) {
+                    // OptionBook allowances
+                    const tokenInfo = tokens[index];
+                    const approvalAmount = approvalAmountResult.result;
+                    try {
+                        // Format the amount with full decimal precision for UI display
+                        const formattedAmount = ethers.utils.formatUnits(approvalAmount, tokenInfo.decimals);
+                        
+                        // Log OptionBook allowance for debugging
+                        console.log(`OptionBook Allowance - ${tokenInfo.symbol}:`, {
+                            symbol: tokenInfo.symbol,
+                            address: tokenInfo.address,
+                            rawAmount: approvalAmount.toString(),
+                            formattedAmount: formattedAmount,
+                            decimals: tokenInfo.decimals,
+                            uiElement: tokenInfo.element
+                        });
+                        
+                        // Update the UI element
+                        $(tokenInfo.element).text(formattedAmount);
+                    } catch (error) {
+                        console.error(`Error processing approval for ${tokenInfo.symbol}:`, error);
+                        $(tokenInfo.element).text('--');
+                    }
+                } else if (index < tokens.length * 2) {
+                    // User's OptionBook allowances (for the payment asset display)
+                    const tokenInfo = tokens[index - tokens.length];
+                    const userApprovalAmount = approvalAmountResult.result;
+                    try {
+                        // Format the amount with full decimal precision for UI display
+                        const formattedAmount = ethers.utils.formatUnits(userApprovalAmount, tokenInfo.decimals);
+                        
+                        // Log user's OptionBook allowance for debugging
+                        console.log(`User OptionBook Allowance - ${tokenInfo.symbol}:`, {
+                            symbol: tokenInfo.symbol,
+                            address: tokenInfo.address,
+                            rawAmount: userApprovalAmount.toString(),
+                            formattedAmount: formattedAmount,
+                            decimals: tokenInfo.decimals,
+                            userAddress: state.connectedAddress
+                        });
+                        
+                        // Store user's OptionBook allowance for the payment asset display
+                        if (!state.userOptionBookAllowances) {
+                            state.userOptionBookAllowances = {};
+                        }
+                        state.userOptionBookAllowances[tokenInfo.symbol] = formattedAmount;
+                        
+                    } catch (error) {
+                        console.error(`Error processing user OptionBook approval for ${tokenInfo.symbol}:`, error);
+                        if (!state.userOptionBookAllowances) {
+                            state.userOptionBookAllowances = {};
+                        }
+                        state.userOptionBookAllowances[tokenInfo.symbol] = '--';
+                    }
+                } else {
+                    // Kyber allowances
+                    const tokenInfo = tokens[index - tokens.length * 2];
+                    const kyberApprovalAmount = approvalAmountResult.result;
                     
-                    // Update the UI element
-                    $(tokenInfo.element).text(formattedAmount);
-                } catch (error) {
-                    console.error(`Error processing approval for ${tokenInfo.symbol}:`, error);
-                    $(tokenInfo.element).text('--');
+                    // Debug logging to see what's happening
+                    console.log(`Processing Kyber allowance at index ${index}:`, {
+                        index,
+                        tokensLength: tokens.length,
+                        calculatedIndex: index - tokens.length * 2,
+                        tokenInfo,
+                        rawAmount: kyberApprovalAmount?.toString() || 'null'
+                    });
+                    try {
+                        // Check if we have a valid result
+                        if (!kyberApprovalAmount || kyberApprovalAmount.toString() === '0') {
+                            console.log(`Kyber allowance is 0 or null for ${tokenInfo.symbol}`);
+                            const formattedAmount = '0';
+                            
+                            // Store user's Kyber allowance for the swap modal
+                            if (!state.userKyberAllowances) {
+                                state.userKyberAllowances = {};
+                            }
+                            state.userKyberAllowances[tokenInfo.symbol] = formattedAmount;
+                            
+                            // Update Kyber allowance display
+                            const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
+                            if ($(kyberElement).length === 0) {
+                                // Create Kyber allowance display if it doesn't exist
+                                const optionBookElement = $(tokenInfo.element);
+                                const kyberDisplay = optionBookElement.clone();
+                                kyberDisplay.attr('id', tokenInfo.symbol.toLowerCase() + '-kyber-liquidity');
+                                kyberDisplay.text(formattedAmount);
+                                optionBookElement.after(kyberDisplay);
+                            } else {
+                                $(kyberElement).text(formattedAmount);
+                            }
+                            return;
+                        }
+                        
+                        // Format the amount with full decimal precision for UI display
+                        const formattedAmount = ethers.utils.formatUnits(kyberApprovalAmount, tokenInfo.decimals);
+                        
+                        // Log Kyber allowance for debugging
+                        console.log(`Kyber Allowance - ${tokenInfo.symbol}:`, {
+                            symbol: tokenInfo.symbol,
+                            address: tokenInfo.address,
+                            rawAmount: kyberApprovalAmount.toString(),
+                            formattedAmount: formattedAmount,
+                            decimals: tokenInfo.decimals,
+                            uiElement: `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`
+                        });
+                        
+                        // Store user's Kyber allowance for the swap modal
+                        if (!state.userKyberAllowances) {
+                            state.userKyberAllowances = {};
+                        }
+                        state.userKyberAllowances[tokenInfo.symbol] = formattedAmount;
+                        
+                        console.log(`Stored Kyber allowance for ${tokenInfo.symbol}:`, formattedAmount);
+                        console.log(`Full state.userKyberAllowances:`, state.userKyberAllowances);
+                        
+                        // Update Kyber allowance display (create if doesn't exist)
+                        const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
+                        if ($(kyberElement).length === 0) {
+                            // Create Kyber allowance display if it doesn't exist
+                            const optionBookElement = $(tokenInfo.element);
+                            const kyberDisplay = optionBookElement.clone();
+                            kyberDisplay.attr('id', tokenInfo.symbol.toLowerCase() + '-kyber-liquidity');
+                            kyberDisplay.text(formattedAmount);
+                            optionBookElement.after(kyberDisplay);
+                        } else {
+                            $(kyberElement).text(formattedAmount);
+                        }
+                    } catch (error) {
+                        console.error(`Error processing Kyber approval for ${tokenInfo.symbol}:`, error);
+                        const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
+                        if ($(kyberElement).length > 0) {
+                            $(kyberElement).text('--');
+                        }
+                    }
                 }
             });
+            
+            // Log summary of all allowances
+            console.log('=== ALLOWANCE SUMMARY ===');
+            console.log('OptionBook Allowances:', tokens.map(tokenInfo => ({
+                symbol: tokenInfo.symbol,
+                element: tokenInfo.element,
+                displayValue: $(tokenInfo.element).text()
+            })));
+            console.log('User OptionBook Allowances:', tokens.map(tokenInfo => ({
+                symbol: tokenInfo.symbol,
+                element: tokenInfo.element,
+                displayValue: $(tokenInfo.element).text()
+            })));
+            console.log('Kyber Allowances:', tokens.map(tokenInfo => {
+                const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
+                return {
+                    symbol: tokenInfo.symbol,
+                    element: kyberElement,
+                    displayValue: $(kyberElement).length > 0 ? $(kyberElement).text() : 'Element not found'
+                };
+            }));
+            console.log('========================');
         } catch (error) {
             console.error('Error in multicall:', error);
             // Set all to '--' if multicall fails
-            tokens.forEach(tokenInfo => $(tokenInfo.element).text('--'));
+            tokens.forEach(tokenInfo => {
+                $(tokenInfo.element).text('--');
+                const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
+                if ($(kyberElement).length > 0) {
+                    $(kyberElement).text('--');
+                }
+            });
         }
     } catch (error) {
         console.error('Error updating liquidity information:', error);
@@ -1234,13 +1542,16 @@ async function updateWalletBalance() {
     try {
         if (!state.connectedAddress) return;
         
-        const tokens = ['USDC', 'CBBTC', 'WETH'];
+        // Separate ETH (native) from ERC20 tokens
+        const erc20Tokens = ['USDC', 'CBBTC', 'WETH'];
+        const nativeTokens = ['ETH'];
         
         // Store current selection to preserve user preference
-        const currentSelection = $('#payment-asset').val();
+        const currentSelection = getSelectedPaymentAsset();
         
+        // Get ERC20 token balances
         const { readContracts } = WagmiCore;
-        const contracts = tokens.map(token => ({
+        const contracts = erc20Tokens.map(token => ({
             address: CONFIG.collateralMap[token],
             abi: ERC20ABI,
             functionName: 'balanceOf',
@@ -1249,25 +1560,154 @@ async function updateWalletBalance() {
         }));
         const balances = await readContracts({ contracts });
         
-        // Update each option's text individually without recreating HTML
-        tokens.forEach((token, i) => {
+        // Store balances for display
+        state.paymentAssetBalances = {};
+        
+        // Process ERC20 token balances
+        erc20Tokens.forEach((token, i) => {
             const balance = formatUnits(balances[i].result, CONFIG.getCollateralDetails(CONFIG.collateralMap[token]).decimals);
-            $(`#payment-asset option[value="${token}"]`).text(`${token} (Wallet Balance: ${balance} ${token})`);
+            state.paymentAssetBalances[token] = balance;
+            
+            // Update button tooltips with balance information
+            const button = document.querySelector(`input[name="payment-asset-selection"][value="${token}"]`);
+            if (button) {
+                const label = button.nextElementSibling;
+                if (label) {
+                    // Get USD value if we have market prices
+                    let usdValue = '';
+                    if (state.market_prices && state.market_prices[token]) {
+                        const price = state.market_prices[token];
+                        const usdAmount = (parseFloat(balance) * price).toFixed(2);
+                        usdValue = ` ($${usdAmount})`;
+                    }
+                    label.setAttribute('data-balance', `${balance} ${token}${usdValue}`);
+                }
+            }
         });
         
-        // Restore the user's selection if it was valid
-        if (currentSelection && currentSelection !== 'init') {
-            $('#payment-asset').val(currentSelection);
-        }
+        // Handle ETH balance separately (native token)
+        // ETH balance is already handled by updateETHBalance() function
+        // We'll set a placeholder here and let the existing ETH balance display handle it
+        state.paymentAssetBalances['ETH'] = '0'; // Placeholder, actual balance shown elsewhere
+        
+        // Update balance display for currently selected asset
+        updatePaymentAssetBalanceDisplay(currentSelection);
         
         // Check fund status after balance update (debounced)
         if (typeof refreshFundStatus === 'function') {
             refreshFundStatus();
         }
+        
+        // Update ETH balance display after wallet balance update
+        if (typeof updateETHBalance === 'function') {
+            updateETHBalance();
+        }
     } catch (error) {
         console.error('Error updating payment asset balances:', error);
     }
 }
+
+// Get the currently selected payment asset from the button group
+window.getSelectedPaymentAsset = function() {
+    const selectedButton = document.querySelector('input[name="payment-asset-selection"]:checked');
+    return selectedButton ? selectedButton.value : 'USDC';
+}
+
+// Update the balance display for the selected payment asset
+window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
+    const balanceDisplay = document.getElementById('payment-balance-display');
+    const allowanceDisplay = document.getElementById('payment-allowance-amount');
+    
+    if (!state.paymentAssetBalances || !selectedAsset) {
+        balanceDisplay.innerHTML = '<span class="balance-text no-balance">No balance data available</span>';
+        if (allowanceDisplay) allowanceDisplay.textContent = '--';
+        return;
+    }
+    
+    // Handle ETH differently since it's a native token
+    if (selectedAsset === 'ETH') {
+        // For ETH, we don't have a balance in state.paymentAssetBalances
+        // The ETH balance is displayed separately by the existing ETH balance display
+        balanceDisplay.innerHTML = '<span class="balance-text">Native ETH balance shown above</span>';
+        if (allowanceDisplay) allowanceDisplay.textContent = 'N/A (Native)';
+        return;
+    }
+    
+    const balance = state.paymentAssetBalances[selectedAsset];
+    
+    if (!balance || balance === '0') {
+        balanceDisplay.innerHTML = '<span class="balance-text no-balance">0.00 ${selectedAsset}</span>';
+        if (allowanceDisplay) allowanceDisplay.textContent = '--';
+        return;
+    }
+    
+    // Get USD value if we have market prices
+    let usdValue = '';
+    if (state.market_prices && state.market_prices[selectedAsset]) {
+        const price = state.market_prices[selectedAsset];
+        const usdAmount = (parseFloat(balance) * price).toFixed(2);
+        usdValue = `($${usdAmount})`;
+    }
+    
+    balanceDisplay.innerHTML = `
+        <span class="balance-amount">${balance} ${selectedAsset}</span>
+        <span class="balance-usd">${usdValue}</span>
+    `;
+    
+    // Update allowance display
+    if (allowanceDisplay) {
+        // Get the user's OptionBook allowance from state if available
+        if (state.userOptionBookAllowances && state.userOptionBookAllowances[selectedAsset]) {
+            allowanceDisplay.textContent = state.userOptionBookAllowances[selectedAsset];
+        } else {
+            // Fallback to the liquidity info if user allowances not available yet
+            const liquidityElement = document.getElementById(`${selectedAsset.toLowerCase()}-liquidity`);
+            if (liquidityElement && liquidityElement.textContent !== '--') {
+                allowanceDisplay.textContent = liquidityElement.textContent;
+            } else {
+                allowanceDisplay.textContent = '--';
+            }
+        }
+    }
+    
+    // Update swap button text to be more contextual
+    const swapBtn = document.getElementById('swap-assets-btn');
+    if (swapBtn) {
+        if (selectedAsset === 'USDC') {
+            swapBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Swap Assets';
+        } else if (selectedAsset === 'ETH') {
+            swapBtn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i>Swap ETH to USDC`;
+        } else {
+            swapBtn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i>Swap to USDC`;
+        }
+    }
+}
+
+// Add debug function for checking stored allowances
+window.debugAllowances = function() {
+    console.log('=== DEBUG ALLOWANCES ===');
+    console.log('state.userKyberAllowances:', state.userKyberAllowances);
+    console.log('state.userOptionBookAllowances:', state.userOptionBookAllowances);
+    
+    // Check if the allowances are being stored correctly
+    if (state.userKyberAllowances) {
+        Object.entries(state.userKyberAllowances).forEach(([symbol, amount]) => {
+            console.log(`Kyber ${symbol}:`, amount, 'Type:', typeof amount);
+        });
+    }
+    
+    // Check the DOM elements
+    ['usdc', 'weth', 'cbbtc'].forEach(symbol => {
+        const kyberElement = document.getElementById(`${symbol}-kyber-liquidity`);
+        if (kyberElement) {
+            console.log(`${symbol} Kyber element:`, kyberElement.textContent);
+        } else {
+            console.log(`${symbol} Kyber element: not found`);
+        }
+    });
+    
+    console.log('========================');
+};
 
 // Initialize the application
 async function initialize() {
@@ -1278,6 +1718,12 @@ async function initialize() {
     // Restore exact approval preference from localStorage
     const exactApprovalEnabled = localStorage.getItem('exactApprovalEnabled') === 'true';
     $('#exact-approval-checkbox').prop('checked', exactApprovalEnabled);
+    
+    // Initialize payment asset balance display with loading state
+    const balanceDisplay = document.getElementById('payment-balance-display');
+    if (balanceDisplay) {
+        balanceDisplay.innerHTML = '<span class="balance-text loading">Loading balances...</span>';
+    }
     
     // Update help text based on saved preference
     const helpText = $('#exact-approval-checkbox').siblings('.form-text').find('small');
@@ -1314,6 +1760,29 @@ async function initialize() {
     state.refreshTimer = setInterval(refreshData, REFRESH_INTERVAL); // Set a timer to refresh data periodically
     updateCountdowns(); // Start the countdown loop *once* after initial setup
     
+    // Ensure advanced view is properly initialized
+    state.viewMode = 'advanced';
+    $('.options-table-container').show();
+    console.log('Advanced view initialized, options table container shown');
+    
+    // Ensure trade section is shown by default
+    showSection('trade');
+    
+    // Populate the options table after data is loaded
+    if (state.orders && state.orders.length > 0 && typeof populateOptionsTable === 'function') {
+        console.log('Orders available, populating table...');
+        populateOptionsTable();
+    } else {
+        console.log('No orders available yet or populateOptionsTable not defined');
+        // Retry populating the table after a short delay
+        setTimeout(() => {
+            if (state.orders && state.orders.length > 0 && typeof populateOptionsTable === 'function') {
+                console.log('Retrying to populate table...');
+                populateOptionsTable();
+            }
+        }, 1000);
+    }
+    
     // Enable the trade button now that app is fully loaded
     // (but still respect fund/swap checks via the normal updateTradeButtonState flow)
     if (typeof updateTradeButtonState === 'function') {
@@ -1329,15 +1798,34 @@ async function initialize() {
     });
 
     // Position asset filter handler
-    $('#positionAssetDropdown').on('click', '.dropdown-item', function(e) {
-        e.preventDefault();
-        const asset = $(this).data('asset');
-        $('#positions-selected-asset').text(asset);
-        refreshPositions();
-    });
+    const positionAssetDropdown = $('#positionAssetDropdown');
+    if (positionAssetDropdown.length > 0) {
+        positionAssetDropdown.on('click', '.dropdown-item', function(e) {
+            e.preventDefault();
+            const asset = $(this).data('asset');
+            const positionsSelectedAsset = $('#positions-selected-asset');
+            if (positionsSelectedAsset.length > 0) {
+                positionsSelectedAsset.text(asset);
+            }
+            refreshPositions();
+        });
+    }
 
 }
 
 $(document).ready(() => {
-    initialize();    
+    console.log('Document ready, initializing...');
+    initialize();
+    
+    // Additional initialization to ensure advanced view is properly set up
+    setTimeout(() => {
+        console.log('Additional initialization check...');
+        if (state.viewMode === 'advanced') {
+            $('.options-table-container').show();
+            if (state.orders && state.orders.length > 0 && typeof populateOptionsTable === 'function') {
+                console.log('Populating table in additional initialization...');
+                populateOptionsTable();
+            }
+        }
+    }, 2000);
 });

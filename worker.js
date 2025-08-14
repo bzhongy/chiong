@@ -1625,7 +1625,7 @@ async function formatPositionData(position) {
 // --- RPC Interaction ---
 
 async function fetchLogs(address, fromBlock, toBlock, topics = [], env) {
-  const infuraEndpoint = `https://base-mainnet.infura.io/v3/8380ec4a284a4335a8bc2b73625b7e3a`;
+  const infuraEndpoint = `https://rpc.ankr.com/base/b265bc0484761da3baea12fcc955e9bb10545e664b75976d20c8089c163b0a53`;
   
   // Create the params object for the request
   const params = {
@@ -1662,7 +1662,7 @@ async function fetchLogs(address, fromBlock, toBlock, topics = [], env) {
 }
 
 async function getCurrentBlockNumber(env) {
-  const infuraEndpoint = `https://base-mainnet.infura.io/v3/8380ec4a284a4335a8bc2b73625b7e3a`;
+  const infuraEndpoint = `https://rpc.ankr.com/base/b265bc0484761da3baea12fcc955e9bb10545e664b75976d20c8089c163b0a53`;
   
   const response = await fetch(infuraEndpoint, {
     method: 'POST',
@@ -1756,7 +1756,7 @@ async function handleOptionEventsRequest(optionAddress, corsHeaders, env) {
  * @returns {Promise<string>} - The result as a string
  */
 async function rpcCall(contractAddress, methodSignature, args = []) {
-  const infuraEndpoint = `https://base-mainnet.infura.io/v3/8380ec4a284a4335a8bc2b73625b7e3a`;
+  const infuraEndpoint = `https://rpc.ankr.com/base/b265bc0484761da3baea12fcc955e9bb10545e664b75976d20c8089c163b0a53`;
   
   // For getTWAP, we don't need to encode additional arguments
   // If args are needed in future, additional encoding would be done here

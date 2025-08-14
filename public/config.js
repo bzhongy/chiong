@@ -47,7 +47,7 @@ const state = {
     expiryTime: null,
     selectedOrderIndex: null,
     selectedPositionSize: 100,
-    viewMode: 'basic', // 'basic' or 'advanced'
+    viewMode: 'advanced', // 'advanced' is now the only view
     countDownInterval: 0,
     selectedPositionPercentage: 50,
 };
@@ -362,13 +362,20 @@ const optionCalculator = {
     }
 };
 
-// Create a configuration object to organize mappings
+// Global configuration object
 const CONFIG = {
+    // Kyber contract address
+    KYBER_CONTRACT_ADDRESS: '0x6131B5fae19EA4f9D964eAc0408E4408b66337b5',
+    
+    // Price feed mappings
     priceFeedsMap: {
         'ETH': '0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70',
         'BTC': '0x64c911996D3c6aC71f9b455B1E8E7266BcbD848F'
     },
+    
+    // Asset mappings
     collateralMap: {
+        'ETH': '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
         'USDC': '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
         'WETH': '0x4200000000000000000000000000000000000006',
         'CBBTC': '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf'
@@ -388,6 +395,7 @@ const CONFIG = {
     // Replace getCollateralDetails, getOptionDetails, getUnderlyingAsset with this
     getCollateralDetails: function(tokenAddress) {
         const tokens = {
+            "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee": { name: "ETH", decimals: 18, asset: "ETH" },
             "0x4200000000000000000000000000000000000006": { name: "WETH", decimals: 18, asset: "ETH" },
             "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913": { name: "USDC", decimals: 6, asset: "USD" },
             "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf": { name: "CBBTC", decimals: 8, asset: "BTC" }

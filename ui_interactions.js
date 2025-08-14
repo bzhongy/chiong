@@ -121,6 +121,24 @@ function setupEventListeners() {
     
     // Setup ETH wrapping listeners
     setupWrapETHListeners();
+    
+    // Add event listener for "From" asset changes
+    $('#swap-from-asset').off('change.swap').on('change.swap', function() {
+        updateSwapFromBalance();
+    });
+    
+    // Add event listener for amount input changes
+    $('#swap-from-amount').off('input.swap').on('input.swap', function() {
+        console.log('Amount changed, checking approval status...');
+        checkSwapApprovalNeeded().catch(error => {
+            console.error('Error checking approval on amount change:', error);
+        });
+    });
+    
+    // Add event listener for approve button
+    $('#approve-swap-btn').off('click.swap').on('click.swap', function() {
+        approveSwapToken();
+    });
 }
 
 // Show a specific section (trade, positions, history)
@@ -508,7 +526,7 @@ async function selectOption(index) {
     getOrderFillInfo(state.orders[index]).then(fillInfo => {
         if (fillInfo && fillInfo.isFull) {
             // Show a notification that this order is full
-            alert("This order batch is already filled to capacity. Please try another option or wait for a new batch.");
+            showNotification("This order batch is already filled to capacity. Please try another option or wait for a new batch.", "warning");
             
             // Deselect the option
             state.selectedOrderIndex = null;
@@ -636,7 +654,7 @@ function showTradeConfirmation() {
     // Safety check: ensure app is fully loaded
     if (!state || state.selectedOrderIndex === null || !state.orders || state.orders.length === 0 || 
         !state.selectedPositionSize || !state.selectedContracts) {
-        alert("App is still loading. Please wait a moment and try again.");
+        showNotification("App is still loading. Please wait a moment and try again.", "warning");
         return;
     }
     
@@ -650,20 +668,20 @@ function showTradeConfirmation() {
     // Additional validation: check if swap is loading before showing modal
     const tradeButton = $('#trade-now-btn');
     if (tradeButton.text().includes('LOADING SWAP')) {
-        alert("Please wait for swap data to load before confirming the trade.");
+        showNotification("Please wait for swap data to load before confirming the trade.", "warning");
         return;
     }
     
     // Check if order is about to expire
     if (isOrderExpired(order.orderExpiryTimestamp)) {
         // Show message that MM is not responding
-        alert("Quotes are stale, please try again later.");
+        showNotification("Quotes are stale, please try again later.", "warning");
         // Close Trade Modal
         $('#trade-confirm-modal').modal('hide');
         return;
     } else if (isOrderExpiringSoon(order.orderExpiryTimestamp)) {
         // Show message that we need to refresh the quote
-        alert("This order is about to expire. Refreshing quote...");
+        showNotification("This order is about to expire. Refreshing quote...", "info");
         
         // Refresh data and try again
         refreshData().then(async () => {
@@ -732,7 +750,7 @@ function showTradeConfirmation() {
             
             // Show message that we need to refresh the quote
             setTimeout(() => {
-                alert("Order quote expired. Refreshing data...");
+                showNotification("Order quote expired. Refreshing data...", "info");
                 
                 // Refresh data and try again
                 refreshData().then(async () => {
@@ -901,7 +919,7 @@ async function executeTrade() {
         if (isOrderExpiringSoon(order.orderExpiryTimestamp)) {
             // Close modal and refresh
             $('#trade-confirm-modal').modal('hide');
-            alert("Order expired during confirmation. Refreshing quote...");
+            showNotification("Order expired during confirmation. Refreshing quote...", "info");
             await refreshData();
             await selectOptionBasedOnConviction();
             showTradeConfirmation();
@@ -976,6 +994,15 @@ async function executeTrade() {
                     chainId: 8453
                 });
                 await waitForTransaction({ hash: approveInputTx.hash });
+                
+                // Refresh allowance for this specific token after approval (no heavy multicall needed!)
+                console.log('Using targeted OptionBook allowance refresh instead of heavy multicall');
+                const inputTokenSymbol = Object.keys(CONFIG.collateralMap).find(key => 
+                    CONFIG.collateralMap[key] === inputTokenAddress
+                );
+                if (inputTokenSymbol) {
+                    await refreshTokenAllowance(inputTokenAddress, inputTokenSymbol, OPTION_BOOK_ADDRESS, 'OptionBook');
+                }
             }
         }
 
@@ -1019,6 +1046,15 @@ async function executeTrade() {
                 chainId: 8453
             });
             await waitForTransaction({ hash: approveCollateralTx.hash });
+            
+            // Refresh allowance for this specific token after approval (no heavy multicall needed!)
+            console.log('Using targeted OptionBook allowance refresh instead of heavy multicall');
+            const collateralTokenSymbol = Object.keys(CONFIG.collateralMap).find(key => 
+                CONFIG.collateralMap[key] === order.collateral
+            );
+            if (collateralTokenSymbol) {
+                await refreshTokenAllowance(order.collateral, collateralTokenSymbol, OPTION_BOOK_ADDRESS, 'OptionBook');
+            }
         }
 
         // --- Prepare Order Parameters ---
@@ -2080,8 +2116,73 @@ async function refreshFundStatus() {
 
 
 
-// Update the openSwapModal function to include the test button
+// Populate swap dropdowns with tokens from CONFIG
+function populateSwapDropdowns() {
+    const fromAssetSelect = $('#swap-from-asset');
+    const toAssetSelect = $('#swap-to-asset');
+    
+    // Clear existing options
+    fromAssetSelect.empty();
+    toAssetSelect.empty();
+    
+    // Get all available tokens from CONFIG
+    const availableTokens = Object.keys(CONFIG.collateralMap);
+    
+    // Populate "From" dropdown (all tokens)
+    availableTokens.forEach(token => {
+        fromAssetSelect.append(`<option value="${token}">${token}</option>`);
+    });
+    
+    // Populate "To" dropdown (all tokens)
+    availableTokens.forEach(token => {
+        toAssetSelect.append(`<option value="${token}">${token}</option>`);
+    });
+    
+    // Set default selections
+    fromAssetSelect.val('USDC'); // Default "From" to USDC
+    toAssetSelect.val('ETH');    // Default "To" to ETH
+}
+
+// Ensure approve button is properly initialized and ready
+function initializeApproveButton() {
+    const approveBtn = $('#approve-swap-btn');
+    if (approveBtn.length === 0) {
+        console.error('Approve button not found in DOM');
+        return;
+    }
+    
+    // Initialize button state but don't show it yet - let the approval check decide
+    approveBtn.prop('disabled', false);
+    approveBtn.removeClass('d-none');
+    approveBtn.hide(); // Start hidden, will be shown by approval check if needed
+    
+    console.log('Approve button initialized:', {
+        exists: approveBtn.length > 0,
+        visible: approveBtn.is(':visible'),
+        disabled: approveBtn.prop('disabled'),
+        text: approveBtn.text()
+    });
+}
+
 function openSwapModal() {
+    // Populate dropdowns if not already done
+    if ($('#swap-from-asset option').length === 0) {
+        populateSwapDropdowns();
+    }
+    
+    // Initialize the approve button
+    initializeApproveButton();
+    
+    // Get the currently selected payment asset from the main UI
+    const currentPaymentAsset = getSelectedPaymentAsset();
+    console.log('Current payment asset:', currentPaymentAsset);
+    console.log('Available payment assets:', $('input[name="payment-asset-selection"]:checked').length);
+    
+    // Set the "From" asset to the currently selected payment asset, default to USDC if none selected
+    const fromAsset = currentPaymentAsset || 'USDC';
+    console.log('Setting from asset to:', fromAsset);
+    $('#swap-from-asset').val(fromAsset);
+    
     // Reset form
     $('#swap-from-amount').val('');
     $('#swap-to-amount').val('');
@@ -2089,47 +2190,101 @@ function openSwapModal() {
     $('#swap-rate-info').hide();
     $('#execute-swap-btn').prop('disabled', true);
     
-    // Update balances
+    // Update balance and allowance for the selected asset
     updateSwapFromBalance();
     
-    // Show modal
+    // Refresh balances and allowances to ensure we have latest data
+    if (typeof updateWalletBalance === 'function') {
+        updateWalletBalance();
+    }
+    if (typeof updateLiquidityInfo === 'function') {
+        updateLiquidityInfo();
+    }
+    
+    // Run approval check immediately after modal opens
+    setTimeout(async () => {
+        updateSwapFromBalance();
+        try {
+            await checkSwapApprovalNeeded();
+        } catch (error) {
+            console.error('Error checking approval status on modal open:', error);
+        }
+    }, 1000); // Reduced delay to 1 second for better responsiveness
+    
+    // Show the modal
     const swapModal = new bootstrap.Modal(document.getElementById('swapModal'));
     swapModal.show();
+    
+    // Add event listener for amount input to check approval immediately
+    $('#swap-from-amount').off('input.checkApproval').on('input.checkApproval', async function() {
+        const amount = $(this).val();
+        if (amount && parseFloat(amount) > 0) {
+            console.log('Amount changed, checking approval immediately');
+            try {
+                await checkSwapApprovalNeeded();
+            } catch (error) {
+                console.error('Error checking approval on amount change:', error);
+            }
+        }
+    });
+    
+    // Add event listener for asset selection change to check approval
+    $('#swap-from-asset').off('change.checkApproval').on('change.checkApproval', async function() {
+        console.log('Asset changed, checking approval');
+        try {
+            await checkSwapApprovalNeeded();
+        } catch (error) {
+            console.error('Error checking approval on asset change:', error);
+        }
+    });
 }
 
 function updateSwapFromBalance() {
     const fromAsset = $('#swap-from-asset').val();
-    if (!state.connectedAddress) {
-        $('#swap-from-balance').text('Connect wallet');
+    
+    // Safety check - if no asset selected, return early
+    if (!fromAsset) {
+        $('#swap-from-balance').text('--');
+        $('#swap-from-kyber-allowance').text('--');
         return;
     }
     
     if (fromAsset === 'ETH') {
-        // For ETH, use the existing ETH balance display
-        const ethBalanceDisplay = document.getElementById('eth-balance-display-main');
-        if (ethBalanceDisplay && ethBalanceDisplay.textContent !== '--') {
-            $('#swap-from-balance').text(`${ethBalanceDisplay.textContent} ETH`);
+        // For ETH, get balance from existing display
+        const ethBalanceElement = $('#eth-balance-display-main');
+        if (ethBalanceElement.length > 0) {
+            const ethBalance = ethBalanceElement.text();
+            $('#swap-from-balance').text(ethBalance);
         } else {
-            // Fallback: try to get ETH balance from the existing function
-            updateETHBalance();
-            // Wait a bit for the balance to update, then set it
-            setTimeout(() => {
-                const updatedBalance = document.getElementById('eth-balance-display-main');
-                if (updatedBalance && updatedBalance.textContent !== '--') {
-                    $('#swap-from-balance').text(`${updatedBalance.textContent} ETH`);
-                } else {
-                    $('#swap-from-balance').text('Loading...');
-                }
-            }, 500);
+            // Trigger ETH balance update if not available
+            if (typeof updateETHBalance === 'function') {
+                updateETHBalance();
+            }
+            $('#swap-from-balance').text('Loading...');
         }
+        
+        // ETH doesn't need Kyber allowance (native token)
+        $('#swap-from-kyber-allowance').text('N/A (Native)');
     } else {
-        // For other tokens, use the existing kyberSwap function
-        kyberSwap.getUserBalance(fromAsset).then(balance => {
-            $('#swap-from-balance').text(`${parseFloat(balance).toFixed(6)} ${fromAsset}`);
-        }).catch(error => {
-            console.error('Error fetching token balance:', error);
-            $('#swap-from-balance').text('Error');
-        });
+        // For ERC20 tokens, get balance from state
+        if (state.paymentAssetBalances && state.paymentAssetBalances[fromAsset]) {
+            $('#swap-from-balance').text(state.paymentAssetBalances[fromAsset]);
+        } else {
+            $('#swap-from-balance').text('--');
+        }
+        
+        // Get Kyber allowance for the selected asset
+        if (state.userKyberAllowances && state.userKyberAllowances[fromAsset]) {
+            $('#swap-from-kyber-allowance').text(state.userKyberAllowances[fromAsset]);
+        } else {
+            // Try to get from the Kyber liquidity display if available
+            const kyberElement = document.getElementById(`${fromAsset.toLowerCase()}-kyber-liquidity`);
+            if (kyberElement && kyberElement.textContent !== '--') {
+                $('#swap-from-kyber-allowance').text(kyberElement.textContent);
+            } else {
+                $('#swap-from-kyber-allowance').text('--');
+            }
+        }
     }
 }
 
@@ -2201,9 +2356,15 @@ async function updateSwapCalculations() {
             // Log the encodedSwapData for debugging
             console.log('encodedSwapData:', quote.encodedSwapData);
             
-            // Format output amount
-            const outputAmount = ethers.utils.formatUnits(quote.outputAmount, 6); // USDC has 6 decimals
-            $('#swap-to-amount').val(parseFloat(outputAmount).toFixed(6));
+            // Format output amount using the correct decimals for the "to" asset
+            const toTokenAddress = CONFIG.collateralMap[toAsset];
+            const toTokenDecimals = CONFIG.getCollateralDetails(toTokenAddress).decimals;
+            console.log('To Token Decimals:', toTokenDecimals);
+            
+            const outputAmount = ethers.utils.formatUnits(quote.outputAmount, toTokenDecimals);
+            console.log('Formatted Output Amount:', outputAmount);
+            
+            $('#swap-to-amount').val(parseFloat(outputAmount).toFixed(toTokenDecimals));
             
             // Calculate and display rate
             const rate = parseFloat(outputAmount) / parseFloat(fromAmount);
@@ -2218,6 +2379,11 @@ async function updateSwapCalculations() {
             
             // Enable execute button
             $('#execute-swap-btn').prop('disabled', false);
+            
+            // Check if approval is needed for the calculated amount
+            checkSwapApprovalNeeded().catch(error => {
+                console.error('Error checking approval status:', error);
+            });
         } else {
             throw new Error('Invalid quote response');
         }
@@ -2249,12 +2415,12 @@ async function executeSwap() {
     const fromAmount = $('#swap-from-amount').val();
     
     if (!fromAmount || parseFloat(fromAmount) <= 0) {
-        alert('Please enter a valid amount');
+        showNotification('Please enter a valid amount', 'error');
         return;
     }
     
     if (!state.connectedAddress) {
-        alert('Please connect your wallet first');
+        showNotification('Please connect your wallet first', 'error');
         return;
     }
     
@@ -2298,7 +2464,7 @@ async function executeSwap() {
         
         // Show success message with transaction hash
         const successMessage = `Swap transaction submitted successfully!\n\nTransaction Hash: ${result.hash}\n\n${fromAmount} ${fromAsset} → ${$('#swap-to-amount').val()} ${toAsset}`;
-        alert(successMessage);
+        showNotification(successMessage, 'success');
         
         // Close modal
         const swapModal = bootstrap.Modal.getInstance(document.getElementById('swapModal'));
@@ -2320,7 +2486,7 @@ async function executeSwap() {
         
     } catch (error) {
         console.error('Error executing swap:', error);
-        alert(`Swap failed: ${error.message}`);
+        showNotification(`Swap failed: ${error.message}`, 'error');
     } finally {
         // Restore button state
         executeBtn.prop('disabled', false).html(originalText);
@@ -2365,6 +2531,408 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
         } else {
             swapBtn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i>Swap to USDC`;
         }
+    }
+}
+
+// Check if user needs to approve the token for Kyber swaps
+async function checkSwapApprovalNeeded() {
+    const fromAsset = $('#swap-from-asset').val();
+    const fromAmount = $('#swap-from-amount').val();
+    const approveBtn = $('#approve-swap-btn');
+    const executeBtn = $('#execute-swap-btn');
+    
+    console.log('checkSwapApprovalNeeded called with:', { fromAsset, fromAmount });
+    console.log('Button elements found:', {
+        approveBtnExists: approveBtn.length > 0,
+        executeBtnExists: executeBtn.length > 0,
+        approveBtnSelector: '#approve-swap-btn',
+        executeBtnSelector: '#execute-swap-btn'
+    });
+    
+    if (!fromAsset || !fromAmount || parseFloat(fromAmount) <= 0) {
+        console.log('Invalid input, hiding approve button');
+        approveBtn.hide();
+        executeBtn.prop('disabled', true);
+        return;
+    }
+    
+    // Skip approval check for ETH (native token)
+    if (fromAsset === 'ETH') {
+        console.log('ETH selected, no approval needed');
+        approveBtn.hide();
+        executeBtn.prop('disabled', false);
+        return;
+    }
+    
+    // Rate limiting: don't check too frequently, but allow immediate checks for user input
+    const now = Date.now();
+    const isUserInput = fromAmount && parseFloat(fromAmount) > 0;
+    const timeSinceLastCheck = checkSwapApprovalNeeded.lastCheck ? (now - checkSwapApprovalNeeded.lastCheck) : 0;
+    
+    if (checkSwapApprovalNeeded.lastCheck && timeSinceLastCheck < 2000 && !isUserInput) {
+        console.log('Rate limiting: skipping approval check (last check was', Math.round(timeSinceLastCheck / 1000), 'seconds ago)');
+        return;
+    }
+    
+    // Update last check time
+    checkSwapApprovalNeeded.lastCheck = now;
+    
+    try {
+        // Get fresh Kyber allowance from blockchain
+        const tokenAddress = CONFIG.collateralMap[fromAsset];
+        const { readContract } = WagmiCore;
+        
+        console.log('Fetching fresh allowance for:', { fromAsset, tokenAddress, userAddress: state.connectedAddress });
+        
+        // Log provider details to debug RPC issue
+        console.log('=== PROVIDER DEBUG INFO ===');
+        console.log('WagmiCore:', WagmiCore);
+        console.log('Web3OnboardBridge:', window.Web3OnboardBridge);
+        if (window.Web3OnboardBridge) {
+            console.log('Bridge provider:', window.Web3OnboardBridge.getProvider && window.Web3OnboardBridge.getProvider());
+            console.log('Bridge direct provider:', window.Web3OnboardBridge.getDirectProvider && window.Web3OnboardBridge.getDirectProvider());
+            console.log('Bridge RPC info:', window.Web3OnboardBridge.getCurrentRpcInfo && window.Web3OnboardBridge.getCurrentRpcInfo());
+        }
+        console.log('=== END PROVIDER DEBUG ===');
+        
+        const allowanceResult = await readContract({
+            address: tokenAddress,
+            abi: ERC20ABI,
+            functionName: 'allowance',
+            args: [state.connectedAddress, CONFIG.KYBER_CONTRACT_ADDRESS],
+            chainId: 8453
+        });
+        
+        // Format the allowance amount
+        const tokenDecimals = CONFIG.getCollateralDetails(tokenAddress).decimals;
+        const userAllowance = parseFloat(ethers.utils.formatUnits(allowanceResult, tokenDecimals));
+        const requiredAmount = parseFloat(fromAmount);
+        
+        console.log('Fresh approval check result:', {
+            fromAsset,
+            fromAmount: requiredAmount,
+            userAllowance,
+            needsApproval: userAllowance < requiredAmount,
+            tokenAddress,
+            userAddress: state.connectedAddress,
+            rawAllowance: allowanceResult.toString()
+        });
+        
+        // Show approve button if allowance is less than required amount
+        if (userAllowance < requiredAmount) {
+            console.log('Showing approve button for', fromAsset);
+            console.log('Button state before show:', {
+                buttonExists: approveBtn.length > 0,
+                buttonVisible: approveBtn.is(':visible'),
+                buttonText: approveBtn.text(),
+                buttonStyle: approveBtn.attr('style'),
+                buttonClasses: approveBtn.attr('class'),
+                buttonDisplay: approveBtn.css('display')
+            });
+            
+            // Force show the button and ensure it's visible
+            approveBtn.show();
+            approveBtn.css('display', 'inline-block'); // Force display
+            approveBtn.removeAttr('style'); // Remove any inline styles that might hide it
+            executeBtn.prop('disabled', true);
+            approveBtn.text(`Approve ${fromAmount} ${fromAsset}`);
+            
+            console.log('Button state after show:', {
+                buttonVisible: approveBtn.is(':visible'),
+                buttonText: approveBtn.text(),
+                buttonStyle: approveBtn.attr('style'),
+                buttonDisplay: approveBtn.css('display')
+            });
+        } else {
+            console.log('Hiding approve button for', fromAsset, '- sufficient allowance');
+            approveBtn.hide();
+            executeBtn.prop('disabled', false);
+        }
+        
+    } catch (error) {
+        console.error('Error checking Kyber allowance:', error);
+        
+        // If it's a rate limit error, don't spam the console
+        if (error.message && error.message.includes('rate limited')) {
+            console.log('Rate limited, will retry later');
+            return;
+        }
+        
+        // Fallback to cached data if fresh call fails
+        let userAllowance = 0;
+        if (state.userKyberAllowances && state.userKyberAllowances[fromAsset]) {
+            userAllowance = parseFloat(state.userKyberAllowances[fromAsset]);
+        } else {
+            // If allowance data not loaded yet, try to get from UI elements
+            const kyberElement = document.getElementById(`${fromAsset.toLowerCase()}-kyber-liquidity`);
+            if (kyberElement && kyberElement.textContent !== '--') {
+                userAllowance = parseFloat(kyberElement.textContent);
+            }
+        }
+        
+        const requiredAmount = parseFloat(fromAmount);
+        
+        console.log('Fallback approval check:', { fromAsset, userAllowance, requiredAmount, needsApproval: userAllowance < requiredAmount });
+        
+        if (userAllowance < requiredAmount) {
+            console.log('Fallback: Showing approve button for', fromAsset);
+            approveBtn.show();
+            executeBtn.prop('disabled', true);
+            approveBtn.text(`Approve ${fromAmount} ${fromAsset}`);
+        } else {
+            console.log('Fallback: Hiding approve button for', fromAsset);
+            approveBtn.hide();
+            executeBtn.prop('disabled', false);
+        }
+    }
+}
+
+// Approve token for Kyber swaps
+async function approveSwapToken() {
+    const fromAsset = $('#swap-from-asset').val();
+    const fromAmount = $('#swap-from-amount').val();
+    const approveBtn = $('#approve-swap-btn');
+    const executeBtn = $('#execute-swap-btn');
+    
+    if (!fromAsset || !fromAmount || parseFloat(fromAmount) <= 0) {
+        showNotification('Invalid amount for approval', 'error');
+        return;
+    }
+    
+    // Skip approval for ETH (native token)
+    if (fromAsset === 'ETH') {
+        showNotification('ETH does not require approval', 'info');
+        return;
+    }
+    
+    try {
+        // Set loading state
+        approveBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Approving...');
+        
+        const tokenAddress = CONFIG.collateralMap[fromAsset];
+        const amountInRaw = ethers.utils.parseUnits(fromAmount, CONFIG.getCollateralDetails(tokenAddress).decimals);
+        
+        console.log('Approving token:', { fromAsset, fromAmount, amountInRaw: amountInRaw.toString(), tokenAddress });
+        
+        // Show notification when transaction is initiated
+        showNotification(`Approval transaction initiated for ${fromAmount} ${fromAsset}`, 'info');
+        
+        const result = await WagmiCore.writeContract({
+            address: tokenAddress,
+            abi: ERC20ABI,
+            functionName: 'approve',
+            args: [CONFIG.KYBER_CONTRACT_ADDRESS, amountInRaw],
+            chainId: 8453
+        });
+        
+        console.log('Approval transaction submitted:', result.hash);
+        
+        // Show notification when waiting for confirmation
+        showNotification(`Waiting for approval confirmation...`, 'info');
+        
+        // Wait for transaction confirmation
+        await WagmiCore.waitForTransaction({ hash: result.hash });
+        
+        // Show success notification when transaction is confirmed
+        showNotification(`Approval confirmed! You can now execute the swap.`, 'success');
+        
+        console.log('Approval transaction confirmed');
+        
+        // Reset button state
+        approveBtn.prop('disabled', false).text(`Approve ${fromAmount} ${fromAsset}`);
+        
+        // Wait a bit before refreshing to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Refresh only the Kyber allowance for this specific token (no heavy multicall needed!)
+        console.log('Using targeted Kyber allowance refresh instead of heavy multicall');
+        await refreshTokenAllowance(tokenAddress, fromAsset, CONFIG.KYBER_CONTRACT_ADDRESS, 'Kyber');
+        
+        // Check approval status immediately
+        try {
+            await checkSwapApprovalNeeded();
+        } catch (error) {
+            console.error('Error checking approval status after confirmation:', error);
+        }
+        
+        // Refresh wallet balance
+        if (typeof updateWalletBalance === 'function') {
+            updateWalletBalance();
+        }
+        
+    } catch (error) {
+        console.error('Error approving token:', error);
+        
+        // Show error notification
+        showNotification(`Approval failed: ${error.message}`, 'error');
+        
+        // Reset button state
+        approveBtn.prop('disabled', false).text(`Approve ${fromAmount} ${fromAsset}`);
+    }
+}
+
+// Simple notification function for basic messages
+function showNotification(message, type = 'info') {
+    // Create notification container if it doesn't exist
+    let container = document.getElementById('simple-notification-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'simple-notification-container';
+        container.className = 'simple-notification-container';
+        container.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+        `;
+        document.body.appendChild(container);
+    }
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show mb-2`;
+    notification.style.cssText = `
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border: none;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        animation: slideInRight 0.3s ease-out;
+    `;
+    
+    // Set icon based on type
+    let icon = '';
+    switch (type) {
+        case 'success':
+            icon = '<i class="bi bi-check-circle-fill me-2"></i>';
+            break;
+        case 'error':
+            icon = '<i class="bi bi-x-circle-fill me-2"></i>';
+            break;
+        case 'warning':
+            icon = '<i class="bi bi-exclamation-triangle-fill me-2"></i>';
+            break;
+        default:
+            icon = '<i class="bi bi-info-circle-fill me-2"></i>';
+    }
+    
+    notification.innerHTML = `
+        ${icon}
+        <span>${message}</span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Add to container
+    container.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.remove();
+        }
+    }, 5000);
+    
+    // Add close button functionality
+    const closeBtn = notification.querySelector('.btn-close');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            notification.remove();
+        });
+    }
+}
+
+// Add CSS for slide-in animation
+if (!document.getElementById('simple-notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'simple-notification-styles';
+    style.textContent = `
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// Unified function to refresh allowance for a specific token after approval
+// This replaces the old separate functions for OptionBook and Kyber allowances
+async function refreshTokenAllowance(tokenAddress, tokenSymbol, spenderAddress, spenderType = 'OptionBook') {
+    try {
+        console.log(`Refreshing ${spenderType} allowance for ${tokenSymbol} at address ${tokenAddress}`);
+        
+        // Get fresh allowance from blockchain for this specific token
+        const { readContract } = WagmiCore;
+        
+        // Get user's allowance for the specified spender
+        const userAllowance = await readContract({
+            address: tokenAddress,
+            abi: ERC20ABI,
+            functionName: 'allowance',
+            args: [state.connectedAddress, spenderAddress],
+            chainId: 8453
+        });
+        
+        // Get token details for formatting
+        const tokenDetails = CONFIG.getCollateralDetails(tokenAddress);
+        const formattedAllowance = ethers.utils.formatUnits(userAllowance, tokenDetails.decimals);
+        
+        console.log(`Fresh ${spenderType} allowance for ${tokenSymbol}:`, {
+            rawAmount: userAllowance.toString(),
+            formattedAmount: formattedAllowance,
+            decimals: tokenDetails.decimals
+        });
+        
+        // Update the appropriate allowance state based on spender type
+        if (spenderType === 'Kyber') {
+            if (!state.userKyberAllowances) {
+                state.userKyberAllowances = {};
+            }
+            state.userKyberAllowances[tokenSymbol] = formattedAllowance;
+            
+            // Update the UI display in the swap modal
+            const kyberAllowanceElement = $('#swap-from-kyber-allowance');
+            if (kyberAllowanceElement.length > 0) {
+                kyberAllowanceElement.text(formattedAllowance);
+            }
+            
+            // Also update the liquidity display element if it exists
+            const liquidityElement = document.getElementById(`${tokenSymbol.toLowerCase()}-kyber-liquidity`);
+            if (liquidityElement) {
+                liquidityElement.textContent = formattedAllowance;
+            }
+        } else {
+            // OptionBook allowance
+            if (!state.userOptionBookAllowances) {
+                state.userOptionBookAllowances = {};
+            }
+            state.userOptionBookAllowances[tokenSymbol] = formattedAllowance;
+            
+            // Update the UI display if this token is currently selected as payment asset
+            const selectedPaymentAsset = getSelectedPaymentAsset();
+            if (selectedPaymentAsset === tokenSymbol) {
+                const allowanceDisplay = document.getElementById('payment-allowance-amount');
+                if (allowanceDisplay) {
+                    allowanceDisplay.textContent = formattedAllowance;
+                }
+            }
+            
+            // Also update the liquidity display element if it exists
+            const liquidityElement = document.getElementById(`${tokenSymbol.toLowerCase()}-liquidity`);
+            if (liquidityElement) {
+                liquidityElement.textContent = formattedAllowance;
+            }
+        }
+        
+        console.log(`Successfully refreshed ${spenderType} allowance for ${tokenSymbol}: ${formattedAllowance}`);
+        
+    } catch (error) {
+        console.error(`Error refreshing ${spenderType} allowance for ${tokenSymbol}:`, error);
     }
 }
 
