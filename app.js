@@ -149,10 +149,8 @@ async function refreshData() {
 
 // Populate the options table in advanced view
 function populateOptionsTable() {
-    console.log('Populating options table...');
-    console.log('Orders available:', state.orders ? state.orders.length : 'undefined');
-    
     const tableBody = $('#options-table-body');
+    
     if (!tableBody.length) {
         console.error('Options table body not found');
         return;
@@ -222,14 +220,9 @@ function populateOptionsTable() {
             
         }
         
-        // Find the original index in state.orders for proper selection tracking
-        const originalIndex = state.orders.findIndex(originalOrder => 
-            originalOrder.order.strikes[0] === order.strikes[0] && 
-            originalOrder.order.isCall === order.isCall
-        );
-        
+        // Use the loop index directly for reliable row selection
         const row = `
-            <tr class="option-row ${originalIndex === state.selectedOrderIndex ? 'selected' : ''}" data-index="${originalIndex}">
+            <tr class="option-row ${i === state.selectedOrderIndex ? 'selected' : ''}" data-index="${i}">
                 <td>$${formatNumber(strike)}</td>
                 <td>${optionType}</td>
                 <td title="Expires at ${expiryDisplay}">${expiryDisplay}</td>
@@ -1365,6 +1358,9 @@ async function initialize() {
     state.viewMode = 'advanced';
     $('.options-table-container').show();
     console.log('Advanced view initialized, options table container shown');
+    
+    // Ensure trade section is shown by default
+    showSection('trade');
     
     // Populate the options table after data is loaded
     if (state.orders && state.orders.length > 0 && typeof populateOptionsTable === 'function') {

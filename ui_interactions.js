@@ -115,6 +115,13 @@ function setupEventListeners() {
         selectOption(index);
     });
     
+    // Specific handler for Select button clicks
+    $(document).on('click', '.select-option-btn', function(e) {
+        e.stopPropagation(); // Prevent row click from also firing
+        const index = $(this).closest('.option-row').data('index');
+        selectOption(index);
+    });
+    
     // Position detail view
     $(document).on('click', '.view-position-btn', function() {
         const index = $(this).data('position-index');
@@ -169,10 +176,20 @@ function showSection(section) {
     
     // Show the selected section and mark its nav link as active
     if (section === 'trade') {
-        $('#trade-section').show();
+        $('#asset-selector-section').show();
+        $('#quote-status-section').show();
+        // Explicitly show the options table container
+        $('.options-table-container').show();
         $('#nav-trade-bottom').addClass('active');
         // Ensure advanced view is shown by default
-        switchView('advanced');
+        // Add a small delay to ensure sections are visible before populating
+        setTimeout(() => {
+            switchView('advanced');
+            // Also refresh the data to ensure everything is up to date
+            if (typeof refreshData === 'function') {
+                refreshData();
+            }
+        }, 100);
     } else if (section === 'positions') {
         $('#positions-section').show();
         $('#nav-positions-bottom').addClass('active');
@@ -622,6 +639,18 @@ function updateOptionPreview() {
     updateDualUI('payout-ratio', formattedContracts); 
     updateDualUI('payout-threshold', strike, 'text', formatNumber);
     updateDualUI('payout-asset', collateral.name);
+
+    // Update the new option preview fields with Greeks and breakeven data
+    const { delta, iv } = orderData.greeks;
+    
+    // Get the breakeven directly from the table data instead of recalculating
+    // The breakeven is already calculated and displayed in the table
+    const tableRow = $(`.option-row[data-index="${state.selectedOrderIndex}"]`);
+    const tableBreakeven = tableRow.find('td:nth-child(6)').text().replace('$', '');
+    
+    updateDualUI('option-breakeven', tableBreakeven, 'text', formatNumber);
+    updateDualUI('option-delta', delta.toFixed(2));
+    updateDualUI('option-iv', `${parseInt(iv * 100)}%`);
 
     // Set the payout direction text
     $('#payout-direction').text(direction);

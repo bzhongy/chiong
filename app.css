@@ -550,37 +550,7 @@ main .container {
     border-color: var(--primary);
 }
 
-/* Option Preview */
-.option-preview .card {
-    background-color: rgba(0, 184, 212, 0.05);
-    border: 1px solid rgba(0, 184, 212, 0.2);
-}
 
-.option-action {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--primary);
-    margin-bottom: 1rem;
-}
-
-.option-details {
-    margin-bottom: 1rem;
-}
-
-.detail-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-}
-
-.detail-label {
-    color: var(--text-secondary);
-}
-
-.detail-value {
-    font-family: 'IBM Plex Mono', monospace;
-    color: var(--text-primary);
-}
 
 .no-liquidation-badge {
     background-color: rgba(24, 242, 178, 0.1);
@@ -3176,5 +3146,76 @@ datalist option::before {
     #connection-alert {
         margin: 0.5rem 0.5rem 0 0.5rem;
         font-size: 0.85rem;
+    }
+}
+
+/* Option Preview */
+.option-preview .card {
+    background-color: rgba(0, 184, 212, 0.05);
+    border: 1px solid rgba(0, 184, 212, 0.2);
+}
+
+.option-action {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 1rem;
+}
+
+.option-details {
+    margin-bottom: 1rem;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.detail-label {
+    color: var(--text-secondary);
+}
+
+.detail-value {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text-primary);
+}
+
+/* Mobile optimization for option preview */
+@media (max-width: 768px) {
+    .option-preview .card-body {
+        padding: 1rem 0.75rem;
+    }
+    
+    .detail-row {
+        flex-direction: column;
+        gap: 0.25rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .detail-label {
+        font-size: 0.9rem;
+    }
+    
+    .detail-value {
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .option-preview .card-body {
+        padding: 1rem 0.5rem;
+    }
+    
+    .detail-row {
+        margin-bottom: 0.5rem;
+    }
+    
+    .detail-label {
+        font-size: 0.85rem;
+    }
+    
+    .detail-value {
+        font-size: 0.9rem;
     }
 }
