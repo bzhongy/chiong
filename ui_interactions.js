@@ -39,12 +39,12 @@
 // Set up event listeners for UI interaction
 function setupEventListeners() {
     // Wallet connection
-    $('#connect-wallet').on('click', connectWallet);
+    const connectWalletBtn = $('#connect-wallet');
+    if (connectWalletBtn.length > 0) {
+        connectWalletBtn.on('click', connectWallet);
+    }
     
     // Navigation
-    $('#nav-trade').on('click', () => showSection('trade'));
-    $('#nav-positions').on('click', () => showSection('positions'));
-    $('#nav-history').on('click', () => showSection('history'));
     $('#go-to-trade').on('click', () => showSection('trade'));
     $('#go-to-trade-from-history').on('click', () => showSection('trade'));
     
@@ -61,12 +61,13 @@ function setupEventListeners() {
     });
     
     // Advanced view is now the default and only view
+    // Note: View toggle buttons don't exist in the main app.html, so we skip those event listeners
     
     // Position size sliders - use one handler for both sliders
-    $(document).on('input', '#position-size-slider, #adv-position-size-slider', updatePositionSize);
+    $(document).on('input', '#position-size-slider', updatePositionSize);
     
     // Conviction sliders - use one handler for both sliders
-    $(document).on('input', '#conviction-slider, #adv-conviction-slider', updateConviction);
+    $(document).on('input', '#conviction-slider', updateConviction);
     
     // Trade buttons
     $('#trade-now-btn').on('click', showTradeConfirmation);
@@ -89,21 +90,24 @@ function setupEventListeners() {
     });
     
     // Auto refresh toggle
-    $('#auto-refresh').on('change', function() {
-        const isChecked = $(this).is(':checked');
-        $(this).next().text(`Auto-refresh: ${isChecked ? 'ON' : 'OFF'}`);
-        
-        if (isChecked) {
-            if (!state.refreshTimer) {
-                state.refreshTimer = setInterval(refreshData, REFRESH_INTERVAL);
+    const autoRefresh = $('#auto-refresh');
+    if (autoRefresh.length > 0) {
+        autoRefresh.on('change', function() {
+            const isChecked = $(this).is(':checked');
+            $(this).next().text(`Auto-refresh: ${isChecked ? 'ON' : 'OFF'}`);
+            
+            if (isChecked) {
+                if (!state.refreshTimer) {
+                    state.refreshTimer = setInterval(refreshData, REFRESH_INTERVAL);
+                }
+            } else {
+                if (state.refreshTimer) {
+                    clearInterval(state.refreshTimer);
+                    state.refreshTimer = null;
+                }
             }
-        } else {
-            if (state.refreshTimer) {
-                clearInterval(state.refreshTimer);
-                state.refreshTimer = null;
-            }
-        }
-    });
+        });
+    }
     
     // Advanced view option selection
     $(document).on('click', '.option-row', function() {
@@ -118,22 +122,31 @@ function setupEventListeners() {
     });
 
     // History navigation
-    document.getElementById('nav-history').addEventListener('click', function(e) {
-        e.preventDefault();
-        showSection('history');
-        document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
-        this.classList.add('active');
-        loadTradeHistory(); // Load history when tab is selected
-    });
+    const navHistory = document.getElementById('nav-history-bottom');
+    if (navHistory) {
+        navHistory.addEventListener('click', function(e) {
+            e.preventDefault();
+            showSection('history');
+            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+            this.classList.add('active');
+            loadTradeHistory(); // Load history when tab is selected
+        });
+    }
     
     // Setup history filters
     setupHistoryFilters();
     
     // Add event listener for the settle option button
-    document.getElementById('settle-option-btn').addEventListener('click', settleOption);
+    const settleOptionBtn = document.getElementById('settle-option-btn');
+    if (settleOptionBtn) {
+        settleOptionBtn.addEventListener('click', settleOption);
+    }
 
     // Add event listener for payment asset selection
-    document.getElementById('payment-asset').addEventListener('change', updatePaymentAsset);
+    const paymentAsset = document.getElementById('payment-asset');
+    if (paymentAsset) {
+        paymentAsset.addEventListener('change', updatePaymentAsset);
+    }
 
     // Add scoreboard navigation
     window.scoreboard.init();
@@ -157,27 +170,23 @@ function showSection(section) {
     // Show the selected section and mark its nav link as active
     if (section === 'trade') {
         $('#trade-section').show();
-        $('#nav-trade').addClass('active');
         $('#nav-trade-bottom').addClass('active');
         // Ensure advanced view is shown by default
         switchView('advanced');
     } else if (section === 'positions') {
         $('#positions-section').show();
-        $('#nav-positions').addClass('active');
         $('#nav-positions-bottom').addClass('active');
         
         // Refresh positions data
         refreshPositions();
     } else if (section === 'history') {
         $('#history-section').show();
-        $('#nav-history').addClass('active');
         $('#nav-history-bottom').addClass('active');
         
         // Load history data
         loadTradeHistory();
     } else if (section === 'scoreboard-section') {
         $('#scoreboard-section').show();
-        $('#nav-scoreboard').addClass('active');
         $('#nav-scoreboard-bottom').addClass('active');
     }
 }

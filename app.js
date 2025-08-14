@@ -1108,14 +1108,15 @@ function setupHistoryFilters() {
     });
     
     // Add event listener for "go to trade" link
-    document.getElementById('go-to-trade-from-history').addEventListener('click', function(e) {
-        e.preventDefault();
-        showSection('trade');
-        document.getElementById('nav-trade').classList.add('active');
-        document.getElementById('nav-trade-bottom').classList.add('active');
-        document.getElementById('nav-history').classList.remove('active');
-        document.getElementById('nav-history-bottom').classList.remove('active');
-    });
+    const goToTradeFromHistory = document.getElementById('go-to-trade-from-history');
+    if (goToTradeFromHistory) {
+        goToTradeFromHistory.addEventListener('click', function(e) {
+            e.preventDefault();
+            showSection('trade');
+            document.getElementById('nav-trade-bottom').classList.add('active');
+            document.getElementById('nav-history-bottom').classList.remove('active');
+        });
+    }
 }
 
 function getOptionTypeDisplay(optionType) {
@@ -1398,12 +1399,18 @@ async function initialize() {
     });
 
     // Position asset filter handler
-    $('#positionAssetDropdown').on('click', '.dropdown-item', function(e) {
-        e.preventDefault();
-        const asset = $(this).data('asset');
-        $('#positions-selected-asset').text(asset);
-        refreshPositions();
-    });
+    const positionAssetDropdown = $('#positionAssetDropdown');
+    if (positionAssetDropdown.length > 0) {
+        positionAssetDropdown.on('click', '.dropdown-item', function(e) {
+            e.preventDefault();
+            const asset = $(this).data('asset');
+            const positionsSelectedAsset = $('#positions-selected-asset');
+            if (positionsSelectedAsset.length > 0) {
+                positionsSelectedAsset.text(asset);
+            }
+            refreshPositions();
+        });
+    }
 
 }
 
