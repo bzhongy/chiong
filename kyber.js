@@ -313,9 +313,15 @@ const kyberSwap = {
             swapInfoEl.id = 'swap-info-container';
             swapInfoEl.className = 'swap-info mt-3 p-2 rounded';
             
-            // Insert after payment selection
-            const paymentSelection = document.querySelector('.payment-selection');
-            paymentSelection.after(swapInfoEl);
+            // Insert after position size section
+            const positionSizeSection = document.querySelector('.position-size-container');
+            if (positionSizeSection) {
+                positionSizeSection.after(swapInfoEl);
+            } else {
+                // Fallback: insert after payment selection if position size not found
+                const paymentSelection = document.querySelector('.payment-selection');
+                paymentSelection.after(swapInfoEl);
+            }
         }
         
         if (!swapInfo || !swapInfo.isValid) {

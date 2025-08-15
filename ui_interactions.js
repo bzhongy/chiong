@@ -89,6 +89,18 @@ function setupEventListeners() {
     // Position size sliders - use one handler for both sliders
     $(document).on('input', '#position-size-slider', updatePositionSize);
     
+    // Quick amount buttons for position size
+    $(document).on('click', '.quick-amount-btn', function() {
+        const percentage = parseFloat($(this).data('percentage'));
+        
+        // Update slider value (now using 0-100 range)
+        $('#position-size-slider').val(percentage).trigger('input');
+        
+        // Update button active states
+        $('.quick-amount-btn').removeClass('active');
+        $(this).addClass('active');
+    });
+    
     // Conviction sliders - use one handler for both sliders
     $(document).on('input', '#conviction-slider', updateConviction);
     
@@ -160,6 +172,15 @@ function setupEventListeners() {
     $('#approve-swap-btn').off('click.swap').on('click.swap', function() {
         approveSwapToken();
     });
+    
+    // Initialize quick amount buttons with 100% active (default position size)
+    setTimeout(() => {
+        $('.quick-amount-btn[data-percentage="100"]').addClass('active');
+        // Update button text when data is available
+        if (state.orders && state.orders.length > 0) {
+            updateQuickAmountButtonText();
+        }
+    }, 100);
 }
 
 // Show a specific section (trade, positions, history)
@@ -294,6 +315,38 @@ function updatePositionSize() {
     refreshFundStatus();
     
     // Trade button state will be updated automatically by kyberSwap.updateSwapInfo
+}
+
+// Update quick amount button text with calculated amounts using exact slider logic
+function updateQuickAmountButtonText() {
+    const orderIndex = state.selectedOrderIndex;
+    if (orderIndex === null || !state.orders || state.orders.length === 0) return;
+    
+    const order = state.orders[orderIndex].order;
+    const collateral = CONFIG.getCollateralDetails(order.collateral);
+    
+    console.log('updateQuickAmountButtonText - order:', order);
+    console.log('updateQuickAmountButtonText - collateral:', collateral);
+    
+    // Update each button with calculated amounts
+    $('.quick-amount-btn').each(function() {
+        const percentage = parseFloat($(this).data('percentage'));
+        
+        console.log(`Button ${percentage}% - calculating with percentage:`, percentage);
+        
+        // Use the EXACT same calculation as the slider - copy the logic from updatePositionSizeWithContracts
+        const { positionCost, selectedContracts } = optionCalculator.calculatePositionDetails(
+            order, collateral, percentage
+        );
+        
+        console.log(`Button ${percentage}% - positionCost:`, positionCost, 'selectedContracts:', selectedContracts);
+        
+        // Format the native amount exactly like the slider does
+        const formattedCost = positionCost.toFixed(collateral.decimals === 6 ? 2 : 4);
+        
+        // Update button text to show percentage and calculated amount
+        $(this).text(`${percentage}% (${formattedCost} ${collateral.asset})`);
+    });
 }
 
 // Flag to track when we're in the middle of selecting an option to prevent redundant updates
@@ -582,6 +635,9 @@ async function selectOption(index) {
 
         // Update option preview immediately
         updateOptionPreview();
+        
+        // Update quick amount button text with new option data
+        updateQuickAmountButtonText();
         
         // OPTIMIZATION: Run smart asset selection in background (non-blocking)
         // This will update the payment asset if a better option is found
