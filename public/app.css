@@ -538,8 +538,9 @@ h4, h5, h6 {
     font-size: 16px !important;
 }
 
-/* Typewriter animation for buying text */
-#buying-text .letter {
+/* Typewriter animation for buying text and expiry text */
+#buying-text .letter,
+#expiry-text .letter {
     opacity: 0 !important;
     visibility: hidden;
     animation: typeWriter 0.1s ease-in-out forwards;
@@ -570,7 +571,8 @@ h4, h5, h6 {
 }
 
 /* Spot price text below buying text */
-#spot-price-text {
+#spot-price-text,
+#expiry-text {
     font-size: 16px !important;
     font-weight: 800 !important;
     font-family: 'Inter', -webkit-system, BlinkMacSystemFont, sans-serif !important;
@@ -580,22 +582,25 @@ h4, h5, h6 {
     text-transform: uppercase !important;
 }
 
-/* Spot price label styling (same as buying word) */
-#spot-price-text .spot-label {
+/* Spot price and expiry label styling (same as buying word) */
+#spot-price-text .spot-label,
+#expiry-text .expiry-label {
     color: rgba(0, 0, 0, 0.3) !important;
     font-size: 16px !important;
     font-weight: 800 !important;
 }
 
-/* Spot price value styling (black) */
-#spot-price-text .spot-value {
+/* Spot price and expiry value styling (black) */
+#spot-price-text .spot-value,
+#expiry-text .expiry-value {
     color: #000000 !important;
     font-size: 16px !important;
     font-weight: 800 !important;
 }
 
-/* Spot price typing cursor */
-#spot-price-text .typing-cursor {
+/* Spot price and expiry typing cursor */
+#spot-price-text .typing-cursor,
+#expiry-text .typing-cursor {
     display: inline-block;
     color: rgba(0, 0, 0, 0.7);
     font-weight: normal;

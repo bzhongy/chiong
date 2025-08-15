@@ -591,6 +591,37 @@ function populateStrikeButtons(expiry) {
     container.show();
 }
 
+// Typing animation function for expiry text
+function typeExpiryText(expiryDateString) {
+    const container = $('#expiry-text');
+    container.html('').show();
+    
+    // Create the structure with spans for styling
+    const labelSpan = $('<span class="expiry-label">EXPIRY: </span>');
+    const valueSpan = $('<span class="expiry-value"></span>');
+    
+    container.append(labelSpan).append(valueSpan);
+    
+    // Simple progressive text reveal
+    let displayText = '';
+    let index = 0;
+    
+    const typeNextLetter = () => {
+        if (index < expiryDateString.length) {
+            displayText += expiryDateString[index];
+            valueSpan.text(displayText);
+            index++;
+            setTimeout(typeNextLetter, 100);
+        } else {
+            // Add typing cursor at the end
+            const cursor = $('<span class="typing-cursor">|</span>');
+            container.append(cursor);
+        }
+    };
+    
+    typeNextLetter();
+}
+
 // Handle expiry selection
 function selectExpiry(expiry) {
     // Clear previous selections
@@ -601,9 +632,21 @@ function selectExpiry(expiry) {
         state.selectedExpiry = null; // Deselect if clicking same expiry
         $('#strike-buttons-container').hide();
         $('.strike-btn').removeClass('active');
+        // Hide expiry text when deselected
+        $('#expiry-text').hide();
     } else {
         state.selectedExpiry = expiry;
         populateStrikeButtons(expiry);
+        
+        // Show expiry with typing animation
+        const expiryDate = new Date(expiry * 1000);
+        const expiryDateString = expiryDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            timeZone: 'UTC'
+        });
+        
+        typeExpiryText(expiryDateString);
     }
     
     // Update button states
