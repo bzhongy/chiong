@@ -100,6 +100,7 @@ function setupEventListeners() {
         // Check if approval is needed for the new payment asset
         setTimeout(async () => {
             if (state.selectedOrderIndex !== null) {
+                console.log('Payment asset changed, updating trade button state...');
                 await updateTradeButtonState();
             }
         }, 100);
@@ -304,7 +305,7 @@ function calculateAndUpdatePositionCost(order, collateral, percentage) {
 }
 
 // Update the updatePositionSize function to also update swap info
-function updatePositionSize() {
+async function updatePositionSize() {
     const percentage = document.getElementById('position-size-slider').value;
     const orderIndex = state.selectedOrderIndex;
     
@@ -341,10 +342,16 @@ function updatePositionSize() {
         }
     }, 50); // Small delay to ensure UI updates are complete
     
-    // Check fund status after position size change (debounced)
-    refreshFundStatus();
-    
-    // Trade button state will be updated automatically by kyberSwap.updateSwapInfo
+            // Check fund status after position size change (debounced)
+        refreshFundStatus();
+        
+        // ALWAYS check approval status when position size changes
+        if (state.selectedOrderIndex !== null) {
+            console.log('Position size changed, checking approval status...');
+            await updateTradeButtonState();
+        }
+        
+        // Trade button state will be updated automatically by kyberSwap.updateSwapInfo
 }
 
 // Update quick amount button text with calculated amounts using exact slider logic
@@ -1130,9 +1137,8 @@ async function approveMaxForTrade() {
             await refreshTokenAllowance(approvalAddress, tokenSymbolForRefresh, OPTION_BOOK_ADDRESS, 'OptionBook');
         }
         
-        // Hide approval button and show trade button
-        $('#approve-max-btn, #approve-max-btn-main').hide();
-        $('#trade-now-btn').prop('disabled', false).removeClass('btn-secondary').addClass('btn-primary').text('TRADE NOW');
+        // Update trade button state to reflect new allowance
+        await updateTradeButtonState();
         
     } catch (error) {
         console.error('Error in approveMaxForTrade:', error);
@@ -1213,9 +1219,17 @@ async function approveSingleTrade() {
 
         showNotification(`Single trade approval successful for ${ethers.utils.formatUnits(approvalAmountBN, tokenDecimals)} ${tokenSymbol}`, "success");
         
-        // Hide approval buttons and enable trade button
-        $('#approve-single-btn-main, #approve-max-btn-main').hide();
-        $('#trade-now-btn').prop('disabled', false).removeClass('btn-secondary').addClass('btn-primary').text('TRADE NOW');
+        // Refresh allowance for this specific token
+        console.log('Using targeted OptionBook allowance refresh instead of heavy multicall');
+        const tokenSymbolForRefresh = Object.keys(CONFIG.collateralMap).find(key => 
+            CONFIG.collateralMap[key] === approvalAddress
+        );
+        if (tokenSymbolForRefresh) {
+            await refreshTokenAllowance(approvalAddress, tokenSymbolForRefresh, OPTION_BOOK_ADDRESS, 'OptionBook');
+        }
+        
+        // Update trade button state to reflect new allowance
+        await updateTradeButtonState();
         
     } catch (error) {
         console.error('Error in approveSingleTrade:', error);
@@ -1229,7 +1243,10 @@ async function approveSingleTrade() {
 // Function to check if approval is needed for the current trade
 async function checkApprovalNeeded() {
     try {
-        if (state.selectedOrderIndex === null) return false;
+        if (state.selectedOrderIndex === null) {
+            console.log('checkApprovalNeeded: No order selected');
+            return false;
+        }
         
         const baseOrder = state.orders[state.selectedOrderIndex];
         const order = baseOrder.order;
@@ -1239,16 +1256,50 @@ async function checkApprovalNeeded() {
         const selectedPaymentAssetName = getSelectedPaymentAsset();
         const isSwapRequired = selectedPaymentAssetName !== CONFIG.getCollateralDetails(order.collateral).name;
         
+        console.log('checkApprovalNeeded:', {
+            selectedPaymentAsset: selectedPaymentAssetName,
+            requiredCollateral: requiredCollateralDetails.name,
+            isSwapRequired: isSwapRequired,
+            positionSize: state.selectedPositionSize
+        });
+        
         // If swap is required, check input token allowance
         if (isSwapRequired) {
             // Get swap info to determine input token and amount
             if (!state.currentSwapInfo || !state.currentSwapInfo.swapData) {
-                return false; // Can't determine approval without swap data
+                console.log('checkApprovalNeeded: Swap required but no swap data available, trying to load swap data...');
+                
+                // Try to load swap data if it's not available
+                try {
+                    if (state.selectedOrderIndex !== null && state.selectedPositionSize) {
+                        const orderData = state.orders[state.selectedOrderIndex];
+                        await kyberSwap.updateSwapInfo(orderData.order, state.selectedPositionSize);
+                        
+                        // Check again if swap data is now available
+                        if (state.currentSwapInfo && state.currentSwapInfo.swapData) {
+                            console.log('checkApprovalNeeded: Successfully loaded swap data');
+                        } else {
+                            console.log('checkApprovalNeeded: Still no swap data after trying to load');
+                            return false; // Can't determine approval without swap data
+                        }
+                    } else {
+                        console.log('checkApprovalNeeded: No order or position size available for swap data loading');
+                        return false;
+                    }
+                } catch (error) {
+                    console.log('checkApprovalNeeded: Error loading swap data:', error);
+                    return false;
+                }
             }
             
             const swapInfo = state.currentSwapInfo.swapData;
             const inputTokenAddress = swapInfo.swaps[0][0].tokenIn;
             const inputAmount = swapInfo.inputAmount;
+            
+            console.log('checkApprovalNeeded: Swap details:', {
+                inputTokenAddress: inputTokenAddress,
+                inputAmount: inputAmount.toString()
+            });
             
             // Check input token allowance
             const { readContract } = WagmiCore;
@@ -1263,7 +1314,14 @@ async function checkApprovalNeeded() {
             const inputAllowanceBN = ethers.BigNumber.from(inputAllowance.toString());
             const inputAmountBN = ethers.BigNumber.from(inputAmount);
             
-            return inputAllowanceBN.lt(inputAmountBN);
+            const approvalNeeded = inputAllowanceBN.lt(inputAmountBN);
+            console.log('checkApprovalNeeded: Input token allowance check:', {
+                allowance: inputAllowanceBN.toString(),
+                required: inputAmountBN.toString(),
+                approvalNeeded: approvalNeeded
+            });
+            
+            return approvalNeeded;
         } else {
             // No swap needed, check collateral token allowance directly
             const actualRequiredAmountBN = optionCalculator.calculateApprovalAmount(
@@ -1271,6 +1329,11 @@ async function checkApprovalNeeded() {
                 requiredCollateralDetails,
                 state.selectedPositionSize
             );
+            
+            console.log('checkApprovalNeeded: Direct collateral check:', {
+                collateralAddress: order.collateral,
+                requiredAmount: actualRequiredAmountBN.toString()
+            });
             
             const { readContract } = WagmiCore;
             const collateralAllowance = await readContract({
@@ -1283,7 +1346,14 @@ async function checkApprovalNeeded() {
             
             const collateralAllowanceBN = ethers.BigNumber.from(collateralAllowance.toString());
             
-            return collateralAllowanceBN.lt(actualRequiredAmountBN);
+            const approvalNeeded = collateralAllowanceBN.lt(actualRequiredAmountBN);
+            console.log('checkApprovalNeeded: Collateral allowance check:', {
+                allowance: collateralAllowanceBN.toString(),
+                required: actualRequiredAmountBN.toString(),
+                approvalNeeded: approvalNeeded
+            });
+            
+            return approvalNeeded;
         }
         
     } catch (error) {
@@ -2542,32 +2612,42 @@ function hideSwapLoadingWarning() {
  * (Swap readiness is handled directly by kyber functions)
  */
 async function updateTradeButtonState() {
+    console.log('updateTradeButtonState: Starting...');
+    
     // Safety check: don't run if app isn't loaded yet
     if (!state || state.selectedOrderIndex === null || !state.orders || state.orders.length === 0) {
-        // App not ready yet, keep button in loading state
+        console.log('updateTradeButtonState: App not ready yet');
         return;
     }
     
+    console.log('updateTradeButtonState: Checking funds...');
     const fundCheck = await checkSufficientFunds();
+    console.log('updateTradeButtonState: Fund check result:', fundCheck);
     
     if (fundCheck.sufficient) {
         // Check if approval is needed
+        console.log('updateTradeButtonState: Checking approval...');
         const approvalNeeded = await checkApprovalNeeded();
+        console.log('updateTradeButtonState: Approval needed:', approvalNeeded);
         
         if (approvalNeeded) {
-            // Show approval buttons and disable trade button
+            // Show approval buttons and ALWAYS disable trade button
+            console.log('updateTradeButtonState: Showing approval buttons');
             $('#approve-single-btn-main, #approve-max-btn-main').show();
+            
+            // Reset approval button text to normal state
+            $('#approve-single-btn-main').text('Approve Single Trade').prop('disabled', false);
+            $('#approve-max-btn-main').text('Approve Max').prop('disabled', false);
+            
             $('#trade-now-btn').prop('disabled', true).attr('data-approval-required', 'true');
         } else {
             // Hide approval buttons and enable trade button
+            console.log('updateTradeButtonState: Hiding approval buttons, enabling trade button');
             $('#approve-single-btn-main, #approve-max-btn-main').hide();
             $('#trade-now-btn').prop('disabled', false).removeAttr('data-approval-required');
             
-            // Enable button and restore normal text (if not disabled by swap loading)
-            // Only update if buttons are not in swap loading state
-            if (!$('#trade-now-btn').text().includes('LOADING')) {
-                toggleButtonReadiness(true, 'TRADE NOW');
-            }
+            // Always restore normal text when approval is not needed
+            toggleButtonReadiness(true, 'TRADE NOW');
         }
         
         // Hide insufficient funds warning
