@@ -281,6 +281,105 @@ function switchView(view) {
     populateOptionsTable();
 }
 
+// Typewriter animation for buying text
+function animateTypewriter(text) {
+    const buyingTextElement = $('#buying-text');
+    buyingTextElement.empty();
+    
+    const letters = text.split('');
+    let currentText = '';
+    
+    // Add a dynamic cursor that moves with typing
+    buyingTextElement.html('<span class="typing-cursor">|</span>');
+    
+    // Animate each letter with delay
+    letters.forEach((letter, index) => {
+        setTimeout(() => {
+            currentText += letter;
+            
+            // Build HTML with proper styling
+            let styledText = '';
+            const chars = currentText.split('');
+            
+            chars.forEach((char, charIndex) => {
+                if (char === ' ') {
+                    styledText += '<span>&nbsp;</span>';
+                } else {
+                    // Apply different colors based on position
+                    if (text.indexOf('Buying') !== -1 && charIndex < 6) {
+                        // First 6 letters are "Buying"
+                        styledText += `<span class="buying-word">${char}</span>`;
+                    } else {
+                        // Rest is asset + options
+                        styledText += `<span class="asset-options">${char}</span>`;
+                    }
+                }
+            });
+            
+            // Update the text with cursor
+            buyingTextElement.html(styledText + '<span class="typing-cursor">|</span>');
+            
+        }, index * 80); // Slower 80ms delay for smoother effect
+    });
+    
+    // Remove cursor after animation completes and start spot price animation
+    setTimeout(() => {
+        buyingTextElement.html(buyingTextElement.html().replace('<span class="typing-cursor">|</span>', ''));
+        
+        // Start spot price animation after a brief pause
+        setTimeout(() => {
+            animateSpotPrice();
+        }, 300);
+    }, letters.length * 80 + 500);
+}
+
+// Animate spot price with typewriter effect
+function animateSpotPrice() {
+    const spotPriceElement = $('#spot-price-text');
+    spotPriceElement.show();
+    
+    // Get current price from state if available
+    let currentPrice = '--';
+    if (state.selectedAsset && state.market_prices && state.market_prices[state.selectedAsset]) {
+        currentPrice = state.market_prices[state.selectedAsset].toFixed(2);
+    }
+    
+    const priceText = `Spot Price: $${currentPrice}`;
+    const letters = priceText.split('');
+    let currentText = '';
+    
+    // Start with cursor
+    spotPriceElement.html('<span class="typing-cursor">|</span>');
+    
+    // Animate each letter
+    letters.forEach((letter, index) => {
+        setTimeout(() => {
+            currentText += letter;
+            
+            // Build styled text with different colors for label vs value
+            let styledText = '';
+            const labelEnd = currentText.indexOf(': $');
+            
+            if (labelEnd !== -1) {
+                // Split into label and value parts
+                const label = currentText.substring(0, labelEnd + 2); // "Spot Price: "
+                const value = currentText.substring(labelEnd + 2); // "$3245.67"
+                styledText = `<span class="spot-label">${label}</span><span class="spot-value">${value}</span>`;
+            } else {
+                // Still typing the label part
+                styledText = `<span class="spot-label">${currentText}</span>`;
+            }
+            
+            spotPriceElement.html(styledText + '<span class="typing-cursor">|</span>');
+        }, index * 60); // Slightly faster for price
+    });
+    
+    // Remove cursor after animation
+    setTimeout(() => {
+        spotPriceElement.html(spotPriceElement.html().replace('<span class="typing-cursor">|</span>', ''));
+    }, letters.length * 60 + 500);
+}
+
 // Select an asset (ETH, BTC), update state, UI then refresh data
 function selectAsset(asset) {
     if (!asset) {
@@ -295,9 +394,10 @@ function selectAsset(asset) {
         // Clear current price display
         updateUI('#current-price', '--');
         
-        // Show asset selector and hide buying text
+        // Show asset selector and hide buying text and spot price
         $('#asset-selector-section').removeClass('hidden');
         $('#buying-text').hide();
+        $('#spot-price-text').hide();
         
         // Disable trading interface elements
         $('#conviction-slider').prop('disabled', true);
@@ -319,9 +419,10 @@ function selectAsset(asset) {
     // Update radio button state
     $(`input[name="asset-selection"][value="${asset}"]`).prop('checked', true);
     
-    // Hide asset selector and show buying text
+    // Hide asset selector and show buying text with typewriter animation
     $('#asset-selector-section').addClass('hidden');
-    $('#buying-text').html(`<span class="buying-word">BUYING</span> <span class="asset-options">${asset} OPTIONS</span>`).show();
+    $('#buying-text').show();
+    animateTypewriter(`Buying ${asset} Options`);
     
     // Enable trading interface elements
     $('#conviction-slider').prop('disabled', false);

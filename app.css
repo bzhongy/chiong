@@ -521,6 +521,75 @@ h4, h5, h6 {
     font-size: 12px !important;
 }
 
+/* Typewriter animation for buying text */
+#buying-text .letter {
+    opacity: 0 !important;
+    visibility: hidden;
+    animation: typeWriter 0.1s ease-in-out forwards;
+}
+
+@keyframes typeWriter {
+    from {
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+}
+
+/* Dynamic typing cursor */
+#buying-text .typing-cursor {
+    display: inline-block;
+    color: rgba(0, 0, 0, 0.7);
+    font-weight: normal;
+    font-size: 12px !important;
+    line-height: 1;
+    animation: blink 1s infinite;
+    margin-left: 1px;
+}
+
+/* Spot price text below buying text */
+#spot-price-text {
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    font-family: 'Inter', -webkit-system, BlinkMacSystemFont, sans-serif !important;
+    text-align: center !important;
+    margin-top: 0px !important;
+    color: rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Spot price label styling (same as buying word) */
+#spot-price-text .spot-label {
+    color: rgba(0, 0, 0, 0.3) !important;
+    font-size: 12px !important;
+}
+
+/* Spot price value styling (black) */
+#spot-price-text .spot-value {
+    color: #000000 !important;
+    font-size: 12px !important;
+}
+
+/* Spot price typing cursor */
+#spot-price-text .typing-cursor {
+    display: inline-block;
+    color: rgba(0, 0, 0, 0.7);
+    font-weight: normal;
+    font-size: 12px !important;
+    line-height: 1;
+    animation: blink 1s infinite;
+    margin-left: 1px;
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
 /* Asset instruction styling */
 .asset-instruction p {
     font-size: 12px !important;
