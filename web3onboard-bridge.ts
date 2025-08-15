@@ -34,8 +34,14 @@ function init() {
       }
     ],
     accountCenter: {
-      desktop: { enabled: true },
-      mobile: { enabled: true }
+      desktop: { 
+        enabled: true,
+        position: 'topRight'
+      },
+      mobile: { 
+        enabled: true,
+        position: 'topRight'
+      }
     },
     theme: {
       '--w3o-background-color': '#1A1D26',

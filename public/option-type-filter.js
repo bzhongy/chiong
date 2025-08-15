@@ -434,6 +434,8 @@ function updatePositionSizeWithContracts() {
         order, collateral, percentage
     );
     
+    console.log('Slider calculation - percentage:', percentage, 'positionCost:', positionCost, 'selectedContracts:', selectedContracts);
+    
     // Determine option type
     const optionType = order.isCall ? "CALL" : "PUT";
     

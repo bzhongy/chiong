@@ -21,10 +21,29 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    font-weight: 200;
+}
+
+/* Font weight overrides for specific elements */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: 600 !important;
+}
+
+.btn, button, input, select, textarea {
+    font-weight: 500 !important;
+}
+
+.nav-link, .navbar-brand {
+    font-weight: 500 !important;
+}
+
+.brand-text h1, .hero-title, .hero-link {
+    font-weight: 700 !important;
 }
 
 body {
-    font-family: 'Nata Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
+    font-weight: 200;
     color: var(--text-color);
     background-color: #ffffff;
     line-height: 1.6;

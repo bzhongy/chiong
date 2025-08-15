@@ -7,11 +7,12 @@
     --warning: #FFB300;          /* Warning Amber */
     --negative: #FF3D71;         /* Alert Red */
     --soft-slate: #607D8B;       /* Soft Slate */
-    --background: #0D1821;       /* Dark Background */
-    --card-bg: #192734;          /* Card Background */
-    --text-primary: #E9ECEF;     /* Primary Text */
-    --text-secondary: #ADB5BD;   /* Secondary Text */
-    --border-color: #2A3A4A;     /* Border Color */
+    --background: #FFFFFF;       /* White Background */
+    --card-bg: #FFFFFF;          /* White Card Background */
+    --text-primary: #000000;     /* Black Primary Text */
+    --text-secondary: #000000;   /* Black Secondary Text */
+    --text-black: #000000;       /* Global Black Text */
+    --border-color: #E0E0E0;     /* Light Border Color */
 
     /* Web3-Onboard: force square corners */
     --w3o-border-radius: 0px;
@@ -26,27 +27,120 @@
 /* Base Styles */
 body {
     font-family: 'Inter', sans-serif;
+    font-weight: 400;
     background-color: var(--background);
-    color: var(--text-primary);
+    color: var(--text-black) !important;
     margin: 0;
     padding: 0;
+}
+
+/* Global text color override - make all text black */
+* {
+    color: var(--text-black) !important;
+    font-weight: 400;
+}
+
+/* Override specific elements that should keep their colors */
+.primary-color, .primary-color *,
+.accent-color, .accent-color *,
+.warning-color, .warning-color *,
+.positive-color, .positive-color *,
+.negative-color, .negative-color * {
+    color: inherit !important;
+}
+
+/* Font weight overrides for specific elements */
+.btn, button, input, select, textarea {
+    font-weight: 500 !important;
+}
+
+.nav-link, .navbar-brand {
+    font-weight: 500 !important;
+}
+
+.table th, .table thead th {
+    font-weight: 600 !important;
+}
+
+.badge, .alert {
+    font-weight: 500 !important;
+}
+
+/* Additional font weight overrides */
+.modal-title, .card-title {
+    font-weight: 600 !important;
+}
+
+.form-label, .form-text {
+    font-weight: 500 !important;
+}
+
+.swap-title, .swap-amount {
+    font-weight: 500 !important;
+}
+
+.countdown, .countdown-timer {
+    font-weight: 600 !important;
+}
+
+/* Center all buttons and interactive elements */
+.btn {
+    margin: 0.25rem auto;
+}
+
+.btn-group {
+    justify-content: center;
+    display: flex;
+}
+
+/* Center all forms and inputs */
+.form-control, .form-select, .form-check {
+    margin: 0.5rem auto;
+}
+
+/* Center all alerts and messages */
+.alert {
+    margin: 1rem auto;
+    max-width: 800px;
+}
+
+/* Web3-Onboard Account Center positioning */
+[data-testid="account-center"] {
+    position: fixed !important;
+    top: 1rem !important;
+    right: 1rem !important;
+    z-index: 1050 !important;
+}
+
+/* Ensure account center is above other elements */
+[data-testid="account-center"] * {
+    z-index: 1050 !important;
+}
+
+/* Hide wallet address and disconnect button when connected */
+.wallet-status.connected #address-display,
+.wallet-status.connected #disconnect-wallet-btn {
+    display: none !important;
 }
 
 /* App Container - ensures consistent layout */
 .app-container {
     max-width: 100%;
     margin: 0 auto;
+    text-align: center;
 }
 
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
-    font-weight: 600;
+    font-weight: 600 !important;
     margin-bottom: 1rem;
+    color: var(--text-black) !important;
 }
 
 .numeric {
     font-family: 'IBM Plex Mono', monospace;
     font-weight: 500;
+    color: var(--text-black) !important;
 }
 
 /* Brand and Wallet Section */
@@ -54,13 +148,15 @@ h1, h2, h3, h4, h5, h6 {
     background-color: transparent;
     padding: 1.5rem 0 1rem 0;
     margin-bottom: 1rem;
+    text-align: center;
 }
 
 .brand-display h1 {
     font-size: 1.8rem;
-    margin: 0;
-    font-weight: 700;
-    color: var(--text-primary);
+    margin: 0 auto;
+    font-weight: 700 !important;
+    color: var(--text-black) !important;
+    text-align: center;
 }
 
 .brand-display h1 span {
@@ -69,13 +165,14 @@ h1, h2, h3, h4, h5, h6 {
 
 .wallet-section {
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
     align-items: center;
 }
 
 /* Asset Selector Section - ensure proper spacing from brand section */
 #asset-selector-section {
     margin-top: 0.5rem;
+    text-align: center;
 }
 
 /* Mobile optimization for brand-wallet section */
@@ -121,68 +218,92 @@ h1, h2, h3, h4, h5, h6 {
     bottom: 0;
     left: 0;
     right: 0;
-    background-color: var(--secondary);
-    border-top: 1px solid var(--border-color);
+    background-color: #FFFFFF;
+    border-top: 1px solid #E0E0E0;
     display: flex;
     justify-content: space-around;
-    padding: 0.75rem 0;
+    padding: 0rem 0;
     z-index: 1000;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .bottom-nav .nav-item {
     flex: 1;
     text-align: center;
+    position: relative;
+}
+
+.bottom-nav .nav-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 20%;
+    bottom: 20%;
+    width: 1px;
+    background-color: #E0E0E0;
 }
 
 .bottom-nav .nav-link {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    color: var(--text-secondary);
+    justify-content: center;
+    color: #666666;
     text-decoration: none;
-    padding: 0.5rem;
+    padding: 0.4rem 0.75rem;
     transition: all 0.2s ease;
     font-size: 0.8rem;
-}
-
-.bottom-nav .nav-link:hover,
-.bottom-nav .nav-link.active {
-    color: var(--primary);
-}
-
-.bottom-nav .nav-link i {
-    font-size: 1.2rem;
-    margin-bottom: 0.25rem;
-}
-
-.bottom-nav .nav-link span {
-    font-size: 0.75rem;
     font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.bottom-nav .nav-link:hover {
+    color: #333333;
+}
+
+.bottom-nav .nav-link.active {
+    color: #000000;
+    font-weight: 600;
+    position: relative;
+}
+
+.bottom-nav .nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 2px;
+    background-color: #000000;
+    border-radius: 1px;
 }
 
 /* Add bottom padding to main content to account for bottom nav */
 main {
     padding: 2rem 0;
+    text-align: center;
+}
+
+/* Center all content sections */
+.content-section {
+    text-align: center;
+}
+
+/* Center all containers */
+.container {
+    text-align: center;
 }
 
 /* Mobile-specific bottom navigation adjustments */
 @media (max-width: 768px) {
     .bottom-nav {
-        padding: 0.5rem 0;
+        padding: 0.4rem 0;
     }
     
     .bottom-nav .nav-link {
-        font-size: 0.7rem;
-        padding: 0.4rem;
-    }
-    
-    .bottom-nav .nav-link i {
-        font-size: 1.1rem;
-        margin-bottom: 0.2rem;
-    }
-    
-    .bottom-nav .nav-link span {
-        font-size: 0.7rem;
+        font-size: 0.75rem;
+        padding: 0.3rem 0.6rem;
     }
     
     /* Mobile adjustments for main content */
@@ -304,21 +425,24 @@ main .container {
 .asset-selector .btn {
     background-color: transparent;
     border-color: var(--border-color);
-    color: var(--text-primary);
+    color: var(--text-black) !important;
+    margin: 0 auto;
 }
 
 /* Current Price Display */
 .current-price-display {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
     font-size: 1.1rem;
-    color: var(--text-primary);
+    color: var(--text-black) !important;
+    margin: 0 auto;
 }
 
 .current-price-display .price-label {
     font-weight: 500;
-    color: var(--text-secondary);
+    color: var(--text-black) !important;
 }
 
 .current-price-display .price-value {
@@ -328,7 +452,7 @@ main .container {
 }
 
 .current-price-display .asset-symbol {
-    color: var(--text-secondary);
+    color: var(--text-black) !important;
     font-weight: 500;
 }
 
@@ -352,7 +476,7 @@ main .container {
 
 .time-display {
     font-size: 0.9rem;
-    color: var(--text-secondary);
+    color: var(--text-black) !important;
 }
 
 .countdown {
@@ -378,10 +502,12 @@ main .container {
     border: 1px solid var(--border-color);
     border-radius: 0.5rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    margin: 0 auto;
+    max-width: 800px;
 }
 
 .card-title {
-    color: var(--text-primary);
+    color: var(--text-black) !important;
     font-weight: 600;
     font-size: 1.1rem;
 }
@@ -389,9 +515,10 @@ main .container {
 /* Conviction Slider */
 .conviction-slider-container {
     position: relative;
-    margin: 2rem 0;
+    margin: 2rem auto;
     padding: 0 1rem;
     margin-bottom: 20px;
+    max-width: 600px;
 }
 
 /* Mobile optimization for conviction slider */
@@ -718,7 +845,8 @@ main .container {
 .form-select {
     background-color: var(--secondary);
     border-color: var(--border-color);
-    color: var(--text-primary);
+    color: var(--text-black) !important;
+    margin: 0 auto;
 }
 
 .form-select:focus {
@@ -749,6 +877,8 @@ main .container {
     color: var(--secondary);
     font-weight: 600;
     transition: all 0.2s ease;
+    margin: 0 auto;
+    display: block;
 }
 
 #trade-now-btn:hover:not(:disabled) {
@@ -797,10 +927,11 @@ main .container {
 
 /* Options Table */
 .options-table-container {
-    margin: 1.5rem 0;
+    margin: 1.5rem auto;
     overflow-x: auto;
     padding: 0 1rem;
     display: block !important; /* Ensure table is always visible in advanced view */
+    max-width: 1000px;
 }
 
 /* Responsive table styling */
@@ -825,12 +956,12 @@ main .container {
 }
 
 .options-table {
-    color: var(--text-primary);
+    color: var(--text-black) !important;
 }
 
 .options-table thead th {
     background-color: var(--secondary);
-    color: var(--text-secondary);
+    color: var(--text-black) !important;
     font-size: 0.85rem;
     font-weight: 500;
     border-color: var(--border-color);
@@ -841,7 +972,7 @@ main .container {
 .options-table td:nth-child(3) {
     min-width: 120px;
     font-size: 0.8rem;
-    color: var(--text-secondary);
+    color: var(--text-black) !important;
     text-align: center;
     white-space: nowrap;
 }
@@ -890,6 +1021,8 @@ main .container {
     padding: 0.5rem 1rem;
     background-color: rgba(255, 179, 0, 0.1);
     border-radius: 2rem;
+    margin: 0 auto;
+    text-align: center;
 }
 
 .position-card {
@@ -897,8 +1030,9 @@ main .container {
     border: 1px solid var(--border-color);
     border-radius: 0.5rem;
     padding: 1.5rem;
-    margin-bottom: 1.5rem;
+    margin: 0 auto 1.5rem auto;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    max-width: 800px;
 }
 
 .position-header {
@@ -916,7 +1050,7 @@ main .container {
 
 .collateral-address {
     font-size: 0.8rem;
-    color: var(--text-secondary);
+    color: var(--text-black) !important;
 }
 
 .position-details {
@@ -1018,7 +1152,7 @@ main .container {
 }
 
 .history-table {
-    color: var(--text-primary);
+    color: var(--text-black) !important;
 }
 
 .history-table thead th {
