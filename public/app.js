@@ -463,6 +463,9 @@ function populateExpiryButtons() {
     const container = $('#expiry-buttons-container');
     container.empty();
     
+    // Create a btn-group wrapper to match asset selector structure
+    const btnGroup = $('<div class="btn-group" role="group" aria-label="Expiry selection"></div>');
+    
     // Get unique expiry timestamps - filter out invalid ones
     const uniqueExpiries = Array.from(new Set(
         state.orders
@@ -484,9 +487,15 @@ function populateExpiryButtons() {
             day: 'numeric',
             timeZone: 'UTC'
         });
-        const displayText = `${expiryDateString} ${expiryTimeString} UTC`;
         
-        const button = $(`<button class="expiry-btn" data-expiry="${expiry}">${displayText}</button>`);
+        // Calculate hours remaining until expiry
+        const now = new Date();
+        const timeDiffMs = expiryDate.getTime() - now.getTime();
+        const hoursRemaining = Math.max(0, Math.ceil(timeDiffMs / (1000 * 60 * 60)));
+        
+        const displayText = `${expiryDateString}<br/><span class="hours-remaining">(${hoursRemaining}h remaining)</span>`;
+        
+        const button = $(`<button class="btn btn-outline-primary" data-expiry="${expiry}">${displayText}</button>`);
         
         // Mark as active if this expiry is selected
         if (state.selectedExpiry === expiry) {
@@ -497,8 +506,11 @@ function populateExpiryButtons() {
             selectExpiry(expiry);
         });
         
-        container.append(button);
+        btnGroup.append(button);
     });
+    
+    // Append the btn-group to the container
+    container.append(btnGroup);
 }
 
 // Populate strike selection buttons for a specific expiry

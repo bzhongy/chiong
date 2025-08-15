@@ -232,8 +232,16 @@ function showSection(section) {
     
     // Show the selected section and mark its nav link as active
     if (section === 'trade') {
-        $('#asset-selector-section').show();
-        $('#quote-status-section').show();
+        // Show appropriate sections based on current state
+        if (state.selectedAsset) {
+            // Asset is selected - show expiry selector and trading interface
+            $('#expiry-selector-section').show();
+            $('#quote-status-section').show();
+        } else {
+            // No asset selected - show asset selector
+            $('#asset-selector-section').show();
+            $('#quote-status-section').show();
+        }
         // Explicitly show the options table container
         $('.options-table-container').show();
         $('#nav-trade-bottom').addClass('active');
@@ -399,6 +407,9 @@ function selectAsset(asset) {
         $('#buying-text').hide();
         $('#spot-price-text').hide();
         
+        // Hide expiry selector section when no asset selected
+        $('#expiry-selector-section').hide();
+        
         // Disable trading interface elements
         $('#conviction-slider').prop('disabled', true);
         $('#position-size-slider').prop('disabled', true);
@@ -422,6 +433,10 @@ function selectAsset(asset) {
     // Hide asset selector and show buying text with typewriter animation
     $('#asset-selector-section').addClass('hidden');
     $('#buying-text').show();
+    
+    // Show expiry selector section when asset is selected
+    $('#expiry-selector-section').show();
+    
     animateTypewriter(`Buying ${asset} Options`);
     
     // Enable trading interface elements

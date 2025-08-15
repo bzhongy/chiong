@@ -232,8 +232,16 @@ function showSection(section) {
     
     // Show the selected section and mark its nav link as active
     if (section === 'trade') {
-        $('#asset-selector-section').show();
-        $('#quote-status-section').show();
+        // Show appropriate sections based on current state
+        if (state.selectedAsset) {
+            // Asset is selected - show expiry selector and trading interface
+            $('#expiry-selector-section').show();
+            $('#quote-status-section').show();
+        } else {
+            // No asset selected - show asset selector
+            $('#asset-selector-section').show();
+            $('#quote-status-section').show();
+        }
         // Explicitly show the options table container
         $('.options-table-container').show();
         $('#nav-trade-bottom').addClass('active');
@@ -322,14 +330,9 @@ function animateTypewriter(text) {
         }, index * 80); // Slower 80ms delay for smoother effect
     });
     
-    // Remove cursor after animation completes and start spot price animation
+    // Remove cursor after animation completes
     setTimeout(() => {
         buyingTextElement.html(buyingTextElement.html().replace('<span class="typing-cursor">|</span>', ''));
-        
-        // Start spot price animation after a brief pause
-        setTimeout(() => {
-            animateSpotPrice();
-        }, 300);
     }, letters.length * 80 + 500);
 }
 
@@ -398,6 +401,10 @@ function selectAsset(asset) {
         $('#asset-selector-section').removeClass('hidden');
         $('#buying-text').hide();
         $('#spot-price-text').hide();
+        $('.current-price-display').hide();
+        
+        // Hide expiry selector section when no asset selected
+        $('#expiry-selector-section').hide();
         
         // Disable trading interface elements
         $('#conviction-slider').prop('disabled', true);
@@ -422,7 +429,17 @@ function selectAsset(asset) {
     // Hide asset selector and show buying text with typewriter animation
     $('#asset-selector-section').addClass('hidden');
     $('#buying-text').show();
+    $('.current-price-display').css('display', 'flex'); // Show current price display when asset is selected
+    
+    // Show expiry selector section when asset is selected
+    $('#expiry-selector-section').show();
+    
     animateTypewriter(`Buying ${asset} Options`);
+    
+    // Show spot price after buying text animation completes
+    setTimeout(() => {
+        animateSpotPrice();
+    }, `Buying ${asset} Options`.length * 80 + 800); // Wait for buying text + small buffer
     
     // Enable trading interface elements
     $('#conviction-slider').prop('disabled', false);
