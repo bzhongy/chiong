@@ -27,6 +27,7 @@
 /* Base Styles */
 body {
     font-family: 'Inter', sans-serif;
+    font-size: 16px;
     font-weight: 400;
     background-color: var(--background);
     color: var(--text-black) !important;
@@ -34,10 +35,12 @@ body {
     padding: 0;
 }
 
-/* Global text color override - make all text black */
+/* Global text color and font override - make all text consistent */
 * {
     color: var(--text-black) !important;
-    font-weight: 400;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
+    font-weight: 400 !important;
 }
 
 /* Override specific elements that should keep their colors */
@@ -49,38 +52,229 @@ body {
     color: inherit !important;
 }
 
-/* Font weight overrides for specific elements */
+/* Font weight overrides for specific elements - only override weight, keep font family and size */
 .btn, button, input, select, textarea {
     font-weight: 500 !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
 }
 
 .nav-link, .navbar-brand {
     font-weight: 500 !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
 }
 
 .table th, .table thead th {
     font-weight: 600 !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
 }
 
 .badge, .alert {
     font-weight: 500 !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
 }
 
 /* Additional font weight overrides */
 .modal-title, .card-title {
     font-weight: 600 !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
 }
 
 .form-label, .form-text {
     font-weight: 500 !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
 }
 
 .swap-title, .swap-amount {
     font-weight: 500 !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
 }
 
 .countdown, .countdown-timer {
     font-weight: 600 !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
+}
+
+/* Center all buttons and interactive elements */
+.btn {
+    margin: 0.25rem auto;
+}
+
+.btn-group {
+    justify-content: center;
+    display: flex;
+    margin: 0 auto;
+    width: fit-content;
+}
+
+/* Specific centering for asset selector button groups */
+.asset-selector .btn-group {
+    justify-content: center;
+    display: flex;
+    margin: 0 auto;
+    width: fit-content;
+}
+
+/* Center payment asset button groups */
+.payment-asset-buttons .btn-group {
+    justify-content: center;
+    display: flex;
+    margin: 0 auto;
+    width: fit-content;
+}
+
+/* Center quick amount button groups */
+.quick-amount-buttons .btn-group {
+    justify-content: center;
+    display: flex;
+    margin: 0 auto;
+    width: fit-content;
+}
+
+/* Center all forms and inputs */
+.form-control, .form-select, .form-check {
+    margin: 0.5rem auto;
+}
+
+/* Center time display and expiry buttons */
+.time-display, .expiry-buttons {
+    text-align: center;
+    margin: 0 auto;
+}
+
+/* Center all button containers */
+.button-container, .action-buttons {
+    text-align: center;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Center specific button types */
+.btn-outline-primary, .btn-outline-secondary, .btn-primary {
+    margin: 0.25rem auto;
+}
+
+/* Center all alerts and messages */
+.alert {
+    margin: 1rem auto;
+    max-width: 800px;
+}
+
+/* Center payment section */
+.payment-section, .payment-method {
+    text-align: center;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Center balance displays */
+.balance-display, .allowance-display {
+    text-align: center;
+    margin: 0 auto;
+}
+
+/* Center all section headers */
+.section-header, .section-title {
+    text-align: center;
+    margin: 0 auto 1rem auto;
+}
+
+/* Center all content containers */
+.content-container, .main-content {
+    text-align: center;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Center specific elements mentioned in the image */
+.start-over-btn, .pay-with-label, .get-more-btn {
+    text-align: center;
+    margin: 0 auto;
+}
+
+/* Center all text elements */
+p, span, div:not(.btn-group):not(.btn) {
+    text-align: center;
+}
+
+/* Override any left-aligned elements */
+* {
+    text-align: center !important;
+}
+
+/* Exception for button groups - they should be centered as blocks */
+.btn-group {
+    text-align: center !important;
+    margin: 0 auto !important;
+}
+
+/* Ensure all text elements use consistent font and size */
+p, span, div, label, a, li, td, th, small, strong, em, b, i {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
+    color: var(--text-black) !important;
+}
+
+/* Override any remaining font variations */
+.font-mono, .font-serif, .font-italic, .font-bold {
+    font-family: 'Inter', sans-serif !important;
+}
+
+/* Ensure buttons maintain consistent font */
+.btn, button, input, select, textarea {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
+    color: var(--text-black) !important;
+}
+
+/* Final comprehensive font override for any remaining elements */
+*:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6) {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
+}
+
+/* Ensure all text content uses consistent styling */
+.text-content, .content-text, .description, .label, .value {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
+    color: var(--text-black) !important;
+}
+
+/* Final override for any remaining grey text - this should catch everything */
+* {
+    color: var(--text-black) !important;
+}
+
+/* Exception for specific elements that should keep their colors */
+.btn-primary, .btn-success, .btn-warning, .btn-danger, .btn-info,
+.alert-success, .alert-warning, .alert-danger, .alert-info,
+.badge-success, .badge-warning, .badge-danger, .badge-info,
+.text-success, .text-warning, .text-danger, .text-info,
+.bg-success, .bg-warning, .bg-danger, .bg-info {
+    color: inherit !important;
+}
+
+/* Ensure all text elements use Inter font */
+* {
+    font-family: 'Inter', sans-serif !important;
+}
+
+/* Exception for specific elements that should keep their fonts */
+.code, .monospace, .font-mono {
+    font-family: inherit !important;
 }
 
 /* Web3-Onboard Account Center positioning */
@@ -96,22 +290,48 @@ body {
     z-index: 1050 !important;
 }
 
+/* Hide wallet address and disconnect button when connected */
+.wallet-status.connected #address-display,
+.wallet-status.connected #disconnect-wallet-btn {
+    display: none !important;
+}
+
 /* App Container - ensures consistent layout */
 .app-container {
     max-width: 100%;
     margin: 0 auto;
+    text-align: center;
 }
 
-/* Typography */
+/* Typography - Headers with consistent font family and size but different weights */
 h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', sans-serif !important;
     font-weight: 600 !important;
     margin-bottom: 1rem;
     color: var(--text-black) !important;
 }
 
+/* Specific header sizes */
+h1 {
+    font-size: 24px !important;
+}
+
+h2 {
+    font-size: 20px !important;
+}
+
+h3 {
+    font-size: 18px !important;
+}
+
+h4, h5, h6 {
+    font-size: 16px !important;
+}
+
 .numeric {
-    font-family: 'IBM Plex Mono', monospace;
-    font-weight: 500;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
     color: var(--text-black) !important;
 }
 
@@ -120,13 +340,25 @@ h1, h2, h3, h4, h5, h6 {
     background-color: transparent;
     padding: 1.5rem 0 1rem 0;
     margin-bottom: 1rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.brand-display {
+    text-align: center;
+    width: 100%;
 }
 
 .brand-display h1 {
-    font-size: 1.8rem;
-    margin: 0;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 28px !important;
+    margin: 0 auto;
     font-weight: 700 !important;
     color: var(--text-black) !important;
+    text-align: center;
+    display: block;
 }
 
 .brand-display h1 span {
@@ -135,13 +367,33 @@ h1, h2, h3, h4, h5, h6 {
 
 .wallet-section {
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
     align-items: center;
+    margin: 0 auto;
+    width: 100%;
+    text-align: center;
+}
+
+/* Ensure wallet elements don't interfere with centering */
+.wallet-section > * {
+    margin: 0 auto;
 }
 
 /* Asset Selector Section - ensure proper spacing from brand section */
 #asset-selector-section {
     margin-top: 0.5rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.asset-selector {
+    text-align: center;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 /* Mobile optimization for brand-wallet section */
@@ -152,7 +404,8 @@ h1, h2, h3, h4, h5, h6 {
     }
     
     .brand-display h1 {
-        font-size: 1.5rem;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 24px !important;
     }
     
     .wallet-section {
@@ -171,7 +424,8 @@ h1, h2, h3, h4, h5, h6 {
     }
     
     .brand-display h1 {
-        font-size: 1.3rem;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 20px !important;
     }
     
     #asset-selector-section {
@@ -202,15 +456,7 @@ h1, h2, h3, h4, h5, h6 {
     position: relative;
 }
 
-.bottom-nav .nav-item:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    top: 20%;
-    bottom: 20%;
-    width: 1px;
-    background-color: #E0E0E0;
-}
+/* Vertical dividers removed */
 
 .bottom-nav .nav-link {
     display: flex;
@@ -220,19 +466,22 @@ h1, h2, h3, h4, h5, h6 {
     text-decoration: none;
     padding: 0.4rem 0.75rem;
     transition: all 0.2s ease;
-    font-size: 0.8rem;
-    font-weight: 500;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
 .bottom-nav .nav-link:hover {
-    color: #333333;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
+    color: var(--text-black) !important;
 }
 
 .bottom-nav .nav-link.active {
     color: #000000;
-    font-weight: 600;
+    font-weight: 700;
     position: relative;
 }
 
@@ -251,6 +500,39 @@ h1, h2, h3, h4, h5, h6 {
 /* Add bottom padding to main content to account for bottom nav */
 main {
     padding: 2rem 0;
+    text-align: center;
+}
+
+/* Center all content sections */
+.content-section {
+    text-align: center;
+}
+
+/* Center all containers */
+.container {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+/* Center all rows */
+.row {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+/* Center all columns */
+.col, .col-12, .col-6, .col-4, .col-3 {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
 }
 
 /* Mobile-specific bottom navigation adjustments */
@@ -260,7 +542,8 @@ main {
     }
     
     .bottom-nav .nav-link {
-        font-size: 0.75rem;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 16px !important;
         padding: 0.3rem 0.6rem;
     }
     
@@ -384,29 +667,40 @@ main .container {
     background-color: transparent;
     border-color: var(--border-color);
     color: var(--text-black) !important;
+    margin: 0 auto;
 }
 
 /* Current Price Display */
 .current-price-display {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
-    font-size: 1.1rem;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
     color: var(--text-black) !important;
+    margin: 0 auto;
+    width: 100%;
+    text-align: center;
 }
 
 .current-price-display .price-label {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
     font-weight: 500;
     color: var(--text-black) !important;
 }
 
 .current-price-display .price-value {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
     font-weight: 600;
-    color: var(--primary);
-    font-size: 1.2rem;
+    color: var(--text-black) !important;
 }
 
 .current-price-display .asset-symbol {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
     color: var(--text-black) !important;
     font-weight: 500;
 }
@@ -430,20 +724,23 @@ main .container {
 }
 
 .time-display {
-    font-size: 0.9rem;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
     color: var(--text-black) !important;
 }
 
 .countdown {
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
     font-weight: 500;
-    color: var(--warning);
+    color: var(--text-black) !important;
 }
 
 .view-toggle .btn {
-    border-color: var(--primary);
-    color: var(--primary);
-    font-size: 0.85rem;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
+    border-color: var(--text-black) !important;
+    color: var(--text-black) !important;
 }
 
 .view-toggle .btn.active {
@@ -457,20 +754,24 @@ main .container {
     border: 1px solid var(--border-color);
     border-radius: 0.5rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    margin: 0 auto;
+    max-width: 800px;
 }
 
 .card-title {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
     color: var(--text-black) !important;
     font-weight: 600;
-    font-size: 1.1rem;
 }
 
 /* Conviction Slider */
 .conviction-slider-container {
     position: relative;
-    margin: 2rem 0;
+    margin: 2rem auto;
     padding: 0 1rem;
     margin-bottom: 20px;
+    max-width: 600px;
 }
 
 /* Mobile optimization for conviction slider */
@@ -798,6 +1099,7 @@ main .container {
     background-color: var(--secondary);
     border-color: var(--border-color);
     color: var(--text-black) !important;
+    margin: 0 auto;
 }
 
 .form-select:focus {
@@ -828,6 +1130,8 @@ main .container {
     color: var(--secondary);
     font-weight: 600;
     transition: all 0.2s ease;
+    margin: 0 auto;
+    display: block;
 }
 
 #trade-now-btn:hover:not(:disabled) {
@@ -876,10 +1180,11 @@ main .container {
 
 /* Options Table */
 .options-table-container {
-    margin: 1.5rem 0;
+    margin: 1.5rem auto;
     overflow-x: auto;
     padding: 0 1rem;
     display: block !important; /* Ensure table is always visible in advanced view */
+    max-width: 1000px;
 }
 
 /* Responsive table styling */
@@ -969,6 +1274,8 @@ main .container {
     padding: 0.5rem 1rem;
     background-color: rgba(255, 179, 0, 0.1);
     border-radius: 2rem;
+    margin: 0 auto;
+    text-align: center;
 }
 
 .position-card {
@@ -976,8 +1283,9 @@ main .container {
     border: 1px solid var(--border-color);
     border-radius: 0.5rem;
     padding: 1.5rem;
-    margin-bottom: 1.5rem;
+    margin: 0 auto 1.5rem auto;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    max-width: 800px;
 }
 
 .position-header {
@@ -1856,8 +2164,9 @@ main .container {
 }
 
 .level-tooltip .tooltip-description {
-    font-size: 0.75rem;
-    color: #ccc;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
+    color: var(--text-black) !important;
     line-height: 1.3;
 }
 
@@ -1919,18 +2228,23 @@ main .container {
 }
 
 .collateralisation-address {
-    font-size: 0.85rem;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
     margin: -5px 0 8px 0;
-    color: #777;
+    color: var(--text-black) !important;
 }
 
 .collateralisation-address a {
-    color: #6c757d;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
+    color: var(--text-black) !important;
     text-decoration: underline;
 }
 
 .collateralisation-address a:hover {
-    color: #495057;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
+    color: var(--text-black) !important;
 }
 
 /* Batch capacity styles */
@@ -2142,7 +2456,9 @@ main .container {
 }
 
 .beta-info {
-    color: #555;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
+    color: var(--text-black) !important;
 }
 
 .liquidity-info {
@@ -2151,7 +2467,9 @@ main .container {
 }
 
 .renewal-info {
-    color: #666;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
+    color: var(--text-black) !important;
     margin-left: auto;
     font-style: italic;
 }
@@ -2961,7 +3279,9 @@ datalist option::before {
 
 /* Loading indicator for message pagination */
 .system-message.loading-more {
-    color: #666;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 16px !important;
+    color: var(--text-black) !important;
     font-style: italic;
     text-align: center;
     padding: 8px;

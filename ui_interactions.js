@@ -43,8 +43,23 @@
  * - Critical UI updates happen first, non-critical updates follow
  */
 
+// Initialize navigation state to ensure proper styling
+function initializeNavigationState() {
+    // Remove active class from all nav links
+    $('#nav-trade-bottom, #nav-positions-bottom, #nav-history-bottom, #nav-scoreboard-bottom').removeClass('active');
+    
+    // Set trade as default active section
+    $('#nav-trade-bottom').addClass('active');
+    
+    // Ensure trade section is visible by default
+    showSection('trade');
+}
+
 // Set up event listeners for UI interaction
 function setupEventListeners() {
+    // Initialize navigation state - set trade as default active
+    initializeNavigationState();
+    
     // Wallet connection
     const connectWalletBtn = $('#connect-wallet');
     if (connectWalletBtn.length > 0) {

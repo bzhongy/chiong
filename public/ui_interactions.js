@@ -1190,7 +1190,14 @@ async function executeTrade() {
                     args: [OPTION_BOOK_ADDRESS, approvalAmountBN.toString()],
                     chainId: 8453
                 });
+                
+                // Show approval submitted notification
+                showNotification(`Input token approval submitted! Transaction Hash: ${approveInputTx.hash.substring(0, 10)}...`, "info", approveInputTx.hash);
+                
                 await waitForTransaction({ hash: approveInputTx.hash });
+                
+                // Show approval confirmed notification
+                showNotification("Input token approval confirmed! ✅", "success", approveInputTx.hash);
                 
                 // Refresh allowance for this specific token after approval (no heavy multicall needed!)
                 console.log('Using targeted OptionBook allowance refresh instead of heavy multicall');
@@ -1242,7 +1249,14 @@ async function executeTrade() {
                 args: [OPTION_BOOK_ADDRESS, approvalAmountBN.toString()],
                 chainId: 8453
             });
+            
+            // Show approval submitted notification
+            showNotification(`Collateral approval submitted! Transaction Hash: ${approveCollateralTx.hash.substring(0, 10)}...`, "info", approveCollateralTx.hash);
+            
             await waitForTransaction({ hash: approveCollateralTx.hash });
+            
+            // Show approval confirmed notification
+            showNotification("Collateral approval confirmed! ✅", "success", approveCollateralTx.hash);
             
             // Refresh allowance for this specific token after approval (no heavy multicall needed!)
             console.log('Using targeted OptionBook allowance refresh instead of heavy multicall');
@@ -1286,23 +1300,32 @@ async function executeTrade() {
             const swapSrcTokenAddress = inputTokenDetails.address; // Already have this from earlier
             const swapSrcAmount = swapInfo.inputAmount; // Already have this from earlier
 
-             tx = await writeContract({
-                 address: OPTION_BOOK_ADDRESS,
-                 abi: OPTION_BOOK_ABI, // Ensure this ABI includes the updated swapAndFillOrder
-                 functionName: 'swapAndFillOrder',
-                 // Update the args array to match the new signature
-                 args: [
-                     orderParams,
-                     signature,
-                     swapRouterAddress,
-                     swapSrcTokenAddress, // New arg: Source token address
-                     swapSrcAmount,       // New arg: Source token amount (ensure it's a string if it's a BigNumber)
-                     encodedSwapData
-                 ],
-                 chainId: 8453
-             });
+            // Show notification that trade is being submitted
+            showNotification("Submitting swap and fill trade...", "info");
+            
+            tx = await writeContract({
+                address: OPTION_BOOK_ADDRESS,
+                abi: OPTION_BOOK_ABI, // Ensure this ABI includes the updated swapAndFillOrder
+                functionName: 'swapAndFillOrder',
+                // Update the args array to match the new signature
+                args: [
+                    orderParams,
+                    signature,
+                    swapRouterAddress,
+                    swapSrcTokenAddress, // New arg: Source token address
+                    swapSrcAmount,       // New arg: Source token amount (ensure it's a string if it's a BigNumber)
+                    encodedSwapData
+                ],
+                chainId: 8453
+            });
+
+            // Show notification that trade was submitted successfully
+            showNotification(`Trade submitted successfully! Transaction Hash: ${tx.hash.substring(0, 10)}...`, "success", tx.hash);
 
         } else {
+            // Show notification that trade is being submitted
+            showNotification("Submitting trade...", "info");
+            
             tx = await writeContract({
                 address: OPTION_BOOK_ADDRESS,
                 abi: OPTION_BOOK_ABI,
@@ -1310,10 +1333,20 @@ async function executeTrade() {
                 args: [orderParams, signature],
                 chainId: 8453
             });
+
+            // Show notification that trade was submitted successfully
+            showNotification(`Trade submitted successfully! Transaction Hash: ${tx.hash.substring(0, 10)}...`, "success", tx.hash);
         }
 
         // Wait for transaction confirmation
         const receipt = await waitForTransaction({ hash: tx.hash });
+
+        // Show notification that transaction was confirmed
+        if (isSwapRequired && swapInfo) {
+            showNotification("Trade completed", "success", tx.hash);
+        } else {
+            showNotification("Trade completed", "success", tx.hash);
+        }
 
         // Close modal
         $('#trade-confirm-modal').modal('hide');
@@ -2658,18 +2691,18 @@ async function executeSwap() {
             if (fromAsset === 'ETH' && toAsset === 'WETH') {
                 // Wrap ETH to WETH
                 result = await WagmiCore.wrapETH(fromAmount);
-                showNotification(`ETH wrapping transaction submitted successfully!\n\nTransaction Hash: ${result.hash}\n\n${fromAmount} ETH → ${fromAmount} WETH`, 'success');
+                showNotification(`ETH wrapping transaction submitted successfully!\n\nTransaction Hash: ${result.hash.substring(0, 10)}...\n\n${fromAmount} ETH → ${fromAmount} WETH`, 'success', result.hash);
             } else {
                 // Unwrap WETH to ETH
                 result = await WagmiCore.unwrapWETH(fromAmount);
-                showNotification(`WETH unwrapping transaction submitted successfully!\n\nTransaction Hash: ${result.hash}\n\n${fromAmount} WETH → ${fromAmount} ETH`, 'success');
+                showNotification(`WETH unwrapping transaction submitted successfully!\n\nTransaction Hash: ${result.hash.substring(0, 10)}...\n\n${fromAmount} WETH → ${fromAmount} ETH`, 'success', result.hash);
             }
             
             // Wait for transaction confirmation
             executeBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status"></span>Waiting for confirmation...');
             try {
                 await WagmiCore.waitForTransaction({ hash: result.hash });
-                showNotification(`Transaction confirmed! ${fromAmount} ${fromAsset} → ${fromAmount} ${toAsset}`, 'success');
+                showNotification(`Transaction confirmed! ${fromAmount} ${fromAsset} → ${fromAmount} ${toAsset}`, 'success', result.hash);
             } catch (error) {
                 console.error('Error waiting for transaction confirmation:', error);
                 showNotification(`Transaction submitted but confirmation failed: ${error.message}`, 'warning');
@@ -2737,14 +2770,14 @@ async function executeSwap() {
         const result = await signer.sendTransaction(transaction);
         
         // Show success message with transaction hash
-        const successMessage = `Swap transaction submitted successfully!\n\nTransaction Hash: ${result.hash}\n\n${fromAmount} ${fromAsset} → ${$('#swap-to-amount').val()} ${toAsset}`;
-        showNotification(successMessage, 'success');
+        const successMessage = `Swap transaction submitted successfully!\n\nTransaction Hash: ${result.hash.substring(0, 10)}...\n\n${fromAmount} ${fromAsset} → ${$('#swap-to-amount').val()} ${toAsset}`;
+        showNotification(successMessage, 'success', result.hash);
         
         // Wait for transaction confirmation
         executeBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status"></span>Waiting for confirmation...');
         try {
             await WagmiCore.waitForTransaction({ hash: result.hash });
-            showNotification(`Transaction confirmed! ${fromAmount} ${fromAsset} → ${$('#swap-to-amount').val()} ${toAsset}`, 'success');
+            showNotification(`Transaction confirmed! ${fromAmount} ${fromAsset} → ${$('#swap-to-amount').val()} ${toAsset}`, 'success', result.hash);
         } catch (error) {
             console.error('Error waiting for transaction confirmation:', error);
             showNotification(`Transaction submitted but confirmation failed: ${error.message}`, 'warning');
@@ -3029,7 +3062,7 @@ async function approveSwapToken() {
         await WagmiCore.waitForTransaction({ hash: result.hash });
         
         // Show success notification when transaction is confirmed
-        showNotification(`Approval confirmed! You can now execute the swap.`, 'success');
+        showNotification(`Approval confirmed! You can now execute the swap.`, 'success', result.hash);
         
         console.log('Approval transaction confirmed');
         
@@ -3066,8 +3099,8 @@ async function approveSwapToken() {
     }
 }
 
-// Simple notification function for basic messages
-function showNotification(message, type = 'info') {
+// Enhanced notification function with explorer link support
+function showNotification(message, type = 'info', txHash = null) {
     // Create notification container if it doesn't exist
     let container = document.getElementById('simple-notification-container');
     if (!container) {
@@ -3111,9 +3144,23 @@ function showNotification(message, type = 'info') {
             icon = '<i class="bi bi-info-circle-fill me-2"></i>';
     }
     
+    // Add explorer link if transaction hash is provided
+    let explorerLink = '';
+    if (txHash) {
+        const basescanUrl = `https://basescan.org/tx/${txHash}`;
+        explorerLink = `
+            <div class="mt-2">
+                <a href="${basescanUrl}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>View on Basescan
+                </a>
+            </div>
+        `;
+    }
+    
     notification.innerHTML = `
         ${icon}
         <span>${message}</span>
+        ${explorerLink}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     

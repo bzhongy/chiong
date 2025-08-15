@@ -1,5 +1,5 @@
-// Simple notification function for basic messages
-function showNotification(message, type = 'info') {
+// Enhanced notification function with explorer link support
+function showNotification(message, type = 'info', txHash = null) {
     // Create notification container if it doesn't exist
     let container = document.getElementById('simple-notification-container');
     if (!container) {
@@ -43,9 +43,23 @@ function showNotification(message, type = 'info') {
             icon = '<i class="bi bi-info-circle-fill me-2"></i>';
     }
     
+    // Add explorer link if transaction hash is provided
+    let explorerLink = '';
+    if (txHash) {
+        const basescanUrl = `https://basescan.org/tx/${txHash}`;
+        explorerLink = `
+            <div class="mt-2">
+                <a href="${basescanUrl}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>View on Basescan
+                </a>
+            </div>
+        `;
+    }
+    
     notification.innerHTML = `
         ${icon}
         <span>${message}</span>
+        ${explorerLink}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     

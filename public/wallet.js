@@ -489,15 +489,14 @@ function updateUIForConnectedState(address) {
     document.getElementById('wallet-status').classList.remove('not-connected');
     document.getElementById('wallet-status').classList.add('connected');
     
-    const shortAddress = shortenAddress(address);
+    // Hide address display and disconnect button when wallet is connected
     const addrEl = document.getElementById('address-display');
     if (addrEl) {
-        addrEl.textContent = shortAddress;
-        addrEl.style.display = 'inline-block';
+        addrEl.style.display = 'none';
     }
     
     const disconnectBtn = document.getElementById('disconnect-wallet-btn');
-    if (disconnectBtn) disconnectBtn.style.display = 'inline-block';
+    if (disconnectBtn) disconnectBtn.style.display = 'none';
     
     const connectBtn = document.getElementById('connect-web3modal-btn');
     if (connectBtn) connectBtn.style.display = 'none';
