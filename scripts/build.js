@@ -5,19 +5,52 @@ const path = require('path');
 
 async function build() {
   try {
-    // Build the main JavaScript bundle (minified to hide source code)
+    // Concatenate and minify JavaScript files (preserving global variable structure)
+    const jsFiles = [
+      'abis.js',
+      'config.js', 
+      'ui-state-manager.js',
+      'retry-helper.js',
+      'tx-notifications.js',
+      'wallet.js',
+      'ui_interactions.js',
+      'kyber.js',
+      'score.js',
+      'analytics.js',
+      'trollbox.js',
+      'app.js',
+      'analytics-integration.js',
+      'custom-chart-manager.js',
+      'option-type-filter.js'
+    ];
+
+    // Read and concatenate all JS files
+    let concatenatedJS = '';
+    for (const file of jsFiles) {
+      if (await fs.pathExists(file)) {
+        const content = await fs.readFile(file, 'utf8');
+        concatenatedJS += `\n// === ${file} ===\n${content}\n`;
+      }
+    }
+
+    // Write the concatenated file first
+    await fs.writeFile('temp-bundle.js', concatenatedJS);
+
+    // Now minify the concatenated file
     await esbuild.build({
-      entryPoints: ['main.js'],
+      entryPoints: ['temp-bundle.js'],
       outfile: 'dist/app.bundle.js',
-      bundle: true,
-      minify: true,  // Enable minification to hide source code
-      sourcemap: false,  // Disable source maps to prevent source code exposure
+      bundle: false,  // Don't bundle since we already concatenated
+      minify: true,   // Minify to hide source code
+      sourcemap: false,  // No source maps
       target: ['es2022'],
       format: 'iife',
-      platform: 'browser',
-      loader: { '.js': 'js' }
+      platform: 'browser'
     });
-    console.log('Built dist/app.bundle.js (minified)');
+
+    // Clean up temp file
+    await fs.remove('temp-bundle.js');
+    console.log('Built dist/app.bundle.js (concatenated and minified)');
 
     // Build the TypeScript bridge
     await esbuild.build({
