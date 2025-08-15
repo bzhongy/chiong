@@ -276,7 +276,7 @@ async function refreshData(isInitialLoad = false) {
         setupConvictionSlider();
         
         // Select the option based on slider position
-        await selectOptionBasedOnConviction();
+        // await selectOptionBasedOnConviction(); // Commented out to prevent automatic asset selection
         
         // Populate advanced view options table (always show since advanced is now default)
         if (typeof populateOptionsTable === 'function') {
@@ -2336,4 +2336,11 @@ async function initialize() {
 
 $(document).ready(() => {
     initialize();
+    
+    // Initialize trading interface in disabled state since no asset is selected by default
+    setTimeout(() => {
+        if (typeof selectAsset === 'function') {
+            selectAsset(null); // This will disable all trading interface elements
+        }
+    }, 100);
 });

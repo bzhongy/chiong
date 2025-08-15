@@ -78,6 +78,14 @@ function setupEventListeners() {
         selectAsset(asset);
     });
     
+    // Handle case when no asset is selected (all radio buttons unchecked)
+    $('input[name="asset-selection"]').on('change', function() {
+        const checkedAsset = $('input[name="asset-selection"]:checked').val();
+        if (!checkedAsset) {
+            selectAsset(null); // Clear asset selection
+        }
+    });
+    
     // Payment asset selection
     $('input[name="payment-asset-selection"]').on('change', function() {
         const asset = $(this).val();
@@ -275,6 +283,35 @@ function switchView(view) {
 
 // Select an asset (ETH, BTC), update state, UI then refresh data
 function selectAsset(asset) {
+    if (!asset) {
+        // No asset selected - clear state and UI
+        state.selectedAsset = null;
+        updateUI('#selected-asset, #positions-selected-asset', '');
+        updateUI('#asset-symbol', '');
+        
+        // Clear radio button state
+        $('input[name="asset-selection"]').prop('checked', false);
+        
+        // Clear current price display
+        updateUI('#current-price', '--');
+        
+        // Show asset selector and hide buying text
+        $('#asset-selector-section').removeClass('hidden');
+        $('#buying-text').hide();
+        
+        // Disable trading interface elements
+        $('#conviction-slider').prop('disabled', true);
+        $('#position-size-slider').prop('disabled', true);
+        $('.quick-amount-btn').prop('disabled', true);
+        $('#trade-now-btn').prop('disabled', true).text('SELECT ASSET TO TRADE');
+        
+        // Clear any selected options
+        state.selectedOrderIndex = null;
+        $('.option-row').removeClass('selected');
+        
+        return;
+    }
+    
     state.selectedAsset = asset;
     updateUI('#selected-asset, #positions-selected-asset', asset);
     updateUI('#asset-symbol', asset);
@@ -282,7 +319,14 @@ function selectAsset(asset) {
     // Update radio button state
     $(`input[name="asset-selection"][value="${asset}"]`).prop('checked', true);
     
-
+    // Hide asset selector and show buying text
+    $('#asset-selector-section').addClass('hidden');
+    $('#buying-text').html(`<span class="buying-word">BUYING</span> <span class="asset-options">${asset} OPTIONS</span>`).show();
+    
+    // Enable trading interface elements
+    $('#conviction-slider').prop('disabled', false);
+    $('#position-size-slider').prop('disabled', false);
+    $('.quick-amount-btn').prop('disabled', false);
     
     refreshData();
 }
@@ -622,6 +666,12 @@ function findNearestOption(targetValue, optionArray, valueExtractor) {
 
 // Select an option from the table
 async function selectOption(index) {
+    // Check if an asset is selected first
+    if (!state.selectedAsset) {
+        showNotification("Please select an asset (ETH or BTC) first.", "warning");
+        return;
+    }
+    
     // Set flag to prevent redundant updates during option selection
     isSelectingOption = true;
     
