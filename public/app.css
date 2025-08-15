@@ -420,24 +420,25 @@ h4, h5, h6 {
 
 /* Buying text below CHIONG - plain text */
 #buying-text {
-    font-size: 12px !important;
-    font-weight: 400 !important;
+    font-size: 16px !important;
+    font-weight: 800 !important;
     font-family: 'Inter', -webkit-system, BlinkMacSystemFont, sans-serif !important;
     text-align: center !important;
     margin-top: 30px !important;
     display: none;
+    text-transform: uppercase !important;
 }
 
 #buying-text .buying-word {
     color: rgba(0, 0, 0, 0.3) !important;
-    font-weight: 400 !important;
-    font-size: 12px !important;
+    font-weight: 800 !important;
+    font-size: 16px !important;
 }
 
 #buying-text .asset-options {
     color: #000000 !important;
-    font-weight: 400 !important;
-    font-size: 12px !important;
+    font-weight: 800 !important;
+    font-size: 16px !important;
 }
 
 /* Typewriter animation for buying text */
@@ -465,7 +466,7 @@ h4, h5, h6 {
     display: inline-block;
     color: rgba(0, 0, 0, 0.7);
     font-weight: normal;
-    font-size: 12px !important;
+    font-size: 16px !important;
     line-height: 1;
     animation: blink 1s infinite;
     margin-left: 1px;
@@ -473,24 +474,27 @@ h4, h5, h6 {
 
 /* Spot price text below buying text */
 #spot-price-text {
-    font-size: 12px !important;
-    font-weight: 400 !important;
+    font-size: 16px !important;
+    font-weight: 800 !important;
     font-family: 'Inter', -webkit-system, BlinkMacSystemFont, sans-serif !important;
     text-align: center !important;
     margin-top: 0px !important;
     color: rgba(0, 0, 0, 0.6) !important;
+    text-transform: uppercase !important;
 }
 
 /* Spot price label styling (same as buying word) */
 #spot-price-text .spot-label {
     color: rgba(0, 0, 0, 0.3) !important;
-    font-size: 12px !important;
+    font-size: 16px !important;
+    font-weight: 800 !important;
 }
 
 /* Spot price value styling (black) */
 #spot-price-text .spot-value {
     color: #000000 !important;
-    font-size: 12px !important;
+    font-size: 16px !important;
+    font-weight: 800 !important;
 }
 
 /* Spot price typing cursor */
@@ -498,7 +502,7 @@ h4, h5, h6 {
     display: inline-block;
     color: rgba(0, 0, 0, 0.7);
     font-weight: normal;
-    font-size: 12px !important;
+    font-size: 16px !important;
     line-height: 1;
     animation: blink 1s infinite;
     margin-left: 1px;
