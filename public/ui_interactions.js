@@ -616,14 +616,22 @@ async function selectOption(index) {
         const requiredAmountUSD = collateral.name === 'USDC' ? currentPositionSize : 
                                  currentPositionSize * (state.market_prices[collateral.asset] || 1);
         
-        // OPTIMIZATION: Use cached balance data for immediate asset selection
-        const selectedAsset = selectBestPaymentAssetFromCache(order, requiredAmountUSD);
+        // Smart initial payment asset selection based on option type
+        let initialPaymentAsset = 'USDC'; // Default for PUTs
         
-        // Update payment asset immediately with cached data
-        if (selectedAsset) {
-            $(`input[name="payment-asset-selection"][value="${selectedAsset}"]`).prop('checked', true);
-            updatePaymentAssetBalanceDisplay(selectedAsset);
+        if (order.isCall) {
+            // For CALL options, default to the collateral asset
+            const collateralDetails = CONFIG.getCollateralDetails(order.collateral);
+            if (collateralDetails.name === 'WETH') {
+                initialPaymentAsset = 'WETH';
+            } else if (collateralDetails.name === 'CBBTC') {
+                initialPaymentAsset = 'CBBTC';
+            }
         }
+        // For PUT options, keep USDC as default
+        
+        // Update payment asset selection and trigger the change event
+        $(`input[name="payment-asset-selection"][value="${initialPaymentAsset}"]`).prop('checked', true).trigger('change');
         
         // Update advanced trade button state immediately
         const button = $('#adv-trade-btn');
@@ -639,18 +647,16 @@ async function selectOption(index) {
         // Update quick amount button text with new option data
         updateQuickAmountButtonText();
         
-        // OPTIMIZATION: Run smart asset selection in background (non-blocking)
-        // This will update the payment asset if a better option is found
-        setTimeout(async () => {
-            try {
-                await selectBestPaymentAsset(order, requiredAmountUSD);
-                // Update payment asset after smart selection (skip preview update since we'll do it once at the end)
-                updatePaymentAsset(true);
-            } catch (error) {
-                console.warn('Background smart asset selection failed:', error);
-                // Don't show error to user since this is just optimization
-            }
-        }, 100); // Small delay to ensure UI is updated first
+        // REMOVED: Background automatic asset selection to preserve user's manual choice
+        // setTimeout(async () => {
+        //     try {
+        //         await selectBestPaymentAsset(order, requiredAmountUSD);
+        //         // Update payment asset after smart selection (skip preview update since we'll do it once at the end)
+        //         updatePaymentAsset(true);
+        //     } catch (error) {
+        //         console.warn('Background smart asset selection failed:', error);
+        //     }
+        // }, 100);
         
     } catch (error) {
         console.error("Error in selectOption:", error);
@@ -2829,7 +2835,7 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
     const balance = state.paymentAssetBalances[selectedAsset];
     
     if (!balance || balance === '0') {
-        balanceDisplay.innerHTML = '<span class="balance-text no-balance">0.00 ${selectedAsset}</span>';
+        balanceDisplay.innerHTML = `<span class="balance-text no-balance">0.00 ${selectedAsset}</span>`;
     } else {
         // Get USD value if we have market prices
         let usdValue = '';

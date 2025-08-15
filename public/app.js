@@ -2118,7 +2118,7 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
     
     // Only show actual balance if it's a valid number greater than 0
     if (parseFloat(balance) === 0) {
-        balanceDisplay.innerHTML = '<small class="text-muted"><i class="bi bi-wallet2 me-1"></i><span class="balance-text no-balance">0.00 ${selectedAsset}</span></small>';
+        balanceDisplay.innerHTML = `<small class="text-muted"><i class="bi bi-wallet2 me-1"></i><span class="balance-text no-balance">0.00 ${selectedAsset}</span></small>`;
     } else {
         // Get USD value if we have market prices
         let usdValue = '';
