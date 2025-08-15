@@ -34,6 +34,13 @@
  * State management: 
  * The global 'state' object in config.js maintains application-wide state
  * and is accessed by all modules.
+ * 
+ * PERFORMANCE OPTIMIZATIONS:
+ * - Option selection is now immediate using cached balance data
+ * - Smart asset selection runs in background to avoid blocking UI
+ * - Slider responses are immediate with deferred calculations
+ * - Swap info updates are deferred to background
+ * - Critical UI updates happen first, non-critical updates follow
  */
 
 // Set up event listeners for UI interaction
@@ -59,6 +66,12 @@ function setupEventListeners() {
     // Payment asset selection
     $('input[name="payment-asset-selection"]').on('change', function() {
         const asset = $(this).val();
+        
+        // OPTIMIZATION: Update allowance display immediately for instant feedback
+        if (typeof updateAllowanceDisplay === 'function') {
+            updateAllowanceDisplay(asset);
+        }
+        
         updatePaymentAssetBalanceDisplay(asset);
         
         // Update ETH wrapping interface visibility if WETH is selected
@@ -255,22 +268,29 @@ function updatePositionSize() {
         order, collateral, percentage
     );
     
-    // Update UI with new position size
+    // Update UI with new position size IMMEDIATELY
     state.selectedPositionPercentage = percentage;
     const selectedPositionSize = positionCost;
     state.selectedPositionSize = selectedPositionSize;
     
-    // Format and display the position size
+    // Format and display the position size IMMEDIATELY
     const sizeDisplay = document.getElementById('current-size');
     sizeDisplay.innerText = selectedPositionSize.toFixed(collateral.decimals === 6 ? 2 : 4);
     
-    // Update option preview with new position size
+    // Update option preview with new position size IMMEDIATELY
     updateOptionPreview();
     
-    // Update swap information if needed
-    kyberSwap.updateSwapInfo(order, selectedPositionSize);
+    // OPTIMIZATION: Defer swap info update to background to make slider response immediate
+    setTimeout(() => {
+        try {
+            // Update swap information if needed
+            kyberSwap.updateSwapInfo(order, selectedPositionSize);
+        } catch (error) {
+            console.warn('Background swap info update failed:', error);
+        }
+    }, 50); // Small delay to ensure UI updates are complete
     
-    // Check fund status after position size change
+    // Check fund status after position size change (debounced)
     refreshFundStatus();
     
     // Trade button state will be updated automatically by kyberSwap.updateSwapInfo
@@ -292,8 +312,15 @@ function updatePaymentAsset(skipPreviewUpdate = false) {
     if (!needsSwap) {
         kyberSwap.hideSwapDisplay();
     } else {        
-        // Update swap information
-        kyberSwap.updateSwapInfo(order.order, state.selectedPositionSize);
+        // OPTIMIZATION: Defer swap info update to background to make asset selection response immediate
+        setTimeout(() => {
+            try {
+                // Update swap information
+                kyberSwap.updateSwapInfo(order.order, state.selectedPositionSize);
+            } catch (error) {
+                console.warn('Background swap info update failed:', error);
+            }
+        }, 50); // Small delay to ensure UI updates are complete
     }
     
     // Only update option preview if not part of a larger update flow and not in the middle of option selection
@@ -434,10 +461,13 @@ function updateConviction(e) {
         }
     }
     
-    // Run option selection asynchronously in the background (non-blocking)
-    selectOptionBasedOnConviction().catch(error => {
-        console.error("Error in selectOptionBasedOnConviction:", error);
-    });
+    // OPTIMIZATION: Run option selection asynchronously in the background (non-blocking)
+    // This makes the slider response immediate while option selection happens in background
+    setTimeout(() => {
+        selectOptionBasedOnConviction().catch(error => {
+            console.error("Error in background option selection:", error);
+        });
+    }, 50); // Small delay to ensure slider UI updates are complete
 }
 
 // Select the best option for the current slider position
@@ -468,7 +498,12 @@ async function selectOptionBasedOnConviction(updatePaymentAsset = false) {
     
     const extractStrike = order => parseFloat(formatUnits(order.order.strikes[0], PRICE_DECIMALS));
     const bestOrderIndex = findNearestOption(targetPrice, state.orders, extractStrike);
-    await selectOption(bestOrderIndex);
+    
+    // OPTIMIZATION: Call selectOption but don't await it to make slider response immediate
+    // The option selection will happen in the background
+    selectOption(bestOrderIndex).catch(error => {
+        console.error("Error in background option selection:", error);
+    });
 
     // Handle initialization case - remove the init option after first selection
     // Remove init check since we're using buttons now
@@ -505,64 +540,138 @@ async function selectOption(index) {
     try {
         state.selectedOrderIndex = index;
     
-    // Update UI to reflect selected option
-    $('.option-row').removeClass('selected');
-    $(`.option-row[data-index="${index}"]`).addClass('selected');
+        // Update UI to reflect selected option IMMEDIATELY
+        $('.option-row').removeClass('selected');
+        $(`.option-row[data-index="${index}"]`).addClass('selected');
 
-    // Get the required amount for smart asset selection
-    const orderData = state.orders[index];
-    const order = orderData.order;
-    
-    // Debug: Log what order we're actually selecting
-    console.log('Selecting option at index:', index, 'Order data:', {
-        strike: formatUnits(order.strikes[0], PRICE_DECIMALS),
-        type: order.isCall ? 'CALL' : 'PUT',
-        expiry: new Date(parseInt(order.expiry) * 1000).toISOString()
-    });
-    const collateral = CONFIG.getCollateralDetails(order.collateral);
-    
-    // Calculate required amount in USD for this trade
-    // Use current position size or default to $100
-    const currentPositionSize = state.selectedPositionSize || 100;
-    const requiredAmountUSD = collateral.name === 'USDC' ? currentPositionSize : 
-                             currentPositionSize * (state.market_prices[collateral.asset] || 1);
-    
-    // Smart asset selection - automatically choose the best payment asset
-    await selectBestPaymentAsset(order, requiredAmountUSD);
-    
-    // Update payment asset after smart selection (skip preview update since we'll do it once at the end)
-    updatePaymentAsset(true);
-    
-    // Update advanced trade button state
-    const button = $('#adv-trade-btn');
-    if (index !== null) {
-        button.prop('disabled', false).text('TRADE NOW');
-    } else {
-        button.prop('disabled', true).text('SELECT OPTION TO TRADE');
-    }
-
-    // Now update option preview once with all changes applied
-    updateOptionPreview();
-    
-    // Trade button state will be updated automatically by kyberSwap functions
-
-    // Check capacity after updating button
-    getOrderFillInfo(state.orders[index]).then(fillInfo => {
-        if (fillInfo && fillInfo.isFull) {
-            // Show a notification that this order is full
-            showNotification("This order batch is already filled to capacity. Please try another option or wait for a new batch.", "warning");
-            
-            // Deselect the option
-            state.selectedOrderIndex = null;
-            updateOptionPreview();
-            return;
+        // Get the required amount for smart asset selection
+        const orderData = state.orders[index];
+        const order = orderData.order;
+        
+        // Debug: Log what order we're actually selecting
+        console.log('Selecting option at index:', index, 'Order data:', {
+            strike: formatUnits(order.strikes[0], PRICE_DECIMALS),
+            type: order.isCall ? 'CALL' : 'PUT',
+            expiry: new Date(parseInt(order.expiry) * 1000).toISOString()
+        });
+        
+        const collateral = CONFIG.getCollateralDetails(order.collateral);
+        
+        // Calculate required amount in USD for this trade
+        // Use current position size or default to $100
+        const currentPositionSize = state.selectedPositionSize || 100;
+        const requiredAmountUSD = collateral.name === 'USDC' ? currentPositionSize : 
+                                 currentPositionSize * (state.market_prices[collateral.asset] || 1);
+        
+        // OPTIMIZATION: Use cached balance data for immediate asset selection
+        const selectedAsset = selectBestPaymentAssetFromCache(order, requiredAmountUSD);
+        
+        // Update payment asset immediately with cached data
+        if (selectedAsset) {
+            $(`input[name="payment-asset-selection"][value="${selectedAsset}"]`).prop('checked', true);
+            updatePaymentAssetBalanceDisplay(selectedAsset);
         }
         
-        // Fund status is already refreshed by updateOptionPreview, no need to call again here
-    });
+        // Update advanced trade button state immediately
+        const button = $('#adv-trade-btn');
+        if (index !== null) {
+            button.prop('disabled', false).text('TRADE NOW');
+        } else {
+            button.prop('disabled', true).text('SELECT OPTION TO TRADE');
+        }
+
+        // Update option preview immediately
+        updateOptionPreview();
+        
+        // OPTIMIZATION: Run smart asset selection in background (non-blocking)
+        // This will update the payment asset if a better option is found
+        setTimeout(async () => {
+            try {
+                await selectBestPaymentAsset(order, requiredAmountUSD);
+                // Update payment asset after smart selection (skip preview update since we'll do it once at the end)
+                updatePaymentAsset(true);
+            } catch (error) {
+                console.warn('Background smart asset selection failed:', error);
+                // Don't show error to user since this is just optimization
+            }
+        }, 100); // Small delay to ensure UI is updated first
+        
+    } catch (error) {
+        console.error("Error in selectOption:", error);
+        showNotification("Error selecting option. Please try again.", "error");
     } finally {
-        // Always clear the flag, even if there's an error
+        // Always reset the flag
         isSelectingOption = false;
+    }
+    
+    // Trade button state will be updated automatically by kyberSwap functions
+}
+
+// New function: Fast asset selection using cached balance data
+function selectBestPaymentAssetFromCache(order, requiredAmountUSD) {
+    if (!state.connectedAddress || !state.paymentAssetBalances) {
+        return null;
+    }
+    
+    try {
+        // Get required collateral details
+        const requiredCollateral = CONFIG.getCollateralDetails(order.collateral);
+        const preferredAsset = requiredCollateral.name;
+        
+        // Check if preferred asset has sufficient balance
+        if (state.paymentAssetBalances[preferredAsset]) {
+            const balance = parseFloat(state.paymentAssetBalances[preferredAsset]);
+            const dollarValue = convertToDollarValue(balance, preferredAsset);
+            if (dollarValue >= requiredAmountUSD) {
+                return preferredAsset;
+            }
+        }
+        
+        // Find asset with highest dollar value that can cover the payment
+        let bestAsset = null;
+        let bestDollarValue = 0;
+        
+        Object.entries(state.paymentAssetBalances).forEach(([asset, balance]) => {
+            if (asset === 'ETH') return; // Skip ETH as it's handled separately
+            
+            const balanceNum = parseFloat(balance);
+            if (balanceNum > 0) {
+                const dollarValue = convertToDollarValue(balanceNum, asset);
+                if (dollarValue >= requiredAmountUSD && dollarValue > bestDollarValue) {
+                    bestAsset = asset;
+                    bestDollarValue = dollarValue;
+                }
+            }
+        });
+        
+        // If no sufficient asset found, return the one with highest value
+        if (!bestAsset) {
+            Object.entries(state.paymentAssetBalances).forEach(([asset, balance]) => {
+                if (asset === 'ETH') return;
+                
+                const balanceNum = parseFloat(balance);
+                if (balanceNum > 0) {
+                    const dollarValue = convertToDollarValue(balanceNum, asset);
+                    if (dollarValue > bestDollarValue) {
+                        bestAsset = asset;
+                        bestDollarValue = dollarValue;
+                    }
+                }
+            });
+        }
+        
+        return bestAsset || preferredAsset;
+        
+    } catch (error) {
+        console.warn('Error in fast asset selection:', error);
+        // Fallback to preferred asset
+        try {
+            const requiredCollateral = CONFIG.getCollateralDetails(order.collateral);
+            return requiredCollateral.name;
+        } catch (fallbackError) {
+            console.error("Error in fallback asset selection:", fallbackError);
+            return null;
+        }
     }
 }
 
@@ -585,8 +694,7 @@ function updateOptionPreview() {
     // Save currently selected strike for maintaining position on refresh
     lastSelectedStrike = parseFloat(strike);
 
-
-
+    // OPTIMIZATION: Update critical UI elements immediately
     // Set position size slider attributes and labels (should only need to happen once ideally, but safe here)
     $('#position-size-slider, #adv-position-size-slider').attr('min', 1).attr('max', 100).attr('step', 1);
     $('.size-label.min').text('1%');
@@ -613,7 +721,7 @@ function updateOptionPreview() {
     // Get the raw leverage value
     const rawPayoutRatio = optionCalculator.calculateLeverage(premium, order, collateral);
 
-    // Update UI elements with calculated values
+    // Update UI elements with calculated values IMMEDIATELY
     $('.leverage-indicator').each(function() {
         $(this).html(`<span class="leverage-value">${rawPayoutRatio}x</span> LEVERAGE`);
     });
@@ -631,43 +739,52 @@ function updateOptionPreview() {
     $('#adjusted-leverage-value').text(rawPayoutRatio); // Adjusted leverage (currently same as raw)
     $('#num-contracts').text(formattedContracts); // Display contracts
 
-    // Update other UI elements
+    // Update other UI elements IMMEDIATELY
     updateDualUI('strike-price', strike, 'text', formatNumber);
     updateDualUI('option-cost', `${positionCost.toFixed(collateral.decimals === 6 ? 2 : 4)} ${collateral.name}`); 
     updateDualUI('payout-ratio', formattedContracts); 
     updateDualUI('payout-threshold', strike, 'text', formatNumber);
     updateDualUI('payout-asset', collateral.name);
 
-    // Update the new option preview fields with Greeks and breakeven data
-    const { delta, iv } = orderData.greeks;
-    
-    // Get the breakeven directly from the table data instead of recalculating
-    // The breakeven is already calculated and displayed in the table
-    const tableRow = $(`.option-row[data-index="${state.selectedOrderIndex}"]`);
-    const tableBreakeven = tableRow.find('td:nth-child(6)').text().replace('$', '');
-    
-    updateDualUI('option-breakeven', tableBreakeven, 'text', formatNumber);
-    updateDualUI('option-delta', delta.toFixed(2));
-    updateDualUI('option-iv', `${parseInt(iv * 100)}%`);
-
     // Set the payout direction text
     $('#payout-direction').text(direction);
 
-    // Update position details in the trade panel (if this function exists and is needed)
-    updateTradeDetails(orderData, strike, rawPayoutRatio); // Assuming this updates other non-cost related things
+    // OPTIMIZATION: Defer non-critical calculations to background
+    setTimeout(() => {
+        try {
+            // Update position details in the trade panel (if this function exists and is needed)
+            if (typeof updateTradeDetails === 'function') {
+                updateTradeDetails(orderData, strike, rawPayoutRatio);
+            }
 
-    const mainExpirySeconds = state.expiryTime ? Math.floor(state.expiryTime / 1000) : 0;
-    // Target both basic and advanced view countdowns if they exist
-    $('#time-left, #adv-time-left') // Assuming #adv-time-left exists for advanced view
-        .attr('data-countdown-expiry', mainExpirySeconds)
-        .data('expiry', mainExpirySeconds); // Also store in jQuery data if needed elsewhere
+            // Update the new option preview fields with Greeks and breakeven data
+            const { delta, iv } = orderData.greeks;
+            
+            // Get the breakeven directly from the table data instead of recalculating
+            // The breakeven is already calculated and displayed in the table
+            const tableRow = $(`.option-row[data-index="${state.selectedOrderIndex}"]`);
+            const tableBreakeven = tableRow.find('td:nth-child(6)').text().replace('$', '');
+            
+            updateDualUI('option-breakeven', tableBreakeven, 'text', formatNumber);
+            updateDualUI('option-delta', delta.toFixed(2));
+            updateDualUI('option-iv', `${parseInt(iv * 100)}%`);
 
-    // Warn if near expiry
-    if (isNearExpiry()) {
-        $('.expiry-warning').show();
-    } else {
-        $('.expiry-warning').hide();
-    }
+            const mainExpirySeconds = state.expiryTime ? Math.floor(state.expiryTime / 1000) : 0;
+            // Target both basic and advanced view countdowns if they exist
+            $('#time-left, #adv-time-left') // Assuming #adv-time-left exists for advanced view
+                .attr('data-countdown-expiry', mainExpirySeconds)
+                .data('expiry', mainExpirySeconds); // Also store in jQuery data if needed elsewhere
+
+            // Warn if near expiry
+            if (isNearExpiry()) {
+                $('.expiry-warning').show();
+            } else {
+                $('.expiry-warning').hide();
+            }
+        } catch (error) {
+            console.warn('Background option preview update failed:', error);
+        }
+    }, 25); // Very small delay to ensure critical UI updates are complete first
     
     // Check fund status after option preview update (debounced)
     refreshFundStatus();

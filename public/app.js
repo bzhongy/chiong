@@ -34,6 +34,16 @@
  * State management: 
  * The global 'state' object in config.js maintains application-wide state
  * and is accessed by all modules.
+ * 
+ * PERFORMANCE OPTIMIZATIONS:
+ * - Option selection is now immediate using cached balance data
+ * - Smart asset selection runs in background to avoid blocking UI
+ * - Slider responses are immediate with deferred calculations
+ * - Swap info updates are deferred to background
+ * - Critical UI updates happen first, non-critical updates follow
+ * - Balance and allowance loading shows cached data immediately
+ * - Fresh data loads in background for progressive enhancement
+ * - Background preloading of balances/allowances on app startup
  */
 
 // Simple notification function for basic messages
@@ -119,6 +129,39 @@ if (!document.getElementById('simple-notification-styles')) {
             to {
                 transform: translateX(0);
                 opacity: 1;
+            }
+        }
+        
+        /* Loading state styling */
+        .balance-text.loading {
+            color: #6c757d;
+            font-style: italic;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        .balance-text.no-balance {
+            color: #dc3545;
+            font-weight: 500;
+        }
+        
+        /* Button label loading states */
+        label[data-balance*="Loading..."] {
+            color: #6c757d !important;
+            font-style: italic !important;
+            animation: pulse 1.5s ease-in-out infinite !important;
+        }
+        
+        label[data-balance*="Error"] {
+            color: #dc3545 !important;
+            font-weight: 500 !important;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.6;
             }
         }
     `;
@@ -226,6 +269,11 @@ async function refreshData(isInitialLoad = false) {
             populateOptionsTable();
         }
         
+        // Also populate expiry buttons even if table is empty
+        if (typeof populateExpiryButtons === 'function') {
+            populateExpiryButtons();
+        }
+        
         // Update positions if on positions tab
         if ($('#positions-section').is(':visible')) {
             refreshPositions();
@@ -262,6 +310,16 @@ async function refreshData(isInitialLoad = false) {
 
 // Populate the options table in advanced view
 function populateOptionsTable() {
+    // Prevent infinite recursion if called from option-type-filter.js
+    if (window.isPopulatingTable) {
+        return;
+    }
+    
+    window.isPopulatingTable = true;
+    
+    // First, populate expiry and strike buttons
+    populateExpiryButtons();
+    
     const tableBody = $('#options-table-body');
     
     if (!tableBody.length) {
@@ -276,12 +334,41 @@ function populateOptionsTable() {
         tableBody.html('<tr><td colspan="9" class="text-center text-muted">No options available</td></tr>');
         return;
     }
-    
-    // Use the already sorted state.orders array
-    for (let i = 0; i < state.orders.length; i++) {
-        const order = state.orders[i].order;
 
-        
+    // Filter orders based on selected expiry and strike
+    let filteredOrders = state.orders;
+    
+    if (state.selectedExpiry) {
+        filteredOrders = filteredOrders.filter(order => {
+            return parseInt(order.order.expiry) === state.selectedExpiry;
+        });
+    }
+    
+    if (state.selectedStrike) {
+        filteredOrders = filteredOrders.filter(order => {
+            const strike = formatUnits(order.order.strikes[0], PRICE_DECIMALS);
+            return parseFloat(strike) === parseFloat(state.selectedStrike);
+        });
+    }
+
+    // Check if we have any valid orders after filtering
+    if (filteredOrders.length === 0) {
+        tableBody.html('<tr><td colspan="9" class="text-center text-muted">No options match the selected filters</td></tr>');
+        updateTableFilterInfo();
+        return;
+    }
+
+    // Use the filtered orders array
+    for (let i = 0; i < filteredOrders.length; i++) {
+        const order = filteredOrders[i].order;
+        const originalIndex = state.orders.findIndex(o => o === filteredOrders[i]);
+
+        // Skip invalid orders
+        if (!order || !order.strikes || !order.strikes[0]) {
+            console.warn('Skipping invalid order:', order);
+            continue;
+        }
+
         const optionType = order.isCall ? "CALL" : "PUT";
         const collateral = CONFIG.getCollateralDetails(order.collateral);
         const strike = formatUnits(order.strikes[0], PRICE_DECIMALS);
@@ -295,12 +382,17 @@ function populateOptionsTable() {
         // Calculate breakeven using centralized calculator
         const breakeven = optionCalculator.calculateBreakeven(order.isCall, parseFloat(strike), premium).toFixed(2);
         
-        // Calculate Greeks using centralized calculator
-        const { theta, delta, iv } = state.orders[i].greeks;
+        // Calculate Greeks using centralized calculator - handle missing greeks gracefully
+        let theta = 0, delta = 0, iv = 0;
+        if (filteredOrders[i].greeks) {
+            theta = filteredOrders[i].greeks.theta || 0;
+            delta = filteredOrders[i].greeks.delta || 0;
+            iv = filteredOrders[i].greeks.iv || 0;
+        }
         
         // Format expiry date from individual order
         let expiryDisplay = 'N/A';
-        if (order.expiry) {
+        if (order.expiry && order.expiry !== '0') {
             try {
                 const orderExpiryTimestamp = parseInt(order.expiry) * 1000; // Convert to milliseconds
                 if (!isNaN(orderExpiryTimestamp) && orderExpiryTimestamp > 0) {
@@ -327,9 +419,9 @@ function populateOptionsTable() {
             
         }
         
-        // Use the loop index directly for reliable row selection
+        // Use the original index for reliable row selection
         const row = `
-            <tr class="option-row ${i === state.selectedOrderIndex ? 'selected' : ''}" data-index="${i}">
+            <tr class="option-row ${originalIndex === state.selectedOrderIndex ? 'selected' : ''}" data-index="${originalIndex}">
                 <td>$${formatNumber(strike)}</td>
                 <td>${optionType}</td>
                 <td title="Expires at ${expiryDisplay}">${expiryDisplay}</td>
@@ -342,6 +434,244 @@ function populateOptionsTable() {
         `;
         tableBody.append(row);
     }
+    
+    // Update table filter info
+    updateTableFilterInfo();
+    
+    // Clear the flag to allow future calls
+    window.isPopulatingTable = false;
+}
+
+// Populate expiry selection buttons
+function populateExpiryButtons() {
+    if (!state.orders || state.orders.length === 0) return;
+    
+    const container = $('#expiry-buttons-container');
+    container.empty();
+    
+    // Get unique expiry timestamps - filter out invalid ones
+    const uniqueExpiries = Array.from(new Set(
+        state.orders
+            .filter(order => order.order && order.order.expiry && order.order.expiry !== '0')
+            .map(order => parseInt(order.order.expiry))
+    )).filter(expiry => !isNaN(expiry)).sort();
+    
+    // Create expiry buttons
+    uniqueExpiries.forEach(expiry => {
+        const expiryDate = new Date(expiry * 1000);
+        const expiryTimeString = expiryDate.toLocaleTimeString('en-US', { 
+            hour12: false, 
+            hour: '2-digit', 
+            minute: '2-digit',
+            timeZone: 'UTC'
+        });
+        const expiryDateString = expiryDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            timeZone: 'UTC'
+        });
+        const displayText = `${expiryDateString} ${expiryTimeString} UTC`;
+        
+        const button = $(`<button class="expiry-btn" data-expiry="${expiry}">${displayText}</button>`);
+        
+        // Mark as active if this expiry is selected
+        if (state.selectedExpiry === expiry) {
+            button.addClass('active');
+        }
+        
+        button.on('click', function() {
+            selectExpiry(expiry);
+        });
+        
+        container.append(button);
+    });
+}
+
+// Populate strike selection buttons for a specific expiry
+function populateStrikeButtons(expiry) {
+    if (!state.orders || state.orders.length === 0) return;
+    
+    const container = $('#strike-buttons-container');
+    container.empty();
+    
+    // Filter orders by expiry
+    const expiryOrders = state.orders.filter(order => parseInt(order.order.expiry) === expiry);
+    
+    // Separate calls and puts
+    const callOrders = expiryOrders.filter(order => order.order.isCall);
+    const putOrders = expiryOrders.filter(order => !order.order.isCall);
+    
+    // Get unique strikes for calls
+    const callStrikes = Array.from(new Set(
+        callOrders
+            .filter(order => order.order && order.order.strikes && order.order.strikes[0])
+            .map(order => parseFloat(formatUnits(order.order.strikes[0], PRICE_DECIMALS)))
+    )).filter(strike => !isNaN(strike)).sort((a, b) => a - b);
+    
+    // Get unique strikes for puts
+    const putStrikes = Array.from(new Set(
+        putOrders
+            .filter(order => order.order && order.order.strikes && order.order.strikes[0])
+            .map(order => parseFloat(formatUnits(order.order.strikes[0], PRICE_DECIMALS)))
+    )).filter(strike => !isNaN(strike)).sort((a, b) => a - b);
+    
+    // Create CALL strikes section
+    if (callStrikes.length > 0) {
+        const callLabel = $('<div class="strike-section-label mb-2"><strong>CALL Options</strong></div>');
+        container.append(callLabel);
+        
+        const callContainer = $('<div class="strike-buttons-row mb-3"></div>');
+        callStrikes.forEach(strike => {
+            const button = $(`<button class="strike-btn call-strike" data-strike="${strike}">$${formatNumber(strike)}</button>`);
+            
+            // Mark as active if this strike is selected
+            if (state.selectedStrike === strike) {
+                button.addClass('active');
+            }
+            
+            button.on('click', function() {
+                selectStrike(strike);
+            });
+            
+            callContainer.append(button);
+        });
+        container.append(callContainer);
+    }
+    
+    // Create PUT strikes section
+    if (putStrikes.length > 0) {
+        const putLabel = $('<div class="strike-section-label mb-2"><strong>PUT Options</strong></div>');
+        container.append(putLabel);
+        
+        const putContainer = $('<div class="strike-buttons-row mb-3"></div>');
+        putStrikes.forEach(strike => {
+            const button = $(`<button class="strike-btn put-strike" data-strike="${strike}">$${formatNumber(strike)}</button>`);
+            
+            // Mark as active if this strike is selected
+            if (state.selectedStrike === strike) {
+                button.addClass('active');
+            }
+            
+            button.on('click', function() {
+                selectStrike(strike);
+            });
+            
+            putContainer.append(button);
+        });
+        container.append(putContainer);
+    }
+    
+    // Show the strike buttons container
+    container.show();
+}
+
+// Handle expiry selection
+function selectExpiry(expiry) {
+    // Clear previous selections
+    state.selectedStrike = null;
+    
+    // Update selected expiry
+    if (state.selectedExpiry === expiry) {
+        state.selectedExpiry = null; // Deselect if clicking same expiry
+        $('#strike-buttons-container').hide();
+        $('.strike-btn').removeClass('active');
+    } else {
+        state.selectedExpiry = expiry;
+        populateStrikeButtons(expiry);
+    }
+    
+    // Update button states
+    $('.expiry-btn').removeClass('active');
+    if (state.selectedExpiry) {
+        $(`.expiry-btn[data-expiry="${state.selectedExpiry}"]`).addClass('active');
+    }
+    
+    // Refresh the table
+    populateOptionsTable();
+    
+    // Update table filter info
+    updateTableFilterInfo();
+}
+
+// Handle strike selection
+function selectStrike(strike) {
+    // Update selected strike
+    if (state.selectedStrike === strike) {
+        state.selectedStrike = null; // Deselect if clicking same strike
+    } else {
+        state.selectedStrike = strike;
+    }
+    
+    // Update button states
+    $('.strike-btn').removeClass('active');
+    if (state.selectedStrike) {
+        $(`.strike-btn[data-strike="${state.selectedStrike}"]`).addClass('active');
+    }
+    
+    // Find the first order with this strike and select it (mimic row click behavior)
+    if (state.selectedStrike) {
+        const matchingOrder = state.orders.find(order => {
+            if (!order.order || !order.order.strikes || !order.order.strikes[0]) return false;
+            const orderStrike = parseFloat(formatUnits(order.order.strikes[0], PRICE_DECIMALS));
+            return parseFloat(orderStrike) === parseFloat(state.selectedStrike);
+        });
+        
+        if (matchingOrder) {
+            const orderIndex = state.orders.indexOf(matchingOrder);
+            if (typeof selectOption === 'function') {
+                selectOption(orderIndex);
+            }
+        }
+    }
+    
+    // Refresh the table
+    populateOptionsTable();
+    
+    // Update table filter info
+    updateTableFilterInfo();
+}
+
+// Update table filter info display
+function updateTableFilterInfo() {
+    let filterText = 'Table sorted by expiry time (earliest first)';
+    
+    if (state.selectedExpiry) {
+        const expiryDate = new Date(state.selectedExpiry * 1000);
+        const expiryTimeString = expiryDate.toLocaleTimeString('en-US', { 
+            hour12: false, 
+            hour: '2-digit', 
+            minute: '2-digit',
+            timeZone: 'UTC'
+        });
+        const expiryDateString = expiryDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            timeZone: 'UTC'
+        });
+        filterText = `Filtered by expiry: ${expiryDateString} ${expiryTimeString} UTC`;
+        
+        if (state.selectedStrike) {
+            filterText += ` | Strike: $${formatNumber(state.selectedStrike)}`;
+        }
+    }
+    
+    $('#table-filter-info').text(filterText);
+}
+
+// Clear all filters and show all orders
+function clearAllFilters() {
+    state.selectedExpiry = null;
+    state.selectedStrike = null;
+    
+    // Update button states
+    $('.expiry-btn').removeClass('active');
+    $('.strike-btn').removeClass('active');
+    
+    // Hide strike buttons container
+    $('#strike-buttons-container').hide();
+    
+    // Refresh the table
+    populateOptionsTable();
 }
 
 // Set the expiry time for the current day
@@ -1312,158 +1642,226 @@ async function updateLiquidityInfo() {
                 };
             });
         
-        // Prepare multicall data for both OptionBook and Kyber allowances
-        const optionBookCalls = tokens.map(tokenInfo => ({
-            address: tokenInfo.address,
-            abi: ERC20ABI,
-            functionName: 'allowance',
-            args: [MAKER_ADDRESS, OPTION_BOOK_ADDRESS]
-        }));
-        
-        // Add user's OptionBook allowances (for the payment asset display)
-        const userOptionBookCalls = tokens.map(tokenInfo => ({
-            address: tokenInfo.address,
-            abi: ERC20ABI,
-            functionName: 'allowance',
-            args: [state.connectedAddress, OPTION_BOOK_ADDRESS]
-        }));
-        
-        const kyberCalls = tokens.map(tokenInfo => ({
-            address: tokenInfo.address,
-            abi: ERC20ABI,
-            functionName: 'allowance',
-            args: [state.connectedAddress, CONFIG.KYBER_CONTRACT_ADDRESS]
-        }));
-        
-        // Combine all calls: MAKER_ADDRESS allowances, USER allowances, then Kyber allowances
-        const allCalls = [...optionBookCalls, ...userOptionBookCalls, ...kyberCalls];
-
-        try {
-            // Execute multicall
-            const { readContracts } = WagmiCore;
-            console.log('Executing multicall with', allCalls.length, 'contracts');
-            console.log('Using multicall address:', MULTICALL_ADDRESS);
-            console.log('All calls:', allCalls);
-            
-            const approvalAmounts = await readContracts({
-                contracts: allCalls,
-                multicallAddress: MULTICALL_ADDRESS,
-                chainId: 8453 // Base chain ID
+        // OPTIMIZATION: Show cached allowances immediately if available
+        if (state.userOptionBookAllowances) {
+            tokens.forEach(tokenInfo => {
+                const cachedAllowance = state.userOptionBookAllowances[tokenInfo.symbol];
+                if (cachedAllowance && cachedAllowance !== '--') {
+                    $(tokenInfo.element).text(cachedAllowance);
+                }
             });
             
-            console.log('Multicall execution completed. Results type:', typeof approvalAmounts);
-            console.log('Is using real Wagmi multicall:', !!window.__WAGMI_READ_CONTRACTS__);
+            // OPTIMIZATION: Update main payment allowance display immediately with cached data
+            const selectedAsset = getSelectedPaymentAsset();
+            if (selectedAsset && selectedAsset !== 'ETH' && state.userOptionBookAllowances[selectedAsset]) {
+                const allowanceDisplay = document.getElementById('payment-allowance-amount');
+                if (allowanceDisplay) {
+                    allowanceDisplay.textContent = state.userOptionBookAllowances[selectedAsset];
+                }
+            }
+        }
+        
+        // OPTIMIZATION: Show loading placeholders for missing data
+        tokens.forEach(tokenInfo => {
+            if (!state.userOptionBookAllowances || !state.userOptionBookAllowances[tokenInfo.symbol]) {
+                $(tokenInfo.element).text('Loading...');
+            }
+        });
+        
+        // OPTIMIZATION: Show loading placeholder in main allowance display if no cached data
+        const selectedAsset = getSelectedPaymentAsset();
+        if (selectedAsset && selectedAsset !== 'ETH' && (!state.userOptionBookAllowances || !state.userOptionBookAllowances[selectedAsset])) {
+            const allowanceDisplay = document.getElementById('payment-allowance-amount');
+            if (allowanceDisplay) {
+                allowanceDisplay.textContent = 'Loading...';
+            }
+        }
+        
+        // OPTIMIZATION: Load fresh allowances in background (non-blocking)
+        setTimeout(async () => {
+            try {
+                // Prepare multicall data for both OptionBook and Kyber allowances
+                const optionBookCalls = tokens.map(tokenInfo => ({
+                    address: tokenInfo.address,
+                    abi: ERC20ABI,
+                    functionName: 'allowance',
+                    args: [MAKER_ADDRESS, OPTION_BOOK_ADDRESS]
+                }));
+                
+                // Add user's OptionBook allowances (for the payment asset display)
+                const userOptionBookCalls = tokens.map(tokenInfo => ({
+                    address: tokenInfo.address,
+                    abi: ERC20ABI,
+                    functionName: 'allowance',
+                    args: [state.connectedAddress, OPTION_BOOK_ADDRESS]
+                }));
+                
+                const kyberCalls = tokens.map(tokenInfo => ({
+                    address: tokenInfo.address,
+                    abi: ERC20ABI,
+                    functionName: 'allowance',
+                    args: [state.connectedAddress, CONFIG.KYBER_CONTRACT_ADDRESS]
+                }));
+                
+                // Combine all calls: MAKER_ADDRESS allowances, USER allowances, then Kyber allowances
+                const allCalls = [...optionBookCalls, ...userOptionBookCalls, ...kyberCalls];
 
-            // Process results and update UI
-            approvalAmounts.forEach((approvalAmountResult, index) => {
-                if (index < tokens.length) {
-                    // OptionBook allowances
-                    const tokenInfo = tokens[index];
-                    const approvalAmount = approvalAmountResult.result;
-                    try {
-                        // Format the amount with full decimal precision for UI display
-                        const formattedAmount = ethers.utils.formatUnits(approvalAmount, tokenInfo.decimals);
-                        
-                        // Update the UI element
-                        $(tokenInfo.element).text(formattedAmount);
-                    } catch (error) {
-                        console.error(`Error processing approval for ${tokenInfo.symbol}:`, error);
-                        $(tokenInfo.element).text('--');
-                    }
-                } else if (index < tokens.length * 2) {
-                    // User's OptionBook allowances (for the payment asset display)
-                    const tokenInfo = tokens[index - tokens.length];
-                    const userApprovalAmount = approvalAmountResult.result;
-                    try {
-                        // Format the amount with full decimal precision for UI display
-                        const formattedAmount = ethers.utils.formatUnits(userApprovalAmount, tokenInfo.decimals);
-                        
-                        // Store user's OptionBook allowance for the payment asset display
-                        if (!state.userOptionBookAllowances) {
-                            state.userOptionBookAllowances = {};
-                        }
-                        state.userOptionBookAllowances[tokenInfo.symbol] = formattedAmount;
-                        
-                    } catch (error) {
-                        console.error(`Error processing user OptionBook approval for ${tokenInfo.symbol}:`, error);
-                        if (!state.userOptionBookAllowances) {
-                            state.userOptionBookAllowances = {};
-                        }
-                        state.userOptionBookAllowances[tokenInfo.symbol] = '--';
-                    }
-                } else {
-                    // Kyber allowances
-                    const tokenInfo = tokens[index - tokens.length * 2];
-                    const kyberApprovalAmount = approvalAmountResult.result;
+                try {
+                    // Execute multicall
+                    const { readContracts } = WagmiCore;
+                    console.log('Executing multicall with', allCalls.length, 'contracts');
+                    console.log('Using multicall address:', MULTICALL_ADDRESS);
+                    console.log('All calls:', allCalls);
                     
-                    try {
-                        // Check if we have a valid result
-                        if (!kyberApprovalAmount || kyberApprovalAmount.toString() === '0') {
-                            const formattedAmount = '0';
-                            
-                            // Store user's Kyber allowance for the swap modal
-                            if (!state.userKyberAllowances) {
-                                state.userKyberAllowances = {};
+                    const approvalAmounts = await readContracts({
+                        contracts: allCalls,
+                        multicallAddress: MULTICALL_ADDRESS,
+                        chainId: 8453 // Base chain ID
+                    });
+                    
+                    console.log('Multicall execution completed. Results type:', typeof approvalAmounts);
+                    console.log('Is using real Wagmi multicall:', !!window.__WAGMI_READ_CONTRACTS__);
+
+                    // Process results and update UI
+                    approvalAmounts.forEach((approvalAmountResult, index) => {
+                        if (index < tokens.length) {
+                            // OptionBook allowances
+                            const tokenInfo = tokens[index];
+                            const approvalAmount = approvalAmountResult.result;
+                            try {
+                                // Format the amount with full decimal precision for UI display
+                                const formattedAmount = ethers.utils.formatUnits(approvalAmount, tokenInfo.decimals);
+                                
+                                // Update the UI element
+                                $(tokenInfo.element).text(formattedAmount);
+                            } catch (error) {
+                                console.error(`Error processing approval for ${tokenInfo.symbol}:`, error);
+                                $(tokenInfo.element).text('--');
                             }
-                            state.userKyberAllowances[tokenInfo.symbol] = formattedAmount;
-                            
-                            // Update Kyber allowance display
-                            const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
-                            if ($(kyberElement).length === 0) {
-                                // Create Kyber allowance display if it doesn't exist
-                                const optionBookElement = $(tokenInfo.element);
-                                const kyberDisplay = optionBookElement.clone();
-                                kyberDisplay.attr('id', tokenInfo.symbol.toLowerCase() + '-kyber-liquidity');
-                                kyberDisplay.text(formattedAmount);
-                                optionBookElement.after(kyberDisplay);
-                            } else {
-                                $(kyberElement).text(formattedAmount);
+                        } else if (index < tokens.length * 2) {
+                            // User's OptionBook allowances (for the payment asset display)
+                            const tokenInfo = tokens[index - tokens.length];
+                            const userApprovalAmount = approvalAmountResult.result;
+                            try {
+                                // Format the amount with full decimal precision for UI display
+                                const formattedAmount = ethers.utils.formatUnits(userApprovalAmount, tokenInfo.decimals);
+                                
+                                // Store user's OptionBook allowance for the payment asset display
+                                if (!state.userOptionBookAllowances) {
+                                    state.userOptionBookAllowances = {};
+                                }
+                                state.userOptionBookAllowances[tokenInfo.symbol] = formattedAmount;
+                                
+                                // OPTIMIZATION: Update main payment allowance display immediately when data arrives
+                                const selectedAsset = getSelectedPaymentAsset();
+                                if (selectedAsset === tokenInfo.symbol) {
+                                    const allowanceDisplay = document.getElementById('payment-allowance-amount');
+                                    if (allowanceDisplay) {
+                                        allowanceDisplay.textContent = formattedAmount;
+                                    }
+                                }
+                                
+                            } catch (error) {
+                                console.error(`Error processing user OptionBook approval for ${tokenInfo.symbol}:`, error);
+                                if (!state.userOptionBookAllowances) {
+                                    state.userOptionBookAllowances = {};
+                                }
+                                state.userOptionBookAllowances[tokenInfo.symbol] = '--';
                             }
-                            return;
-                        }
-                        
-                        // Format the amount with full decimal precision for UI display
-                        const formattedAmount = ethers.utils.formatUnits(kyberApprovalAmount, tokenInfo.decimals);
-                        
-                        // Store user's Kyber allowance for the swap modal
-                        if (!state.userKyberAllowances) {
-                            state.userKyberAllowances = {};
-                        }
-                        state.userKyberAllowances[tokenInfo.symbol] = formattedAmount;
-                        
-                        // Update Kyber allowance display (create if doesn't exist)
-                        const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
-                        if ($(kyberElement).length === 0) {
-                            // Create Kyber allowance display if it doesn't exist
-                            const optionBookElement = $(tokenInfo.element);
-                            const kyberDisplay = optionBookElement.clone();
-                            kyberDisplay.attr('id', tokenInfo.symbol.toLowerCase() + '-kyber-liquidity');
-                            kyberDisplay.text(formattedAmount);
-                            optionBookElement.after(kyberDisplay);
                         } else {
-                            $(kyberElement).text(formattedAmount);
+                            // Kyber allowances
+                            const tokenInfo = tokens[index - tokens.length * 2];
+                            const kyberApprovalAmount = approvalAmountResult.result;
+                            
+                            try {
+                                // Check if we have a valid result
+                                if (!kyberApprovalAmount || kyberApprovalAmount.toString() === '0') {
+                                    const formattedAmount = '0';
+                                    
+                                    // Store user's Kyber allowance for the swap modal
+                                    if (!state.userKyberAllowances) {
+                                        state.userKyberAllowances = {};
+                                    }
+                                    state.userKyberAllowances[tokenInfo.symbol] = formattedAmount;
+                                    
+                                    // Update Kyber allowance display
+                                    const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
+                                    if ($(kyberElement).length === 0) {
+                                        // Create Kyber allowance display if it doesn't exist
+                                        const optionBookElement = $(tokenInfo.element);
+                                        const kyberDisplay = optionBookElement.clone();
+                                        kyberDisplay.attr('id', tokenInfo.symbol.toLowerCase() + '-kyber-liquidity');
+                                        kyberDisplay.text(formattedAmount);
+                                        optionBookElement.after(kyberDisplay);
+                                    } else {
+                                        $(kyberElement).text(formattedAmount);
+                                    }
+                                    return;
+                                }
+                                
+                                // Format the amount with full decimal precision for UI display
+                                const formattedAmount = ethers.utils.formatUnits(kyberApprovalAmount, tokenInfo.decimals);
+                                
+                                // Store user's Kyber allowance for the swap modal
+                                if (!state.userKyberAllowances) {
+                                    state.userKyberAllowances = {};
+                                }
+                                state.userKyberAllowances[tokenInfo.symbol] = formattedAmount;
+                                
+                                // Update Kyber allowance display (create if doesn't exist)
+                                const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
+                                if ($(kyberElement).length === 0) {
+                                    // Create Kyber allowance display if it doesn't exist
+                                    const optionBookElement = $(tokenInfo.element);
+                                    const kyberDisplay = optionBookElement.clone();
+                                    kyberDisplay.attr('id', tokenInfo.symbol.toLowerCase() + '-kyber-liquidity');
+                                    kyberDisplay.text(formattedAmount);
+                                    optionBookElement.after(kyberDisplay);
+                                } else {
+                                    $(kyberElement).text(formattedAmount);
+                                }
+                            } catch (error) {
+                                console.error(`Error processing Kyber approval for ${tokenInfo.symbol}:`, error);
+                                const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
+                                if ($(kyberElement).length > 0) {
+                                    $(kyberElement).text('--');
+                                }
+                            }
                         }
-                    } catch (error) {
-                        console.error(`Error processing Kyber approval for ${tokenInfo.symbol}:`, error);
+                    });
+
+                } catch (error) {
+                    console.error('Error in multicall:', error);
+                    // Set all to '--' if multicall fails
+                    tokens.forEach(tokenInfo => {
+                        $(tokenInfo.element).text('--');
                         const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
                         if ($(kyberElement).length > 0) {
                             $(kyberElement).text('--');
                         }
+                    });
+                    
+                    // Also show error in main allowance display
+                    const allowanceDisplay = document.getElementById('payment-allowance-amount');
+                    if (allowanceDisplay) {
+                        allowanceDisplay.textContent = 'Failed';
                     }
                 }
-            });
-
-        } catch (error) {
-            console.error('Error in multicall:', error);
-            // Set all to '--' if multicall fails
-            tokens.forEach(tokenInfo => {
-                $(tokenInfo.element).text('--');
-                const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
-                if ($(kyberElement).length > 0) {
-                    $(kyberElement).text('--');
+            } catch (error) {
+                console.error('Error in background liquidity update:', error);
+                // Show error state for failed tokens
+                tokens.forEach(tokenInfo => {
+                    $(tokenInfo.element).text('Failed');
+                });
+                
+                // Also show error in main allowance display
+                const allowanceDisplay = document.getElementById('payment-allowance-amount');
+                if (allowanceDisplay) {
+                    allowanceDisplay.textContent = 'Failed';
                 }
-            });
-        }
+            }
+        }, 150); // Small delay to ensure UI updates are shown first
+        
     } catch (error) {
         console.error('Error updating liquidity information:', error);
     }
@@ -1501,45 +1899,98 @@ async function updateWalletBalance() {
         // Store current selection to preserve user preference
         const currentSelection = getSelectedPaymentAsset();
         
-        // Get ERC20 token balances
-        const { readContracts } = WagmiCore;
-        const contracts = erc20Tokens.map(token => ({
-            address: CONFIG.collateralMap[token],
-            abi: ERC20ABI,
-            functionName: 'balanceOf',
-            args: [state.connectedAddress],
-            chainId: 8453
-        }));
-        const balances = await readContracts({ contracts });
-        
-        // Store balances for display
-        state.paymentAssetBalances = {};
-        
-        // Process ERC20 token balances
-        erc20Tokens.forEach((token, i) => {
-            const balance = formatUnits(balances[i].result, CONFIG.getCollateralDetails(CONFIG.collateralMap[token]).decimals);
-            state.paymentAssetBalances[token] = balance;
-            
-            // Update button tooltips with balance information
-            const button = document.querySelector(`input[name="payment-asset-selection"][value="${token}"]`);
-            if (button) {
-                const label = button.nextElementSibling;
-                if (label) {
-                    // Get USD value if we have market prices
-                    let usdValue = '';
-                    if (state.market_prices && state.market_prices[token]) {
-                        const price = state.market_prices[token];
-                        const usdAmount = (parseFloat(balance) * price).toFixed(2);
-                        usdValue = ` ($${usdAmount})`;
-                    }
-                    label.setAttribute('data-balance', `${balance} ${token}${usdValue}`);
+        // OPTIMIZATION: Show cached balances immediately if available
+        if (state.paymentAssetBalances) {
+            // Update UI with cached data first for instant response
+            erc20Tokens.forEach(token => {
+                const cachedBalance = state.paymentAssetBalances[token];
+                if (cachedBalance && cachedBalance !== 'Loading...' && cachedBalance !== 'Error' && cachedBalance !== 'Failed') {
+                    updateBalanceDisplay(token, cachedBalance);
                 }
+            });
+        }
+        
+        // OPTIMIZATION: Show loading placeholders for missing data
+        erc20Tokens.forEach(token => {
+            if (!state.paymentAssetBalances || !state.paymentAssetBalances[token] || 
+                state.paymentAssetBalances[token] === 'Loading...' || 
+                state.paymentAssetBalances[token] === 'Error' || 
+                state.paymentAssetBalances[token] === 'Failed') {
+                // Set loading state in state
+                if (!state.paymentAssetBalances) {
+                    state.paymentAssetBalances = {};
+                }
+                state.paymentAssetBalances[token] = 'Loading...';
+                
+                // Update UI to show loading
+                updateBalanceDisplay(token, 'Loading...');
             }
         });
+        
+        // OPTIMIZATION: Load fresh balances in background (non-blocking)
+        setTimeout(async () => {
+            try {
+                // Get ERC20 token balances using multicall
+                const { readContracts } = WagmiCore;
+                const contracts = erc20Tokens.map(token => ({
+                    address: CONFIG.collateralMap[token],
+                    abi: ERC20ABI,
+                    functionName: 'balanceOf',
+                    args: [state.connectedAddress],
+                    chainId: 8453
+                }));
+                
+                const balances = await readContracts({ contracts });
+                
+                // Store balances for display
+                if (!state.paymentAssetBalances) {
+                    state.paymentAssetBalances = {};
+                }
+                
+                // Process ERC20 token balances and update UI
+                erc20Tokens.forEach((token, i) => {
+                    try {
+                        const balance = formatUnits(balances[i].result, CONFIG.getCollateralDetails(CONFIG.collateralMap[token]).decimals);
+                        state.paymentAssetBalances[token] = balance;
+                        
+                        // Update UI with fresh balance
+                        updateBalanceDisplay(token, balance);
+                        
+                        // Update button tooltips with balance information
+                        updateBalanceTooltip(token, balance);
+                        
+                    } catch (error) {
+                        console.error(`Error processing balance for ${token}:`, error);
+                        state.paymentAssetBalances[token] = 'Error';
+                        updateBalanceDisplay(token, 'Error');
+                    }
+                });
+                
+                // Update balance display for currently selected asset
+                updatePaymentAssetBalanceDisplay(currentSelection);
+                
+                // Check fund status after balance update (debounced)
+                if (typeof refreshFundStatus === 'function') {
+                    refreshFundStatus();
+                }
+                
+            } catch (error) {
+                console.error('Error updating payment asset balances:', error);
+                // Show error state for failed tokens
+                erc20Tokens.forEach(token => {
+                    if (!state.paymentAssetBalances) {
+                        state.paymentAssetBalances = {};
+                    }
+                    state.paymentAssetBalances[token] = 'Failed';
+                    updateBalanceDisplay(token, 'Failed');
+                });
+            }
+        }, 100); // Small delay to ensure UI updates are shown first
         
         // Handle ETH balance separately (native token)
         // ETH balance is already handled by updateETHBalance() function
         // We'll set a placeholder here and let the existing ETH balance display handle it
+        state.paymentAssetBalances = state.paymentAssetBalances || {};
         state.paymentAssetBalances['ETH'] = '0'; // Placeholder, actual balance shown elsewhere
         
         // Update balance display for currently selected asset
@@ -1554,8 +2005,59 @@ async function updateWalletBalance() {
         if (typeof updateETHBalance === 'function') {
             updateETHBalance();
         }
+        
     } catch (error) {
         console.error('Error updating payment asset balances:', error);
+    }
+}
+
+// Helper function to update balance display for a specific token
+function updateBalanceDisplay(token, balance) {
+    const button = document.querySelector(`input[name="payment-asset-selection"][value="${token}"]`);
+    if (button) {
+        const label = button.nextElementSibling;
+        if (label) {
+            if (balance === 'Loading...') {
+                label.setAttribute('data-balance', `Loading...`);
+                // Add loading class for styling
+                label.classList.add('loading');
+            } else if (balance === 'Error' || balance === 'Failed') {
+                label.setAttribute('data-balance', `Error loading balance`);
+                // Remove loading class and add error styling
+                label.classList.remove('loading');
+                label.classList.add('error');
+            } else {
+                // Remove any special classes for normal balance display
+                label.classList.remove('loading', 'error');
+                
+                // Get USD value if we have market prices
+                let usdValue = '';
+                if (state.market_prices && state.market_prices[token]) {
+                    const price = state.market_prices[token];
+                    const usdAmount = (parseFloat(balance) * price).toFixed(2);
+                    usdValue = ` ($${usdAmount})`;
+                }
+                label.setAttribute('data-balance', `${balance} ${token}${usdValue}`);
+            }
+        }
+    }
+}
+
+// Helper function to update balance tooltip
+function updateBalanceTooltip(token, balance) {
+    const button = document.querySelector(`input[name="payment-asset-selection"][value="${token}"]`);
+    if (button) {
+        const label = button.nextElementSibling;
+        if (label) {
+            // Get USD value if we have market prices
+            let usdValue = '';
+            if (state.market_prices && state.market_prices[token]) {
+                const price = state.market_prices[token];
+                const usdAmount = (parseFloat(balance) * price).toFixed(2);
+                usdValue = ` ($${usdAmount})`;
+            }
+            label.setAttribute('data-balance', `${balance} ${token}${usdValue}`);
+        }
     }
 }
 
@@ -1571,7 +2073,7 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
     const allowanceDisplay = document.getElementById('payment-allowance-amount');
     
     if (!state.paymentAssetBalances || !selectedAsset) {
-        balanceDisplay.innerHTML = '<span class="balance-text no-balance">No balance data available</span>';
+        balanceDisplay.innerHTML = '<small class="text-muted"><i class="bi bi-wallet2 me-1"></i><span class="balance-text no-balance">No balance data available</span></small>';
         if (allowanceDisplay) allowanceDisplay.textContent = '--';
         return;
     }
@@ -1580,33 +2082,48 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
     if (selectedAsset === 'ETH') {
         // For ETH, we don't have a balance in state.paymentAssetBalances
         // The ETH balance is displayed separately by the existing ETH balance display
-        balanceDisplay.innerHTML = '<span class="balance-text">Native ETH balance shown above</span>';
+        balanceDisplay.innerHTML = '<small class="text-muted"><i class="bi bi-wallet2 me-1"></i><span class="balance-text">Native ETH balance shown above</span></small>';
         if (allowanceDisplay) allowanceDisplay.textContent = 'N/A (Native)';
         return;
     }
     
     const balance = state.paymentAssetBalances[selectedAsset];
     
-    if (!balance || balance === '0') {
-        balanceDisplay.innerHTML = '<span class="balance-text no-balance">0.00 ${selectedAsset}</span>';
+    // OPTIMIZATION: Show loading state instead of zero balance while loading
+    if (!balance || balance === 'Loading...' || balance === 'Error' || balance === 'Failed') {
+        if (balance === 'Loading...') {
+            balanceDisplay.innerHTML = '<small class="text-muted"><i class="bi bi-wallet2 me-1"></i><span class="balance-text loading">Loading balance...</span></small>';
+        } else if (balance === 'Error' || balance === 'Failed') {
+            balanceDisplay.innerHTML = '<small class="text-muted"><i class="bi bi-wallet2 me-1"></i><span class="balance-text no-balance">Failed to load balance</span></small>';
+        } else {
+            balanceDisplay.innerHTML = '<small class="text-muted"><i class="bi bi-wallet2 me-1"></i><span class="balance-text loading">Loading balance...</span></small>';
+        }
         if (allowanceDisplay) allowanceDisplay.textContent = '--';
         return;
     }
     
-    // Get USD value if we have market prices
-    let usdValue = '';
-    if (state.market_prices && state.market_prices[selectedAsset]) {
-        const price = state.market_prices[selectedAsset];
-        const usdAmount = (parseFloat(balance) * price).toFixed(2);
-        usdValue = `($${usdAmount})`;
+    // Only show actual balance if it's a valid number greater than 0
+    if (parseFloat(balance) === 0) {
+        balanceDisplay.innerHTML = '<small class="text-muted"><i class="bi bi-wallet2 me-1"></i><span class="balance-text no-balance">0.00 ${selectedAsset}</span></small>';
+    } else {
+        // Get USD value if we have market prices
+        let usdValue = '';
+        if (state.market_prices && state.market_prices[selectedAsset]) {
+            const price = state.market_prices[selectedAsset];
+            const usdAmount = (parseFloat(balance) * price).toFixed(2);
+            usdValue = `($${usdAmount})`;
+        }
+        
+        balanceDisplay.innerHTML = `
+            <small class="text-muted">
+                <i class="bi bi-wallet2 me-1"></i>
+                <span class="balance-amount">${balance} ${selectedAsset}</span>
+                <span class="balance-usd">${usdValue}</span>
+            </small>
+        `;
     }
     
-    balanceDisplay.innerHTML = `
-        <span class="balance-amount">${balance} ${selectedAsset}</span>
-        <span class="balance-usd">${usdValue}</span>
-    `;
-    
-    // Update allowance display
+    // OPTIMIZATION: Update allowance display immediately with cached data
     if (allowanceDisplay) {
         // Get the user's OptionBook allowance from state if available
         if (state.userOptionBookAllowances && state.userOptionBookAllowances[selectedAsset]) {
@@ -1614,10 +2131,11 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
         } else {
             // Fallback to the liquidity info if user allowances not available yet
             const liquidityElement = document.getElementById(`${selectedAsset.toLowerCase()}-liquidity`);
-            if (liquidityElement && liquidityElement.textContent !== '--') {
+            if (liquidityElement && liquidityElement.textContent !== '--' && liquidityElement.textContent !== 'Loading...') {
                 allowanceDisplay.textContent = liquidityElement.textContent;
             } else {
-                allowanceDisplay.textContent = '--';
+                // Show loading state if no cached data available
+                allowanceDisplay.textContent = 'Loading...';
             }
         }
     }
@@ -1626,6 +2144,25 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
     const swapBtn = document.getElementById('swap-assets-btn');
     if (swapBtn) {
         swapBtn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i>Get more ${selectedAsset}`;
+    }
+}
+
+// OPTIMIZATION: Add function to immediately update allowance display when asset changes
+window.updateAllowanceDisplay = function(selectedAsset) {
+    const allowanceDisplay = document.getElementById('payment-allowance-amount');
+    if (!allowanceDisplay) return;
+    
+    if (selectedAsset === 'ETH') {
+        allowanceDisplay.textContent = 'N/A (Native)';
+        return;
+    }
+    
+    // Show cached allowance immediately if available
+    if (state.userOptionBookAllowances && state.userOptionBookAllowances[selectedAsset]) {
+        allowanceDisplay.textContent = state.userOptionBookAllowances[selectedAsset];
+    } else {
+        // Show loading state
+        allowanceDisplay.textContent = 'Loading...';
     }
 }
 
@@ -1677,22 +2214,10 @@ async function initialize() {
     setExpiryTime(); // Set the initial expiry time
     updateLiquidityRenewalCountdown(); // Set the liquidity renewal countdown
     
-    // Restore exact approval preference from localStorage
-    const exactApprovalEnabled = localStorage.getItem('exactApprovalEnabled') === 'true';
-    $('#exact-approval-checkbox').prop('checked', exactApprovalEnabled);
-    
     // Initialize payment asset balance display with loading state
     const balanceDisplay = document.getElementById('payment-balance-display');
     if (balanceDisplay) {
-        balanceDisplay.innerHTML = '<span class="balance-text loading">Loading balances...</span>';
-    }
-    
-    // Update help text based on saved preference
-    const helpText = $('#exact-approval-checkbox').siblings('.form-text').find('small');
-    if (exactApprovalEnabled) {
-        helpText.text('Only the exact amount needed for this trade will be approved. You may need to approve again for future trades.');
-    } else {
-        helpText.text('Up to $1000 worth of tokens will be approved to reduce future approval transactions. When checked, approves only the exact amount needed for this trade.');
+        balanceDisplay.innerHTML = '<small class="text-muted"><i class="bi bi-wallet2 me-1"></i><span class="balance-text loading">Loading balances...</span></small>';
     }
     
     // Wait for wallet system to be ready and attempt auto-connect
@@ -1713,6 +2238,37 @@ async function initialize() {
     
     // Initial data load (only once during startup)
     await refreshData(true); // Pass true to indicate this is initial load
+    
+    // OPTIMIZATION: Show initial allowance display immediately with cached data
+    setTimeout(() => {
+        try {
+            const selectedAsset = getSelectedPaymentAsset();
+            if (selectedAsset && typeof updateAllowanceDisplay === 'function') {
+                updateAllowanceDisplay(selectedAsset);
+            }
+        } catch (error) {
+            console.warn('Initial allowance display update failed:', error);
+        }
+    }, 100); // Small delay to ensure app is fully initialized
+    
+    // OPTIMIZATION: Preload balances and allowances in background for faster subsequent loads
+    setTimeout(async () => {
+        try {
+            if (state.connectedAddress) {
+                console.log('Preloading balances and allowances in background...');
+                // Preload wallet balances
+                if (typeof updateWalletBalance === 'function') {
+                    updateWalletBalance();
+                }
+                // Preload liquidity info (allowances)
+                if (typeof updateLiquidityInfo === 'function') {
+                    updateLiquidityInfo();
+                }
+            }
+        } catch (error) {
+            console.warn('Background preload failed:', error);
+        }
+    }, 2000); // Wait 2 seconds after initial load to avoid overwhelming the RPC
     
     // Set up periodic refresh timer (but not immediate)
     state.refreshTimer = setInterval(() => refreshData(false), REFRESH_INTERVAL);

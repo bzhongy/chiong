@@ -274,22 +274,22 @@
                     <div class="row">
                         <!-- Asset selector and info -->
                         <div class="col-12 mb-4">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="asset-selector">
-                                    <div class="btn-group" role="group" aria-label="Asset selection">
-                                        <input type="radio" class="btn-check" name="asset-selection" id="asset-eth" value="ETH" checked>
-                                        <label class="btn btn-outline-primary" for="asset-eth">ETH</label>
-                                        
-                                        <input type="radio" class="btn-check" name="asset-selection" id="asset-btc" value="BTC">
-                                        <label class="btn btn-outline-primary" for="asset-btc">BTC</label>
-                                    </div>
-                                    <span id="selected-asset" class="d-none">ETH</span>
+                            <div class="asset-selector">
+                                <div class="btn-group" role="group" aria-label="Asset selection">
+                                    <input type="radio" class="btn-check" name="asset-selection" id="asset-eth" value="ETH" checked>
+                                    <label class="btn btn-outline-primary" for="asset-eth">ETH</label>
+                                    
+                                    <input type="radio" class="btn-check" name="asset-selection" id="asset-btc" value="BTC">
+                                    <label class="btn btn-outline-primary" for="asset-btc">BTC</label>
                                 </div>
-                                <div class="asset-info">
-                                    <div class="price-display">
-                                        <span id="current-price">0.00</span> / <span id="asset-symbol">ETH</span>
-                                    </div>
-                                </div>
+                                <span id="selected-asset" class="d-none">ETH</span>
+                            </div>
+                            
+                            <!-- Current Price Display -->
+                            <div class="current-price-display mt-2">
+                                <span class="price-label">Spot Price:</span>
+                                <span class="price-value">$<span id="current-price">0.00</span></span>
+                                <span class="asset-symbol">/ <span id="asset-symbol">ETH</span></span>
                             </div>
                         </div>
                     </div>
@@ -440,13 +440,6 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- Filter Controls -->
-                                    <div class="filter-controls mb-3">
-                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-filters-btn" onclick="clearAllFilters()">
-                                            <i class="bi bi-x-circle me-1"></i>Clear Filters
-                                        </button>
-                                    </div>
-                                    
                                     <!-- Expiry Selection Buttons -->
                                     <div class="expiry-buttons-container mb-3" id="expiry-buttons-container">
                                         <!-- Expiry buttons will be populated here dynamically -->
@@ -457,31 +450,11 @@
                                         <!-- Strike buttons will be populated here dynamically -->
                                     </div>
                                     
-                                    <div class="options-table-container">
-                                        <table class="table options-table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Strike</th>
-                                                    <th>Type</th>
-                                                    <th>Expiry <i class="bi bi-sort-down" title="Sorted by expiry (earliest first)"></i></th>
-                                                    <th>Premium</th>
-                                                    <th>Payout Ratio</th>
-                                                    <th>Break-even</th>
-                                                    <th>Delta</th>
-                                                    <th>IV</th>
-                                                    <th>Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="options-table-body">
-                                                <!-- Options will be populated here dynamically -->
-                                            </tbody>
-                                        </table>
-                                        <div class="table-info mt-2">
-                                            <small class="text-muted">
-                                                <i class="bi bi-info-circle"></i> 
-                                                <span id="table-filter-info">Table sorted by expiry time (earliest first)</span>
-                                            </small>
-                                        </div>
+                                    <!-- Start Over Button -->
+                                    <div class="start-over-container mb-3">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-filters-btn" onclick="clearAllFilters()">
+                                            <i class="bi bi-arrow-clockwise me-1"></i>Start Over
+                                        </button>
                                     </div>
                                     
                                     <h5 class="card-title mt-4">Position Size:</h5>
@@ -518,12 +491,15 @@
                                             </div>
                                             
                                             <!-- Balance display below buttons -->
-                                            <div class="payment-balance-display mt-2" id="payment-balance-display">
-                                                <span class="balance-text">Loading balances...</span>
+                                            <div class="mt-2" id="payment-balance-display">
+                                                <small class="text-muted">
+                                                    <i class="bi bi-wallet2 me-1"></i>
+                                                    <span class="balance-text">Loading balances...</span>
+                                                </small>
                                             </div>
                                             
                                             <!-- Allowance display below balance -->
-                                            <div class="payment-allowance-display mt-1" id="payment-allowance-display">
+                                            <div class="mt-1" id="payment-allowance-display">
                                                 <small class="text-muted">
                                                     <i class="bi bi-shield-check"></i>
                                                     OptionBook Allowance: <span id="payment-allowance-amount">--</span>
@@ -531,7 +507,7 @@
                                             </div>
                                             
                                             <!-- ETH Balance Display -->
-                                            <div class="eth-balance-info mt-2" id="eth-balance-info">
+                                            <div class="mt-2" id="eth-balance-info">
                                                 <small class="text-muted">
                                                     <i class="bi bi-info-circle"></i>
                                                     ETH Balance: <span id="eth-balance-display-main">--</span> ETH
@@ -540,19 +516,7 @@
                                             </div>
                                         </div>
                                         
-                                        <!-- Add Exact Approval Checkbox -->
-                                        <div class="form-check mt-3">
-                                            <input class="form-check-input" type="checkbox" id="exact-approval-checkbox">
-                                            <label class="form-check-label" for="exact-approval-checkbox">
-                                                Exact Approval
-                                            </label>
-                                            <div class="form-text">
-                                                <small class="text-muted">
-                                                    When unchecked, approves up to $1000 worth of tokens to reduce future approval transactions. 
-                                                    When checked, approves only the exact amount needed for this trade.
-                                                </small>
-                                            </div>
-                                        </div>
+
                                     </div>
                                     
                                     <!-- Swap Modal -->
@@ -636,51 +600,6 @@
                                         </div>
                                     </div>
                                     
-                                                        <!-- ETH to WETH Wrapping Interface -->
-                    <div class="eth-wrap-section mt-3" id="eth-wrap-section" style="display: none;">
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="eth-wrap-header d-flex justify-content-between align-items-center">
-                                    <h6 class="eth-wrap-title mb-0">
-                                        <i class="bi bi-arrow-repeat"></i> Wrap ETH to WETH
-                                    </h6>
-                                    <button class="btn btn-sm btn-outline-primary" id="toggle-eth-wrap-section" title="Hide ETH Wrapping">
-                                        <i class="bi bi-chevron-up"></i>
-                                    </button>
-                                </div>
-                                
-                                <!-- ETH Wrap Content (can be hidden/shown) -->
-                                <div class="eth-wrap-content" id="eth-wrap-content">
-                                    <p class="card-text small text-muted mt-2">
-                                        Convert your ETH to WETH to use for trading.
-                                    </p>
-                                    <div class="row align-items-end">
-                                        <div class="col-md-6">
-                                            <label for="eth-wrap-amount" class="form-label">Amount (ETH)</label>
-                                            <input type="number" class="form-control" id="eth-wrap-amount" placeholder="0.1" step="0.001" min="0.001">
-                                            <div class="form-text">
-                                                Available: <span id="eth-balance-display">--</span> ETH
-                                            </div>
-                                            <!-- Quick amount buttons -->
-                                            <div class="quick-amounts mt-2">
-                                                <small class="text-muted">Quick amounts: </small>
-                                                <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-eth-amount="0.01">0.01</button>
-                                                <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-eth-amount="0.1">0.1</button>
-                                                <button type="button" class="btn btn-sm btn-outline-secondary" data-eth-amount="0.5">0.5</button>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <button type="button" class="btn btn-outline-primary w-100" id="wrap-eth-btn">
-                                                <i class="bi bi-arrow-repeat"></i> Wrap ETH
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div id="wrap-status" class="alert alert-info mt-2" style="display: none;"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                                    
                                     <div class="option-preview mt-4">
                                         <div class="card">
                                             <div class="card-body">
@@ -744,6 +663,36 @@
                                     
                                     <div class="trade-actions mt-4">
                                         <button id="trade-now-btn" class="btn btn-secondary btn-lg w-100" disabled>LOADING...</button>
+                                    </div>
+                                    
+                                    <!-- Options Table Section -->
+                                    <div class="options-section mt-4">
+                                        <div class="options-table-container">
+                                            <table class="table options-table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Strike</th>
+                                                        <th>Type</th>
+                                                        <th>Expiry <i class="bi bi-sort-down" title="Sorted by expiry (earliest first)"></i></th>
+                                                        <th>Premium</th>
+                                                        <th>Payout Ratio</th>
+                                                        <th>Break-even</th>
+                                                        <th>Delta</th>
+                                                        <th>IV</th>
+                                                        <th>Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="options-table-body">
+                                                    <!-- Options will be populated here dynamically -->
+                                                </tbody>
+                                            </table>
+                                            <div class="table-info mt-2">
+                                                <small class="text-muted">
+                                                    <i class="bi bi-info-circle"></i> 
+                                                    <span id="table-filter-info">Table sorted by expiry time (earliest first)</span>
+                                                </small>
+                                            </div>
+                                        </div>
                                     </div>
                         </div>
                     </div>

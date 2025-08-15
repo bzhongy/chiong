@@ -2073,7 +2073,7 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
     const allowanceDisplay = document.getElementById('payment-allowance-amount');
     
     if (!state.paymentAssetBalances || !selectedAsset) {
-        balanceDisplay.innerHTML = '<span class="balance-text no-balance">No balance data available</span>';
+        balanceDisplay.innerHTML = '<small class="text-muted"><i class="bi bi-wallet2 me-1"></i><span class="balance-text no-balance">No balance data available</span></small>';
         if (allowanceDisplay) allowanceDisplay.textContent = '--';
         return;
     }
@@ -2082,7 +2082,7 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
     if (selectedAsset === 'ETH') {
         // For ETH, we don't have a balance in state.paymentAssetBalances
         // The ETH balance is displayed separately by the existing ETH balance display
-        balanceDisplay.innerHTML = '<span class="balance-text">Native ETH balance shown above</span>';
+        balanceDisplay.innerHTML = '<small class="text-muted"><i class="bi bi-wallet2 me-1"></i><span class="balance-text">Native ETH balance shown above</span></small>';
         if (allowanceDisplay) allowanceDisplay.textContent = 'N/A (Native)';
         return;
     }
@@ -2092,11 +2092,11 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
     // OPTIMIZATION: Show loading state instead of zero balance while loading
     if (!balance || balance === 'Loading...' || balance === 'Error' || balance === 'Failed') {
         if (balance === 'Loading...') {
-            balanceDisplay.innerHTML = '<span class="balance-text loading">Loading balance...</span>';
+            balanceDisplay.innerHTML = '<small class="text-muted"><i class="bi bi-wallet2 me-1"></i><span class="balance-text loading">Loading balance...</span></small>';
         } else if (balance === 'Error' || balance === 'Failed') {
-            balanceDisplay.innerHTML = '<span class="balance-text no-balance">Failed to load balance</span>';
+            balanceDisplay.innerHTML = '<small class="text-muted"><i class="bi bi-wallet2 me-1"></i><span class="balance-text no-balance">Failed to load balance</span></small>';
         } else {
-            balanceDisplay.innerHTML = '<span class="balance-text loading">Loading balance...</span>';
+            balanceDisplay.innerHTML = '<small class="text-muted"><i class="bi bi-wallet2 me-1"></i><span class="balance-text loading">Loading balance...</span></small>';
         }
         if (allowanceDisplay) allowanceDisplay.textContent = '--';
         return;
@@ -2104,7 +2104,7 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
     
     // Only show actual balance if it's a valid number greater than 0
     if (parseFloat(balance) === 0) {
-        balanceDisplay.innerHTML = '<span class="balance-text no-balance">0.00 ${selectedAsset}</span>';
+        balanceDisplay.innerHTML = '<small class="text-muted"><i class="bi bi-wallet2 me-1"></i><span class="balance-text no-balance">0.00 ${selectedAsset}</span></small>';
     } else {
         // Get USD value if we have market prices
         let usdValue = '';
@@ -2115,8 +2115,11 @@ window.updatePaymentAssetBalanceDisplay = function(selectedAsset) {
         }
         
         balanceDisplay.innerHTML = `
-            <span class="balance-amount">${balance} ${selectedAsset}</span>
-            <span class="balance-usd">${usdValue}</span>
+            <small class="text-muted">
+                <i class="bi bi-wallet2 me-1"></i>
+                <span class="balance-amount">${balance} ${selectedAsset}</span>
+                <span class="balance-usd">${usdValue}</span>
+            </small>
         `;
     }
     
@@ -2211,22 +2214,10 @@ async function initialize() {
     setExpiryTime(); // Set the initial expiry time
     updateLiquidityRenewalCountdown(); // Set the liquidity renewal countdown
     
-    // Restore exact approval preference from localStorage
-    const exactApprovalEnabled = localStorage.getItem('exactApprovalEnabled') === 'true';
-    $('#exact-approval-checkbox').prop('checked', exactApprovalEnabled);
-    
     // Initialize payment asset balance display with loading state
     const balanceDisplay = document.getElementById('payment-balance-display');
     if (balanceDisplay) {
-        balanceDisplay.innerHTML = '<span class="balance-text loading">Loading balances...</span>';
-    }
-    
-    // Update help text based on saved preference
-    const helpText = $('#exact-approval-checkbox').siblings('.form-text').find('small');
-    if (exactApprovalEnabled) {
-        helpText.text('Only the exact amount needed for this trade will be approved. You may need to approve again for future trades.');
-    } else {
-        helpText.text('Up to $1000 worth of tokens will be approved to reduce future approval transactions. When checked, approves only the exact amount needed for this trade.');
+        balanceDisplay.innerHTML = '<small class="text-muted"><i class="bi bi-wallet2 me-1"></i><span class="balance-text loading">Loading balances...</span></small>';
     }
     
     // Wait for wallet system to be ready and attempt auto-connect

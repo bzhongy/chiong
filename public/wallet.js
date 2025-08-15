@@ -128,8 +128,8 @@ if (!window.ethereumClient) {
 if (!window.WagmiCore) {
     window.WagmiCore = {
         readContract: async ({ address, abi, functionName, args = [], chainId }) => {
-            // Use configured RPC endpoint
-            const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
+            // Force all calls through custom RPC endpoint
+            const directProvider = new ethers.providers.JsonRpcProvider('https://base-rpc.thetanuts.finance');
             const contract = new ethers.Contract(address, abi, directProvider);
             return await contract[functionName](...(args || []));
         },
@@ -143,8 +143,8 @@ if (!window.WagmiCore) {
             
             // Fallback to sequential calls if real Wagmi not available
             const { contracts = [] } = params;
-            // Use configured RPC endpoint
-            const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
+            // Force all calls through custom RPC endpoint
+            const directProvider = new ethers.providers.JsonRpcProvider('https://base-rpc.thetanuts.finance');
             
             console.warn('Using fallback sequential calls - real Wagmi multicall not available');
             const results = [];
@@ -171,13 +171,13 @@ if (!window.WagmiCore) {
             return tx;
         },
         waitForTransaction: async ({ hash }) => {
-            // Use configured RPC endpoint
-            const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
+            // Force all calls through custom RPC endpoint
+            const directProvider = new ethers.providers.JsonRpcProvider('https://base-rpc.thetanuts.finance');
             return await directProvider.waitForTransaction(hash);
         },
         getETHBalance: async (address) => {
-            // Use configured RPC endpoint
-            const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
+            // Force all calls through custom RPC endpoint
+            const directProvider = new ethers.providers.JsonRpcProvider('https://base-rpc.thetanuts.finance');
             return await directProvider.getBalance(address);
         },
         wrapETH: async (amount) => {
@@ -224,8 +224,8 @@ if (!window.WagmiCore) {
             return tx;
         },
         getNetwork: async () => {
-            // Use configured RPC endpoint
-            const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
+            // Force all calls through custom RPC endpoint
+            const directProvider = new ethers.providers.JsonRpcProvider('https://base-rpc.thetanuts.finance');
             const net = await directProvider.getNetwork();
             // Normalize to shape expected by callers: { chain: { id } }
             const chainId = net?.chainId ?? net?.id;
@@ -274,8 +274,8 @@ function setupOnboardCompatibility() {
         // WagmiCore shim
         window.WagmiCore = {
             readContract: async ({ address, abi, functionName, args = [], chainId }) => {
-                // Use configured RPC endpoint
-                const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
+                // Force all calls through custom RPC endpoint
+                const directProvider = new ethers.providers.JsonRpcProvider('https://base-rpc.thetanuts.finance');
                 const contract = new ethers.Contract(address, abi, directProvider);
                 return await contract[functionName](...(args || []));
             },
@@ -289,8 +289,8 @@ function setupOnboardCompatibility() {
                 
                 // Fallback to sequential calls if real Wagmi not available
                 const { contracts = [] } = params;
-                // Use configured RPC endpoint
-                const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
+                // Force all calls through custom RPC endpoint
+                const directProvider = new ethers.providers.JsonRpcProvider('https://base-rpc.thetanuts.finance');
                 
                 console.warn('Using fallback sequential calls - real Wagmi multicall not available');
                 const results = [];
@@ -315,13 +315,13 @@ function setupOnboardCompatibility() {
                 return tx;
             },
             waitForTransaction: async ({ hash }) => {
-                // Use configured RPC endpoint
-                const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
+                // Force all calls through custom RPC endpoint
+                const directProvider = new ethers.providers.JsonRpcProvider('https://base-rpc.thetanuts.finance');
                 return await directProvider.waitForTransaction(hash);
             },
             getETHBalance: async (address) => {
-                // Use configured RPC endpoint
-                const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
+                // Force all calls through custom RPC endpoint
+                const directProvider = new ethers.providers.JsonRpcProvider('https://base-rpc.thetanuts.finance');
                 return await directProvider.getBalance(address);
             },
             wrapETH: async (amount) => {
@@ -368,8 +368,8 @@ function setupOnboardCompatibility() {
                 return tx;
             },
             getNetwork: async () => {
-                // Use configured RPC endpoint
-                const directProvider = new ethers.providers.JsonRpcProvider(CONFIG.RPC_ENDPOINTS.BASE);
+                // Force all calls through custom RPC endpoint
+                const directProvider = new ethers.providers.JsonRpcProvider('https://base-rpc.thetanuts.finance');
                 const net = await directProvider.getNetwork();
                 // Normalize to shape expected by callers: { chain: { id } }
                 const chainId = net?.chainId ?? net?.id;
