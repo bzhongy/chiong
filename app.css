@@ -419,6 +419,7 @@ h4, h5, h6 {
 .brand-wallet-section {
     background-color: transparent;
     padding: 1.5rem 0 1rem 0;
+    margin-top: 25vh;
     margin-bottom: 1rem;
     text-align: center;
     display: flex;
@@ -1214,6 +1215,33 @@ main .container {
     display: block;
 }
 
+/* Approval Button */
+#approve-max-btn, #approve-max-btn-main {
+    background-color: var(--warning);
+    border-color: var(--warning);
+    color: var(--secondary);
+    font-weight: 600;
+    transition: all 0.2s ease;
+    margin: 0 auto;
+    display: block;
+}
+
+#approve-max-btn:hover:not(:disabled), #approve-max-btn-main:hover:not(:disabled) {
+    background-color: #e0a800;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(255, 179, 0, 0.3);
+}
+
+#approve-max-btn:disabled, #approve-max-btn-main:disabled {
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    color: #fff !important;
+    cursor: not-allowed;
+    opacity: 0.65;
+    transform: none;
+    box-shadow: none;
+}
+
 #trade-now-btn:hover:not(:disabled) {
     background-color: #c9e44c;
     transform: translateY(-2px);
@@ -1229,6 +1257,14 @@ main .container {
     opacity: 0.65;
     transform: none;
     box-shadow: none;
+}
+
+/* Special styling for trade button when approval is required */
+#trade-now-btn:disabled[data-approval-required="true"] {
+    background-color: var(--warning) !important;
+    border-color: var(--warning) !important;
+    color: var(--secondary) !important;
+    opacity: 0.8;
 }
 
 #trade-now-btn.btn-warning,
@@ -4059,67 +4095,5 @@ datalist option::before {
     .strike-section-label {
         font-size: 0.8rem;
         padding-bottom: 0.25rem;
-    }
-}
-
-/* Liquidity Banner */
-.liquidity-banner {
-    background-color: #000000;
-    color: #ffffff;
-    padding: 0.75rem 0;
-    text-align: center;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
-    font-weight: 500;
-    border-bottom: 1px solid #333333;
-    position: relative;
-    z-index: 1001;
-}
-
-.liquidity-banner .container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.liquidity-label {
-    color: #cccccc;
-    font-weight: 400;
-}
-
-.liquidity-amount {
-    font-family: 'IBM Plex Mono', monospace;
-    font-weight: 600;
-    color: #ffffff;
-}
-
-.liquidity-separator {
-    color: #666666;
-    margin: 0 0.5rem;
-}
-
-/* Mobile responsive adjustments for liquidity banner */
-@media (max-width: 768px) {
-    .liquidity-banner {
-        padding: 0.5rem 0;
-        font-size: 0.8rem;
-    }
-    
-    .liquidity-banner .container {
-        gap: 0.5rem;
-        flex-direction: column;
-    }
-    
-    .liquidity-separator {
-        display: none;
-    }
-}
-
-@media (max-width: 480px) {
-    .liquidity-banner {
-        padding: 0.4rem 0;
-        font-size: 0.75rem;
     }
 }

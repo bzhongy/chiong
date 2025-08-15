@@ -96,6 +96,13 @@ function setupEventListeners() {
         } else {
             $('#eth-wrap-section').hide();
         }
+        
+        // Check if approval is needed for the new payment asset
+        setTimeout(async () => {
+            if (state.selectedOrderIndex !== null) {
+                await updateTradeButtonState();
+            }
+        }, 100);
     });
     
     // Advanced view is now the default and only view
@@ -130,6 +137,11 @@ function setupEventListeners() {
     // Trade buttons
     $('#trade-now-btn').on('click', showTradeConfirmation);
     $('#confirm-trade-btn').on('click', executeTrade);
+    
+    // Approval buttons
+    $('#approve-max-btn').on('click', approveMaxForTrade);
+    $('#approve-max-btn-main').on('click', approveMaxForTrade);
+    $('#approve-single-btn-main').on('click', approveSingleTrade);
     
     // Exact Approval checkbox event listener
     $('#exact-approval-checkbox').on('change', function() {
@@ -196,6 +208,9 @@ function setupEventListeners() {
             updateQuickAmountButtonText();
         }
     }, 100);
+    
+    // Initialize the main approval button
+    initializeMainApproveButton();
 }
 
 // Show a specific section (trade, positions, history)
@@ -654,6 +669,9 @@ async function selectOption(index) {
         // Update quick amount button text with new option data
         updateQuickAmountButtonText();
         
+        // Check if approval is needed and update trade button state
+        await updateTradeButtonState();
+        
         // OPTIMIZATION: Run smart asset selection in background (non-blocking)
         // This will update the payment asset if a better option is found
         setTimeout(async () => {
@@ -661,6 +679,8 @@ async function selectOption(index) {
                 await selectBestPaymentAsset(order, requiredAmountUSD);
                 // Update payment asset after smart selection (skip preview update since we'll do it once at the end)
                 updatePaymentAsset(true);
+                // Update trade button state again after payment asset changes
+                await updateTradeButtonState();
             } catch (error) {
                 console.warn('Background smart asset selection failed:', error);
                 // Don't show error to user since this is just optimization
@@ -862,7 +882,7 @@ function updateOptionPreview() {
 }
 
 // Show trade confirmation modal
-function showTradeConfirmation() {
+async function showTradeConfirmation() {
     // Safety check: ensure app is fully loaded
     if (!state || state.selectedOrderIndex === null || !state.orders || state.orders.length === 0 || 
         !state.selectedPositionSize || !state.selectedContracts) {
@@ -994,6 +1014,19 @@ function showTradeConfirmation() {
     $('#scenario-profit1').text(`$${formatNumber(scenarios.profit1.price)}: Profit $${scenarios.profit1.profit} in ${collateral.name} (${scenarios.profit1.profitPercent}% return)`);
     $('#scenario-profit2').text(`$${formatNumber(scenarios.profit2.price)}: Profit $${scenarios.profit2.profit} in ${collateral.name} (${scenarios.profit2.profitPercent}% return)`);
     
+    // Check if approval is needed before showing the modal
+    const approvalNeeded = await checkApprovalNeeded();
+    
+    if (approvalNeeded) {
+        // Show approval button and hide trade button in modal
+        $('#approve-max-btn').show();
+        $('#confirm-trade-btn').hide();
+    } else {
+        // Hide approval button and show trade button in modal
+        $('#approve-max-btn').hide();
+        $('#confirm-trade-btn').show();
+    }
+    
     // Show the modal
     $('#trade-confirm-modal').modal('show');
     
@@ -1018,6 +1051,245 @@ function showTradeConfirmation() {
             $('#modal-batch-info').hide();
         }
     });
+}
+
+// Function to approve max amount for the selected asset
+async function approveMaxForTrade() {
+    try {
+        // Check if wallet is connected
+        if (!ethereumClient.getAccount().isConnected) {
+            throw new Error("Wallet not connected. Please connect your wallet first.");
+        }
+
+        // Get current selected option details
+        if (state.selectedOrderIndex === null) return;
+        
+        const baseOrder = state.orders[state.selectedOrderIndex];
+        const order = baseOrder.order;
+        const requiredCollateralDetails = CONFIG.getCollateralDetails(order.collateral);
+        
+        // Determine if a swap is needed
+        const selectedPaymentAssetName = getSelectedPaymentAsset();
+        const isSwapRequired = selectedPaymentAssetName !== CONFIG.getCollateralDetails(order.collateral).name;
+        
+        let approvalAddress, tokenSymbol;
+        
+        if (isSwapRequired) {
+            // Get swap info to determine input token
+            if (!state.currentSwapInfo || !state.currentSwapInfo.swapData) {
+                throw new Error("Swap is required, but swap information is missing. Please select the payment asset again or wait for swap data to load.");
+            }
+            
+            const swapInfo = state.currentSwapInfo.swapData;
+            const inputTokenAddress = swapInfo.swaps[0][0].tokenIn;
+            
+            // Find the input token details from the swap data
+            if (!swapInfo.tokens[inputTokenAddress]) {
+                throw new Error("Input token details not found in swap data.");
+            }
+            const inputTokenDetails = swapInfo.tokens[inputTokenAddress];
+            
+            approvalAddress = inputTokenAddress;
+            tokenSymbol = inputTokenDetails.symbol;
+        } else {
+            // No swap needed, approve collateral token directly
+            approvalAddress = order.collateral;
+            tokenSymbol = requiredCollateralDetails.symbol;
+        }
+        
+        // Set button to loading state
+        $('#approve-max-btn, #approve-max-btn-main').text('Approving...').prop('disabled', true);
+        
+        // Import Wagmi functions
+        const { writeContract, waitForTransaction } = WagmiCore;
+        
+        // Approve with max uint256 value
+        const maxApproval = ethers.constants.MaxUint256;
+        
+        const approveTx = await writeContract({
+            address: approvalAddress,
+            abi: ERC20ABI,
+            functionName: 'approve',
+            args: [OPTION_BOOK_ADDRESS, maxApproval.toString()],
+            chainId: 8453
+        });
+        
+        // Show approval submitted notification
+        showNotification(`Max approval submitted for ${tokenSymbol}! Transaction Hash: ${approveTx.hash.substring(0, 10)}...`, "info", approveTx.hash);
+        
+        await waitForTransaction({ hash: approveTx.hash, chainId: 8453 });
+        
+        // Show approval confirmed notification
+        showNotification(`Max approval confirmed for ${tokenSymbol}! ✅`, "success", approveTx.hash);
+        
+        // Refresh allowance for this specific token
+        const tokenSymbolForRefresh = Object.keys(CONFIG.collateralMap).find(key => 
+            CONFIG.collateralMap[key] === approvalAddress
+        );
+        if (tokenSymbolForRefresh) {
+            await refreshTokenAllowance(approvalAddress, tokenSymbolForRefresh, OPTION_BOOK_ADDRESS, 'OptionBook');
+        }
+        
+        // Hide approval button and show trade button
+        $('#approve-max-btn, #approve-max-btn-main').hide();
+        $('#trade-now-btn').prop('disabled', false).removeClass('btn-secondary').addClass('btn-primary').text('TRADE NOW');
+        
+    } catch (error) {
+        console.error('Error in approveMaxForTrade:', error);
+        showNotification(`Approval failed: ${error.message}`, "error");
+        
+        // Reset button state
+        $('#approve-max-btn, #approve-max-btn-main').text('Approve Max').prop('disabled', false);
+        $('#approve-single-btn-main').text('Approve Single Trade').prop('disabled', false);
+    }
+}
+
+// Function to approve only the amount needed for the current trade
+async function approveSingleTrade() {
+    try {
+        if (state.selectedOrderIndex === null) {
+            showNotification('No option selected for approval', "error");
+            return;
+        }
+
+        const baseOrder = state.orders[state.selectedOrderIndex];
+        const order = baseOrder.order;
+        const requiredCollateralDetails = CONFIG.getCollateralDetails(order.collateral);
+        
+        // Determine if a swap is needed
+        const selectedPaymentAssetName = getSelectedPaymentAsset();
+        const isSwapRequired = selectedPaymentAssetName !== CONFIG.getCollateralDetails(order.collateral).name;
+        
+        let approvalAddress, approvalAmountBN, tokenSymbol, tokenDecimals;
+        
+        if (isSwapRequired) {
+            // Get swap info to determine input token and amount
+            if (!state.currentSwapInfo || !state.currentSwapInfo.swapData) {
+                throw new Error("Swap is required, but swap information is missing. Please select the payment asset again or wait for swap data to load.");
+            }
+            
+            const swapInfo = state.currentSwapInfo.swapData;
+            const inputTokenAddress = swapInfo.swaps[0][0].tokenIn;
+            const inputAmount = swapInfo.inputAmount;
+            
+            // Find the input token details from the swap data
+            if (!swapInfo.tokens[inputTokenAddress]) {
+                throw new Error("Input token details not found in swap data.");
+            }
+            const inputTokenDetails = swapInfo.tokens[inputTokenAddress];
+            
+            approvalAddress = inputTokenAddress;
+            approvalAmountBN = ethers.BigNumber.from(inputAmount);
+            tokenSymbol = inputTokenDetails.symbol;
+            tokenDecimals = inputTokenDetails.decimals;
+        } else {
+            // No swap needed, approve collateral token directly
+            approvalAmountBN = optionCalculator.calculateApprovalAmount(
+                order,
+                requiredCollateralDetails,
+                state.selectedPositionSize
+            );
+            approvalAddress = order.collateral;
+            tokenSymbol = requiredCollateralDetails.symbol;
+            tokenDecimals = requiredCollateralDetails.decimals;
+        }
+
+        // Show approval in progress
+        $('#approve-single-btn-main').text('Approving...').prop('disabled', true);
+        
+        // Approve the exact amount needed
+        const { writeContract } = WagmiCore;
+        const txResponse = await writeContract({
+            address: approvalAddress,
+            abi: ERC20ABI,
+            functionName: 'approve',
+            args: [OPTION_BOOK_ADDRESS, approvalAmountBN],
+            chainId: 8453
+        });
+
+        // Wait for transaction confirmation
+        const { waitForTransaction } = WagmiCore;
+        await waitForTransaction({ hash: txResponse.hash, chainId: 8453 });
+
+        showNotification(`Single trade approval successful for ${ethers.utils.formatUnits(approvalAmountBN, tokenDecimals)} ${tokenSymbol}`, "success");
+        
+        // Hide approval buttons and enable trade button
+        $('#approve-single-btn-main, #approve-max-btn-main').hide();
+        $('#trade-now-btn').prop('disabled', false).removeClass('btn-secondary').addClass('btn-primary').text('TRADE NOW');
+        
+    } catch (error) {
+        console.error('Error in approveSingleTrade:', error);
+        showNotification(`Single trade approval failed: ${error.message}`, "error");
+        
+        // Reset button state
+        $('#approve-single-btn-main').text('Approve Single Trade').prop('disabled', false);
+    }
+}
+
+// Function to check if approval is needed for the current trade
+async function checkApprovalNeeded() {
+    try {
+        if (state.selectedOrderIndex === null) return false;
+        
+        const baseOrder = state.orders[state.selectedOrderIndex];
+        const order = baseOrder.order;
+        const requiredCollateralDetails = CONFIG.getCollateralDetails(order.collateral);
+        
+        // Determine if a swap is needed
+        const selectedPaymentAssetName = getSelectedPaymentAsset();
+        const isSwapRequired = selectedPaymentAssetName !== CONFIG.getCollateralDetails(order.collateral).name;
+        
+        // If swap is required, check input token allowance
+        if (isSwapRequired) {
+            // Get swap info to determine input token and amount
+            if (!state.currentSwapInfo || !state.currentSwapInfo.swapData) {
+                return false; // Can't determine approval without swap data
+            }
+            
+            const swapInfo = state.currentSwapInfo.swapData;
+            const inputTokenAddress = swapInfo.swaps[0][0].tokenIn;
+            const inputAmount = swapInfo.inputAmount;
+            
+            // Check input token allowance
+            const { readContract } = WagmiCore;
+            const inputAllowance = await readContract({
+                address: inputTokenAddress,
+                abi: ERC20ABI,
+                functionName: 'allowance',
+                args: [state.connectedAddress, OPTION_BOOK_ADDRESS],
+                chainId: 8453
+            });
+            
+            const inputAllowanceBN = ethers.BigNumber.from(inputAllowance.toString());
+            const inputAmountBN = ethers.BigNumber.from(inputAmount);
+            
+            return inputAllowanceBN.lt(inputAmountBN);
+        } else {
+            // No swap needed, check collateral token allowance directly
+            const actualRequiredAmountBN = optionCalculator.calculateApprovalAmount(
+                order,
+                requiredCollateralDetails,
+                state.selectedPositionSize
+            );
+            
+            const { readContract } = WagmiCore;
+            const collateralAllowance = await readContract({
+                address: order.collateral,
+                abi: ERC20ABI,
+                functionName: 'allowance',
+                args: [state.connectedAddress, OPTION_BOOK_ADDRESS],
+                chainId: 8453
+            });
+            
+            const collateralAllowanceBN = ethers.BigNumber.from(collateralAllowance.toString());
+            
+            return collateralAllowanceBN.lt(actualRequiredAmountBN);
+        }
+        
+    } catch (error) {
+        console.error('Error checking approval:', error);
+        return false;
+    }
 }
 
 // Function to check if an order is about to expire (less than 30 seconds)
@@ -2279,10 +2551,23 @@ async function updateTradeButtonState() {
     const fundCheck = await checkSufficientFunds();
     
     if (fundCheck.sufficient) {
-        // Enable button and restore normal text (if not disabled by swap loading)
-        // Only update if buttons are not in swap loading state
-        if (!$('#trade-now-btn').text().includes('LOADING')) {
-            toggleButtonReadiness(true, 'TRADE NOW');
+        // Check if approval is needed
+        const approvalNeeded = await checkApprovalNeeded();
+        
+        if (approvalNeeded) {
+            // Show approval buttons and disable trade button
+            $('#approve-single-btn-main, #approve-max-btn-main').show();
+            $('#trade-now-btn').prop('disabled', true).attr('data-approval-required', 'true');
+        } else {
+            // Hide approval buttons and enable trade button
+            $('#approve-single-btn-main, #approve-max-btn-main').hide();
+            $('#trade-now-btn').prop('disabled', false).removeAttr('data-approval-required');
+            
+            // Enable button and restore normal text (if not disabled by swap loading)
+            // Only update if buttons are not in swap loading state
+            if (!$('#trade-now-btn').text().includes('LOADING')) {
+                toggleButtonReadiness(true, 'TRADE NOW');
+            }
         }
         
         // Hide insufficient funds warning
@@ -2290,6 +2575,9 @@ async function updateTradeButtonState() {
     } else {
         // Disable button and show insufficient funds message
         toggleButtonReadiness(false, 'INSUFFICIENT FUNDS');
+        
+        // Hide approval buttons when funds are insufficient
+        $('#approve-single-btn-main, #approve-max-btn-main').hide();
         
         // Show warning message if it doesn't exist, create it
         let warningDiv = $('#insufficient-funds-warning');
@@ -2386,6 +2674,26 @@ function populateSwapDropdowns() {
     // Set default selections
     fromAssetSelect.val('ETH'); // Default "From" to ETH
     toAssetSelect.val('USDC');  // Default "To" to USDC (will be overridden in openSwapModal)
+}
+
+// Ensure main approval button is properly initialized and ready
+function initializeMainApproveButton() {
+    const approveBtn = $('#approve-max-btn-main');
+    if (approveBtn.length === 0) {
+        console.error('Main approve button not found in DOM');
+        return;
+    }
+    
+    // Initialize button state but don't show it yet - let the approval check decide
+    approveBtn.prop('disabled', false);
+    approveBtn.hide(); // Start hidden, will be shown by approval check if needed
+    
+    console.log('Main approve button initialized:', {
+        exists: approveBtn.length > 0,
+        visible: approveBtn.is(':visible'),
+        disabled: approveBtn.prop('disabled'),
+        text: approveBtn.text()
+    });
 }
 
 // Ensure approve button is properly initialized and ready

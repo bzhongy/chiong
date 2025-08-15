@@ -221,32 +221,20 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Liquidity Banner -->
-        <div class="liquidity-banner">
-            <div class="container">
-                <span class="liquidity-label">Remaining maker liquidity for today:</span>
-                <span class="liquidity-amount">19027.07093.3 USDC</span>
-                <span class="liquidity-separator">|</span>
-                <span class="liquidity-amount">10.0908178668738495380.0005 WETH</span>
-                <span class="liquidity-separator">|</span>
-                <span class="liquidity-amount">0.124744490 CBBTC</span>
-            </div>
-        </div>
-        
         <main>
             <!-- Brand and Wallet Section -->
             <section class="brand-wallet-section">
                 <div class="container">
                     <div class="row align-items-center">
                         <!-- Brand -->
-                        <div class="col-6">
+                        <div class="col-12 text-center mb-3">
                             <div class="brand-display">
                                 <h1>Chiong<span>.fi</span></h1>
                             </div>
                         </div>
                         
                         <!-- Wallet connection -->
-                        <div class="col-6">
+                        <div class="col-12 text-center">
                             <div class="wallet-section">
                                 <div id="wallet-status" class="not-connected">
                                     <!-- Buttons for choosing connection type -->
@@ -685,6 +673,8 @@
                                     </div>
                                     
                                     <div class="trade-actions mt-4">
+                                        <button id="approve-single-btn-main" class="btn btn-info btn-lg w-100 mb-2" style="display: none;">Approve Single Trade</button>
+                                        <button id="approve-max-btn-main" class="btn btn-warning btn-lg w-100 mb-2" style="display: none;">Approve Max</button>
                                         <button id="trade-now-btn" class="btn btn-secondary btn-lg w-100" disabled>LOADING...</button>
                                     </div>
                                     
@@ -1022,6 +1012,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
+                        <button type="button" class="btn btn-warning" id="approve-max-btn" style="display: none;">Approve Max</button>
                         <button type="button" class="btn btn-primary" id="confirm-trade-btn">Confirm Trade</button>
                     </div>
                 </div>
