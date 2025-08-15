@@ -297,6 +297,86 @@ p, span, div, label, a, li, td, th, small, strong, em, b, i {
     font-family: inherit !important;
 }
 
+/* Bottom Navigation - ExtraBold Font Weight Override */
+.bottom-nav .nav-link,
+.bottom-nav .nav-link.active,
+.bottom-nav .nav-link:hover {
+    font-weight: 800 !important;
+    font-variation-settings: 'wght' 800 !important;
+}
+
+/* Enhanced navigation state visibility */
+.bottom-nav .nav-link:not(.active) {
+    color: #999999 !important;
+    opacity: 0.2;
+}
+
+.bottom-nav .nav-link.active {
+    color: #000000 !important;
+    opacity: 1;
+}
+
+/* Hover effects for better interactivity */
+.bottom-nav .nav-link:hover:not(.active) {
+    color: #666666 !important;
+    opacity: 0.9;
+}
+
+.bottom-nav .nav-link:hover.active {
+    color: #000000 !important;
+    opacity: 1;
+}
+
+/* Ensure proper contrast for navigation states */
+.bottom-nav .nav-link:not(.active) {
+    color: #999999 !important;
+    opacity: 0.2;
+    transition: all 0.2s ease;
+}
+
+.bottom-nav .nav-link.active {
+    color: #000000 !important;
+    opacity: 1;
+    transition: all 0.2s ease;
+}
+
+/* Force override any conflicting styles */
+.bottom-nav .nav-link {
+    font-weight: 800 !important;
+    font-variation-settings: 'wght' 800 !important;
+}
+
+/* Active indicator enhancement */
+.bottom-nav .nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 3px;
+    background-color: #000000;
+    border-radius: 2px;
+    transition: all 0.2s ease;
+}
+
+/* Ensure proper contrast for navigation states */
+.bottom-nav .nav-link:not(.active) {
+    color: #999999 !important;
+    opacity: 0.2;
+}
+
+.bottom-nav .nav-link.active {
+    color: #000000 !important;
+    opacity: 1;
+}
+
+/* Hover effect for inactive items */
+.bottom-nav .nav-link:not(.active):hover {
+    color: #666666 !important;
+    opacity: 0.9;
+}
+
 /* Web3-Onboard Account Center positioning */
 [data-testid="account-center"] {
     position: fixed !important;
@@ -359,6 +439,7 @@ h4, h5, h6 {
 .brand-wallet-section {
     background-color: transparent;
     padding: 1rem 0 1rem 0;
+    margin-top: 0;
     margin-bottom: 1rem;
     text-align: center;
     display: flex;
@@ -729,13 +810,13 @@ h4, h5, h6 {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #666666;
+    color: #999999;
     text-decoration: none;
     padding: 0.4rem 0.75rem;
     transition: all 0.2s ease;
     font-family: 'Inter', sans-serif !important;
     font-size: 16px !important;
-    font-weight: 700;
+    font-weight: 800 !important;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -748,7 +829,7 @@ h4, h5, h6 {
 
 .bottom-nav .nav-link.active {
     color: #000000;
-    font-weight: 700;
+    font-weight: 800 !important;
     position: relative;
 }
 
@@ -758,10 +839,10 @@ h4, h5, h6 {
     bottom: -0.5rem;
     left: 50%;
     transform: translateX(-50%);
-    width: 20px;
-    height: 2px;
+    width: 24px;
+    height: 3px;
     background-color: #000000;
-    border-radius: 1px;
+    border-radius: 2px;
 }
 
 /* Add bottom padding to main content to account for bottom nav */
@@ -1401,6 +1482,33 @@ main .container {
     display: block;
 }
 
+/* Approval Button */
+#approve-max-btn, #approve-max-btn-main {
+    background-color: var(--warning);
+    border-color: var(--warning);
+    color: var(--secondary);
+    font-weight: 600;
+    transition: all 0.2s ease;
+    margin: 0 auto;
+    display: block;
+}
+
+#approve-max-btn:hover:not(:disabled), #approve-max-btn-main:hover:not(:disabled) {
+    background-color: #e0a800;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(255, 179, 0, 0.3);
+}
+
+#approve-max-btn:disabled, #approve-max-btn-main:disabled {
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    color: #fff !important;
+    cursor: not-allowed;
+    opacity: 0.65;
+    transform: none;
+    box-shadow: none;
+}
+
 #trade-now-btn:hover:not(:disabled) {
     background-color: #c9e44c;
     transform: translateY(-2px);
@@ -1416,6 +1524,14 @@ main .container {
     opacity: 0.65;
     transform: none;
     box-shadow: none;
+}
+
+/* Special styling for trade button when approval is required */
+#trade-now-btn:disabled[data-approval-required="true"] {
+    background-color: var(--warning) !important;
+    border-color: var(--warning) !important;
+    color: var(--secondary) !important;
+    opacity: 0.8;
 }
 
 #trade-now-btn.btn-warning,

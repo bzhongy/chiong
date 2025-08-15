@@ -5,12 +5,26 @@ const path = require('path');
 
 async function build() {
   try {
+    // Build the main JavaScript bundle (minified to hide source code)
+    await esbuild.build({
+      entryPoints: ['main.js'],
+      outfile: 'dist/app.bundle.js',
+      bundle: true,
+      minify: true,  // Enable minification to hide source code
+      sourcemap: false,  // Disable source maps to prevent source code exposure
+      target: ['es2022'],
+      format: 'iife',
+      platform: 'browser',
+      loader: { '.js': 'js' }
+    });
+    console.log('Built dist/app.bundle.js (minified)');
+
     // Build the TypeScript bridge
     await esbuild.build({
       entryPoints: ['web3onboard-bridge.ts'],
       outfile: 'dist/web3onboard-bridge.js',
       bundle: true,
-      minify: false,
+      minify: true,  // Also minify this for consistency
       sourcemap: false,
       target: ['es2022'],
       format: 'iife',
@@ -18,7 +32,7 @@ async function build() {
       platform: 'browser',
       loader: { '.ts': 'ts' }
     });
-    console.log('Built dist/web3onboard-bridge.js');
+    console.log('Built dist/web3onboard-bridge.js (minified)');
 
     // Create public directory
     await fs.ensureDir('public');
@@ -34,34 +48,15 @@ async function build() {
       'analysis/**/*'
     ];
     
-    // Copy individual files
+    // Copy individual files (excluding individual JS files since they're now bundled)
     const filesToCopy = [
       'index.html',
       'app.html',
       'app.css',
-      'app.js',
-      'config.js',
-      'wallet.js',
-      'ui_interactions.js',
-      'kyber.js',
-      'score.js',
-      'analytics.js',
-      'price-alerts.js',
-      'ui-state-manager.js',
-      'trollbox.js',
       'trollbox.css',
-      'tx-notifications.js',
       'tx-notifications.css',
-      'option-type-filter.js',
-      'retry-helper.js',
-      'custom-chart-manager.js',
-      'analytics-integration.js',
-      'time-decay-visualization.js',
-      'leverage-visualization.js',
       'landing.css',
-      'landing.js',
       'trollbox-admin.html',
-      'trollbox-admin.js',
       'test-notifications.html',
       'test-analytics.html',
       'userBrowser.html',
@@ -88,7 +83,11 @@ async function build() {
       }
     }
     
-    // Copy the built web3onboard-bridge.js
+    // Copy the bundled files
+    await fs.ensureDir('public/dist');
+    await fs.copy('dist/app.bundle.js', 'public/dist/app.bundle.js');
+    console.log('Copied dist/app.bundle.js to public/dist/');
+    
     await fs.copy('dist/web3onboard-bridge.js', 'public/dist/web3onboard-bridge.js');
     console.log('Copied dist/web3onboard-bridge.js to public/dist/');
     
