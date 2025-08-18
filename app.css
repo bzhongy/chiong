@@ -501,7 +501,7 @@ h4, h5, h6 {
 .position-size-section {
     display: block !important;
     visibility: visible !important;
-    padding: 15px !important;
+    /* padding: 15px !important; */
     margin: 10px 0 !important;
 }
 
@@ -683,7 +683,7 @@ h4, h5, h6 {
     font-size: 20px !important;
     font-weight: 800 !important;
     color: rgba(0, 0, 0, 0.2) !important;
-    margin: 0 0 0rem 0 !important;
+    margin: 0 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
 }
@@ -1615,7 +1615,7 @@ main .container {
     display: flex;
     flex-direction: row;
     gap: 1rem;
-    margin-top: 1rem;
+    margin-top: 0;
     flex-wrap: wrap;
 }
 

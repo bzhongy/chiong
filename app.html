@@ -318,7 +318,7 @@
                                 <p>SELECT A PAYMENT ASSET</p>
                             </div>
                             <!-- Payment Selection -->
-                            <div class="payment-selection mt-0">
+                            <div class="payment-selection mt-2">
                                 <div class="payment-asset-boxes">
                                     <!-- USDC Asset Box -->
                                     <div class="asset-box" id="usdc-asset-box">
@@ -436,17 +436,21 @@
                             
                             <!-- Position Size Section -->
                             <div class="position-size-section mt-4">
-                                <h5 class="card-title">Position Size:</h5>
+                                <!-- Position Size Instruction -->
+                                <div class="asset-instruction mb-0">
+                                    <p>CHOOSE AMOUNT TO TRADE</p>
+                                </div>
                                 
                                 <!-- Quick Amount Buttons -->
                                 <div class="quick-amount-buttons mb-3">
-                                    <small class="text-muted mb-2 d-block">Quick amounts:</small>
-                                    <div class="btn-group btn-group-sm" role="group" aria-label="Quick position sizes">
-                                        <button type="button" class="btn btn-outline-secondary quick-amount-btn" data-percentage="1">1%</button>
-                                        <button type="button" class="btn btn-outline-secondary quick-amount-btn" data-percentage="25">25%</button>
-                                        <button type="button" class="btn btn-outline-secondary quick-amount-btn" data-percentage="50">50%</button>
-                                        <button type="button" class="btn btn-outline-secondary quick-amount-btn" data-percentage="75">75%</button>
-                                        <button type="button" class="btn btn-outline-secondary quick-amount-btn" data-percentage="100">100%</button>
+                                    <div class="asset-selector">
+                                        <div class="btn-group" role="group" aria-label="Quick position sizes">
+                                            <button type="button" class="btn quick-amount-btn" data-percentage="1">1%</button>
+                                            <button type="button" class="btn quick-amount-btn" data-percentage="25">25%</button>
+                                            <button type="button" class="btn quick-amount-btn" data-percentage="50">50%</button>
+                                            <button type="button" class="btn quick-amount-btn" data-percentage="75">75%</button>
+                                            <button type="button" class="btn quick-amount-btn" data-percentage="100">100%</button>
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -1369,6 +1373,12 @@
                                 }
                                 var expirySection = document.getElementById('expiry-selector-section');
                                 if (expirySection) expirySection.style.display = 'none';
+                                // Hide payment section by removing show class
+                                var paymentSection = document.getElementById('payment-position-section');
+                                if (paymentSection) paymentSection.classList.remove('show');
+                                // Clear payment asset selection
+                                var paymentRadios = document.querySelectorAll('input[name="payment-asset-selection"]');
+                                paymentRadios.forEach(function(r){ r.checked = false; });
                                 var buyingText = document.getElementById('buying-text');
                                 if (buyingText) buyingText.style.display = 'none';
                                 var spotPrice = document.getElementById('spot-price-text');

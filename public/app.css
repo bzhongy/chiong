@@ -446,7 +446,7 @@ h4, h5, h6 {
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    min-height: 100vh;
+    min-height: auto;
     position: relative;
 }
 
@@ -483,14 +483,11 @@ h4, h5, h6 {
     margin: 0 auto;
 }
 
-/* Asset Selector Section - reliable vertical centering */
+/* Asset Selector Section - positioned below brand wallet section */
 #asset-selector-section {
     margin-top: 0;
     text-align: center;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    position: relative;
     width: 100%;
 }
 
@@ -508,18 +505,15 @@ h4, h5, h6 {
     margin: 10px 0 !important;
 }
 
-/* Payment and Position Size Section - Hidden by Default, Centered when Visible */
+/* Payment and Position Size Section - flows below brand wallet section */
 #payment-position-section {
     display: none !important;
     visibility: hidden !important;
     text-align: center !important;
-    position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    width: 95vw !important;
-    margin-top: 10vw !important;
-    max-width: 95vw !important;
+    position: relative !important;
+    width: 100% !important;
+    margin-top: 0 !important;
+    max-width: 100% !important;
     background: transparent !important;
     border-radius: 8px !important;
     /* padding: 8px !important; */
@@ -554,58 +548,15 @@ h4, h5, h6 {
     visibility: visible !important;
 }
 
-/* Mobile header clearance - adjust top positioning for payment section */
-@media (max-width: 768px) {
-    #payment-position-section {
-        top: 90% !important;
-        margin-top: 0 !important;
-    }
-}
-
-@media (max-width: 480px) {
-    #payment-position-section {
-        top: 90% !important;
-        margin-top: 0 !important;
-    }
-}
-
-@media (max-width: 360px) {
-    #payment-position-section {
-        top: 90% !important;
-        margin-top: 0 !important;
-    }
-}
-
-/* CSS classes for JavaScript-controlled landscape mode */
-body.mobile-landscape .brand-display {
-    margin-top: -40px !important;
-    padding-top: 0 !important;
-}
-
-body.mobile-landscape .brand-display h1 {
-    margin-top: -20px !important;
-    margin-bottom: 5px !important;
-}
-
-body.mobile-landscape #payment-position-section {
-    top: 65% !important;
-}
-
-body.mobile-landscape #strike-selector-section,
-body.mobile-landscape #expiry-selector-section {
-    margin-top: 30px !important;
-}
 
 
 
-/* Expiry Selector Section - same positioning as asset selector */
+
+/* Expiry Selector Section - flows below brand wallet section */
 #expiry-selector-section {
     margin-top: 0;
     text-align: center;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    position: relative;
     width: 100%;
 }
 
@@ -713,7 +664,11 @@ body.mobile-landscape #expiry-selector-section {
     51%, 100% { opacity: 0; }
 }
 
-/* Asset instruction styling */
+/* Asset instruction styling - positioned to start below brand wallet section */
+.asset-instruction {
+    margin-top: 0;
+}
+
 .asset-instruction p {
     font-size: 20px !important;
     font-weight: 800 !important;
@@ -728,7 +683,7 @@ body.mobile-landscape #expiry-selector-section {
     font-size: 20px !important;
     font-weight: 800 !important;
     color: rgba(0, 0, 0, 0.2) !important;
-    margin: 0 0 0rem 0 !important;
+    margin: 0 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
 }
@@ -832,19 +787,16 @@ body.mobile-landscape #expiry-selector-section {
         justify-content: center;
     }
     
-    /* Center asset selector in portrait like landscape */
+    /* Asset selector positioned below brand wallet section */
     #asset-selector-section {
-        position: absolute !important;
-        top: 50% !important;
-        left: 50% !important;
-        transform: translate(-50%, -50%) !important;
+        position: relative !important;
         width: 100%;
         margin-top: 0;
     }
     
-    /* Ensure content below asset selector starts after centered section */
+    /* Content flows naturally below asset selector */
     #quote-status-section {
-        margin-top: 100vh;
+        margin-top: 0;
         position: relative;
         z-index: 1;
     }
@@ -855,7 +807,7 @@ body.mobile-landscape #expiry-selector-section {
     .brand-wallet-section {
         padding: 0.5rem 0 0.25rem 0;
         margin-bottom: 0.5rem;
-        min-height: 100vh;
+        min-height: auto;
         justify-content: flex-start;
     }
     
@@ -868,19 +820,16 @@ body.mobile-landscape #expiry-selector-section {
         justify-content: center;
     }
     
-    /* Keep absolute positioning for landscape */
+    /* Asset selector positioned below brand wallet section */
     #asset-selector-section {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
+        position: relative;
         width: 100%;
         margin-top: 0;
     }
     
-    /* Ensure content below asset selector starts after centered section */
+    /* Content flows naturally below asset selector */
     #quote-status-section {
-        margin-top: 100vh;
+        margin-top: 0;
         position: relative;
         z-index: 1;
     }
@@ -997,12 +946,13 @@ main {
     text-align: center;
 }
 
-/* Center all content sections */
+/* Content sections start below brand wallet section */
 .content-section {
     text-align: center;
+    margin-top: 0;
 }
 
-/* Center all containers */
+/* Containers positioned to start content below brand wallet section */
 .container {
     text-align: center;
     display: flex;
@@ -1665,7 +1615,7 @@ main .container {
     display: flex;
     flex-direction: row;
     gap: 1rem;
-    margin-top: 1rem;
+    margin-top: 0;
     flex-wrap: wrap;
 }
 
@@ -1854,7 +1804,7 @@ main .container {
         flex-direction: column;
         gap: 0.75rem;
         /* Keep the global width/margin treatment from the main rules */
-        margin-top: 1rem;
+        /* margin-top: 1rem; */
     }
     
     .asset-box {
