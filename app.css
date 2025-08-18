@@ -4411,6 +4411,21 @@ datalist option::before {
     border-radius: 6px;
 }
 
+/* Floating Start Over button at bottom */
+.start-over-floating {
+    position: fixed;
+    bottom: 84px; /* above bottom nav */
+    right: 16px;
+    z-index: 1048;
+}
+
+@media (max-width: 768px) {
+    .start-over-floating {
+        bottom: 92px;
+        right: 12px;
+    }
+}
+
 /* Expiry and Strike Selection Buttons - Responsive */
 .expiry-buttons-container {
     display: flex; /* Show when parent section is visible */

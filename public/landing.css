@@ -42,7 +42,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 body {
-    font-family: 'Open Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-weight: 200;
     color: var(--text-color);
     background-color: #ffffff;
@@ -1445,7 +1445,7 @@ footer ul li a:hover {
     --bs-tooltip-border-radius: var(--border-radius);
     --bs-tooltip-padding-x: 10px;
     --bs-tooltip-padding-y: 8px;
-    font-family: 'Open Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 12px;
     box-shadow: var(--box-shadow);
     border: 1px solid var(--border-color);

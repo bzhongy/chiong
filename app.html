@@ -475,12 +475,7 @@
                                     
                                     <!-- Strike buttons moved to asset selector section for center positioning -->
                                     
-                                    <!-- Start Over Button -->
-                                    <div class="start-over-container mb-3">
-                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="clear-filters-btn" onclick="clearAllFilters()">
-                                            <i class="bi bi-arrow-clockwise me-1"></i>Start Over
-                                        </button>
-                                    </div>
+                                    
                                     
                                     <div class="payment-selection mt-4">
                                         <label for="payment-asset">Pay With:</label>
@@ -1240,6 +1235,119 @@
                 </a>
             </div>
         </nav>
+
+        <!-- Bottom Start Over Button (appears only after asset selection) -->
+        <button id="start-over-floating" class="btn btn-outline-secondary start-over-floating" style="display:none;">
+            <i class="bi bi-arrow-clockwise me-1"></i> Start Over
+        </button>
+
+        <script>
+            (function(){
+                function showFloatingStartOver(show){
+                    var btn = document.getElementById('start-over-floating');
+                    if(!btn) return;
+                    btn.style.display = show ? 'block' : 'none';
+                }
+                function isAssetSelected(){
+                    var checked = document.querySelector('input[name="asset-selection"]:checked');
+                    return !!checked;
+                }
+                function wireClick(){
+                    var btn = document.getElementById('start-over-floating');
+                    if(!btn) return;
+                    btn.onclick = function(){
+                        try { if (typeof clearAllFilters === 'function') clearAllFilters(); } catch(e) {}
+                        var didCallSelect = false;
+                        try {
+                            if (typeof selectAsset === 'function') { selectAsset(null); didCallSelect = true; }
+                            else if (window && typeof window.selectAsset === 'function') { window.selectAsset(null); didCallSelect = true; }
+                        } catch(e) {}
+                        // Ensure core state is cleared even if function call failed
+                        if (window && window.state) {
+                            try {
+                                window.state.selectedAsset = null;
+                                window.state.selectedOrderIndex = null;
+                                window.state.selectedExpiry = null;
+                                window.state.selectedStrike = null;
+                            } catch(e) {}
+                        }
+                        if (!didCallSelect) {
+                            // Fallback: manually reset UI to asset selection
+                            try {
+                                var radios = document.querySelectorAll('input[name="asset-selection"]');
+                                radios.forEach(function(r){ r.checked = false; });
+                                var assetSection = document.getElementById('asset-selector-section');
+                                if (assetSection) assetSection.classList.remove('hidden');
+                                var expirySection = document.getElementById('expiry-selector-section');
+                                if (expirySection) expirySection.style.display = 'none';
+                                var buyingText = document.getElementById('buying-text');
+                                if (buyingText) buyingText.style.display = 'none';
+                                var spotPrice = document.getElementById('spot-price-text');
+                                if (spotPrice) spotPrice.style.display = 'none';
+                                var priceDisplays = document.getElementsByClassName('current-price-display');
+                                if (priceDisplays && priceDisplays[0]) priceDisplays[0].style.display = 'none';
+                                // Disable trading interface
+                                var cs = document.getElementById('conviction-slider'); if (cs) cs.disabled = true;
+                                var ps = document.getElementById('position-size-slider'); if (ps) ps.disabled = true;
+                                document.querySelectorAll('.quick-amount-btn').forEach(function(b){ b.disabled = true; });
+                                var tradeBtn = document.getElementById('trade-now-btn');
+                                if (tradeBtn){ tradeBtn.disabled = true; tradeBtn.textContent = 'SELECT ASSET TO TRADE'; tradeBtn.classList.add('btn-secondary'); tradeBtn.classList.remove('btn-primary'); }
+                                // Hide strike buttons, show expiry buttons/instruction
+                                var strikeCont = document.getElementById('strike-buttons-container'); if (strikeCont) strikeCont.style.display = 'none';
+                                var expiryText = document.getElementById('expiry-text'); if (expiryText) expiryText.style.display = 'none';
+                                var expiryBtns = document.getElementById('expiry-buttons-container'); if (expiryBtns) expiryBtns.style.display = '';
+                                var expiryInstr = document.getElementById('expiry-instruction'); if (expiryInstr) expiryInstr.style.display = '';
+                                // Clear selected rows
+                                document.querySelectorAll('.option-row.selected').forEach(function(r){ r.classList.remove('selected'); });
+                                // Clear option preview back to initial placeholders
+                                var setText = function(id, val){ var el = document.getElementById(id); if (el) el.textContent = val; };
+                                setText('option-action-text', 'Select option...');
+                                setText('strike-price', '---');
+                                setText('option-cost', '---');
+                                setText('payout-ratio', '---');
+                                setText('payout-direction', 'above');
+                                setText('payout-threshold', '---');
+                                setText('option-breakeven', '---');
+                                setText('option-delta', '---');
+                                setText('option-iv', '---');
+                                var optExp = document.getElementById('option-expiry');
+                                if (optExp) { optExp.textContent = '--:--:--'; optExp.removeAttribute('data-countdown-expiry'); optExp.classList.remove('expiring-soon','is-expired'); }
+                                // Reset batch capacity UI
+                                var fp = document.getElementById('fill-progress'); if (fp) fp.style.width = '0%';
+                                setText('fill-capacity', '0% filled');
+                                setText('available-capacity', '0 available');
+                                var cw = document.getElementById('capacity-warning'); if (cw) cw.style.display = 'none';
+                                // Reset position size display
+                                var curSize = document.getElementById('current-size'); if (curSize) curSize.textContent = '';
+                                if (ps) ps.value = 100;
+                            } catch(e) {}
+                        }
+                        showFloatingStartOver(false);
+                        window.scrollTo({top: 0, behavior: 'smooth'});
+                    };
+                }
+                function init(){
+                    wireClick();
+                    // Toggle on asset change
+                    document.querySelectorAll('input[name="asset-selection"]').forEach(function(el){
+                        el.addEventListener('change', function(){
+                            showFloatingStartOver(isAssetSelected());
+                        });
+                    });
+                    // Also observe the asset selector section class changes
+                    var assetSection = document.getElementById('asset-selector-section');
+                    if (assetSection && window.MutationObserver){
+                        var obs = new MutationObserver(function(){
+                            // Hidden when class contains 'hidden'
+                            var hidden = assetSection.classList.contains('hidden');
+                            showFloatingStartOver(hidden);
+                        });
+                        obs.observe(assetSection, { attributes: true, attributeFilter: ['class'] });
+                    }
+                }
+                if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+            })();
+        </script>
 
 </body>
 </html> 

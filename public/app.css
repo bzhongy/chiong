@@ -633,17 +633,29 @@ h4, h5, h6 {
     align-items: center;
 }
 
-/* Asset selector button styling - just big grey text */
+/* Asset selector button styling - responsive big grey text */
 .asset-selector .btn-group .btn {
-    font-size: 56px !important;
+    /* Responsive font size: starts at 56px, scales down to minimum 28px based on viewport width */
+    font-size: clamp(28px, 14vw, 56px) !important;
     font-weight: 700 !important;
     color: #000000 !important;
     background-color: transparent !important;
     border: 1px solid #000000 !important;
     border-radius: 0 !important;
-    padding: 12px 24px !important;
+    /* Prevent half-rounded corners from Bootstrap button group states */
+    clip-path: inset(0 round 0);
+    /* Responsive padding that scales with font size */
+    padding: clamp(8px, 3vw, 12px) clamp(12px, 6vw, 24px) !important;
     box-shadow: none !important;
-    margin: 0 8px !important;
+    /* Remove margins to allow flex stretching */
+    margin: 0 !important;
+    /* Flex properties for stretching */
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
 }
 
 /* Reduce opacity of instruction text and increase gap */
@@ -656,12 +668,25 @@ h4, h5, h6 {
     letter-spacing: 0.5px !important;
 }
 
-/* Remove the container border and background */
+/* Remove the container border and background - with responsive flex behavior */
 .asset-selector .btn-group {
     border: none !important;
     background-color: transparent !important;
     padding: 0 !important;
+    /* Ensure responsive flexbox behavior - stretch to fill width */
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    /* Avoid clipping button corners */
+    overflow: visible !important;
+    box-sizing: border-box !important;
+    gap: clamp(4px, 1vw, 8px) !important;
 }
+
+
 
 /* Disabled state styling for trading interface */
 .asset-selector .btn-group .btn:disabled,
@@ -916,10 +941,10 @@ main {
         padding: 0.3rem 0.6rem;
     }
     
-    /* Mobile adjustments for main content */
+    /* Mobile adjustments for main content - reduced padding */
     main .container {
-        padding-left: 0.75rem;
-        padding-right: 0.75rem;
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
     }
     
     .content-section {
@@ -934,18 +959,128 @@ main {
 /* Very small screen adjustments */
 @media (max-width: 480px) {
     main .container {
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
+        padding-left: 0.1rem;
+        padding-right: 0.1rem;
     }
     
     /* Further reduce margins on very small screens */
     main {
-        padding: 1.5rem 0;
+        padding: 0.5rem 0;
         padding-bottom: 5rem;
     }
     
     .content-section {
         margin-bottom: 1.5rem;
+    }
+
+    /* Additional safeguards for asset selector buttons on very small screens */
+    .asset-selector .btn-group .btn {
+        font-size: 28px !important;
+        padding: 6px 10px !important;
+        margin: 0 !important;
+        min-width: 0 !important;
+        /* Maintain flex stretching on mobile */
+        flex: 1 1 0% !important;
+    }
+
+    /* Additional safeguards for expiry buttons on very small screens */
+    .expiry-buttons-container .btn-group .btn {
+        font-size: 14px !important;
+        padding: 8px 10px !important;
+        margin: 0 !important;
+        /* Maintain flex stretching on mobile */
+        flex: 1 1 auto !important;
+        min-width: 80px !important;
+        max-width: none !important;
+    }
+    
+    .expiry-buttons-container .btn-group .btn .hours-remaining {
+        font-size: 10px !important;
+        margin-top: 1px;
+    }
+
+    /* Additional safeguards for strike buttons on very small screens */
+    .strike-buttons-container .btn-group .btn,
+    .strike-buttons-container .btn-group > .btn,
+    .strike-buttons-container .btn-group > .btn-outline-success,
+    .strike-buttons-container .btn-group > .btn-outline-danger {
+        font-size: 10px !important;
+        padding: 6px 4px !important;
+        margin: 0 !important;
+        flex: 1 1 0% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        width: 100% !important;
+    }
+    
+    .strike-buttons-container .btn-group {
+        gap: 1px !important;
+        margin-bottom: 8px !important;
+        /* Adjust grid for mobile */
+        grid-template-columns: repeat(auto-fit, 100px);
+        justify-content: center !important;
+    }
+}
+
+/* Extra small screen optimizations for asset selector buttons */
+@media (max-width: 360px) {
+    .asset-selector .btn-group .btn {
+        font-size: 24px !important;
+        padding: 4px 8px !important;
+        margin: 0 !important;
+        min-width: 0 !important;
+        /* Maintain flex stretching on very small screens */
+        flex: 1 1 0% !important;
+    }
+    
+    .asset-selector .btn-group {
+        gap: 2px !important;
+    }
+
+    /* Extra small screen optimizations for expiry buttons */
+    .expiry-buttons-container .btn-group .btn {
+        font-size: 12px !important;
+        padding: 6px 8px !important;
+        margin: 0 !important;
+        /* Maintain flex stretching on very small screens */
+        flex: 1 1 auto !important;
+        min-width: 70px !important;
+        max-width: none !important;
+    }
+    
+    .expiry-buttons-container .btn-group .btn .hours-remaining {
+        font-size: 9px !important;
+        margin-top: 1px;
+    }
+    
+    .expiry-buttons-container .btn-group {
+        gap: 2px !important;
+    }
+
+    /* Extra small screen optimizations for strike buttons */
+    .strike-buttons-container .btn-group .btn,
+    .strike-buttons-container .btn-group > .btn,
+    .strike-buttons-container .btn-group > .btn-outline-success,
+    .strike-buttons-container .btn-group > .btn-outline-danger {
+        font-size: 9px !important;
+        padding: 4px 3px !important;
+        margin: 0 !important;
+        flex: 1 1 0% !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        width: 100% !important;
+    }
+    
+    .strike-buttons-container .btn-group {
+        gap: 1px !important;
+        margin-bottom: 6px !important;
+        /* Adjust grid for very small screens */
+        grid-template-columns: repeat(auto-fit, 90px);
+        justify-content: center !important;
     }
 }
 
@@ -2006,17 +2141,17 @@ main .container {
 
 @media (max-width: 768px) {
     .navbar {
-        padding: 0.5rem 0.75rem;
+        padding: 0.5rem 0.25rem;
     }
     
     .navbar .container-fluid {
-        padding-left: 0.75rem;
-        padding-right: 0.75rem;
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
     }
     
     main .container {
-        padding-left: 0.75rem;
-        padding-right: 0.75rem;
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
     }
     
     /* Reduce margins on mobile for better space utilization */
@@ -2045,17 +2180,17 @@ main .container {
 
 @media (max-width: 480px) {
     .navbar {
-        padding: 0.5rem 0.5rem;
+        padding: 0.5rem 0.1rem;
     }
     
     .navbar .container-fluid {
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
+        padding-left: 0.1rem;
+        padding-right: 0.1rem;
     }
     
     main .container {
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
+        padding-left: 0.1rem;
+        padding-right: 0.1rem;
     }
     
     /* Further reduce margins on very small screens */
@@ -4276,13 +4411,103 @@ datalist option::before {
     border-radius: 6px;
 }
 
-/* Expiry and Strike Selection Buttons */
+/* Floating Start Over button at bottom */
+.start-over-floating {
+    position: fixed;
+    bottom: 84px; /* above bottom nav */
+    right: 16px;
+    z-index: 1048;
+}
+
+@media (max-width: 768px) {
+    .start-over-floating {
+        bottom: 92px;
+        right: 12px;
+    }
+}
+
+/* Expiry and Strike Selection Buttons - Responsive */
 .expiry-buttons-container {
     display: flex; /* Show when parent section is visible */
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: clamp(0.25rem, 2vw, 0.5rem);
     align-items: center;
     justify-content: center;
+    width: 100%;
+    max-width: 100vw;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+/* Responsive expiry button sizing - keep original styling */
+.expiry-buttons-container .btn-group .btn {
+    /* Responsive font size for date text */
+    font-size: clamp(14px, 4vw, 18px) !important;
+    /* Responsive padding */
+    padding: clamp(8px, 2.5vw, 12px) clamp(12px, 4vw, 16px) !important;
+    /* Responsive margins */
+    margin: 0 clamp(2px, 1vw, 4px) !important;
+    /* Flexible sizing to prevent overflow */
+    min-width: 0;
+    flex-shrink: 1;
+    white-space: nowrap;
+    text-align: center;
+}
+
+/* Hours remaining text styling - smaller and responsive */
+.expiry-buttons-container .btn-group .btn .hours-remaining {
+    font-size: clamp(10px, 2.5vw, 12px) !important;
+    display: block;
+    margin-top: 2px;
+}
+
+
+
+/* Enhanced responsive btn-group container for expiry buttons */
+.expiry-buttons-container .btn-group {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: stretch !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    /* Avoid clipping button corners when wrapping */
+    overflow: visible !important;
+    box-sizing: border-box !important;
+    gap: clamp(4px, 1vw, 8px) !important;
+}
+
+/* Expiry buttons stretch to fill available space per row */
+.expiry-buttons-container .btn-group .btn {
+    flex: 1 1 auto !important;
+    min-width: 120px !important;
+    max-width: none !important;
+    /* Ensure corners render fully */
+    clip-path: inset(0 round 0);
+}
+
+/* Global consistent edge margins for all button containers */
+.asset-selector,
+.expiry-buttons-container,
+.strike-buttons-container {
+    margin-left: clamp(8px, 2vw, 16px) !important;
+    margin-right: clamp(8px, 2vw, 16px) !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* Asset selector and expiry buttons stretch to fill available width */
+.asset-selector,
+.expiry-buttons-container {
+    width: calc(100vw - clamp(16px, 4vw, 32px)) !important;
+    max-width: calc(100vw - clamp(16px, 4vw, 32px)) !important;
+}
+
+/* Strike buttons maintain centered grid layout */
+.strike-buttons-container {
+    width: auto !important;
+    max-width: calc(100vw - clamp(16px, 4vw, 32px)) !important;
 }
 
 .hours-remaining {
@@ -4297,6 +4522,11 @@ datalist option::before {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    width: 100% !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 .strike-section-label {
@@ -4311,6 +4541,83 @@ datalist option::before {
     flex-wrap: wrap;
     gap: 0.5rem;
     align-items: center;
+}
+
+/* Responsive styling for strike price buttons - uniform size and full width */
+.strike-buttons-container .btn-group .btn {
+    /* Smaller responsive font size for strike prices - reduced for uniform fitting */
+    font-size: clamp(10px, 2.5vw, 14px) !important;
+    /* Compact responsive padding */
+    padding: clamp(6px, 2vw, 10px) clamp(4px, 1.5vw, 8px) !important;
+    /* Grid item sizing handled by parent grid; ensure full-width inside track */
+    width: 100% !important;
+    margin: 0 !important;
+    /* Text overflow handling */
+    min-width: 0 !important;
+    max-width: none !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+    /* Ensure compact appearance */
+    line-height: 1.2;
+    /* Ensure consistent height */
+    min-height: clamp(32px, 8vw, 40px);
+    height: clamp(32px, 8vw, 40px) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Keep square corners */
+    border-radius: 0 !important;
+}
+
+/* Enhanced responsive container for strike button groups - consistent width */
+.strike-buttons-container .btn-group {
+    /* Use CSS grid with fixed-width columns for consistency between CALL/PUT */
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, 140px);
+    grid-auto-rows: minmax(32px, auto);
+    gap: clamp(2px, 0.8vw, 8px) !important;
+    margin-bottom: clamp(8px, 2vw, 12px) !important;
+    /* Center the grid when it doesn't fill full width */
+    justify-content: center !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+    /* Neutralize Bootstrap btn-group visuals */
+    border: 0 !important;
+    background: none !important;
+    padding: 0 !important;
+}
+
+/* Ensure the asset-selector container doesn't constrain strike buttons */
+
+/* Additional specific targeting to override Bootstrap btn-group button sizing */
+.strike-buttons-container .btn-group > .btn,
+.strike-buttons-container .btn-group > .btn-outline-success,
+.strike-buttons-container .btn-group > .btn-outline-danger {
+    /* Grid children fill their tracks equally */
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    /* Keep square edges per original design */
+    border-radius: 0 !important;
+    /* Ensure visible corners are not clipped */
+    clip-path: inset(0 round 0);
+}
+
+/* Override Bootstrap btn-group first/last child border-radius removal */
+.strike-buttons-container .btn-group > .btn:first-child,
+.strike-buttons-container .btn-group > .btn:last-child,
+.strike-buttons-container .btn-group > .btn-outline-success:first-child,
+.strike-buttons-container .btn-group > .btn-outline-success:last-child,
+.strike-buttons-container .btn-group > .btn-outline-danger:first-child,
+.strike-buttons-container .btn-group > .btn-outline-danger:last-child {
+    border-radius: 0 !important;
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
 }
 
 /* Expiry buttons now use Bootstrap btn classes via asset-selector for consistency */
@@ -4342,14 +4649,56 @@ datalist option::before {
     cursor: not-allowed;
 }
 
-/* Responsive adjustments for buttons */
+/* Enhanced responsive adjustments for expiry and strike buttons */
 @media (max-width: 768px) {
     .expiry-buttons-container {
         gap: 0.25rem;
+        padding: 0;
+    }
+    
+    .expiry-buttons-container .btn-group .btn {
+        font-size: 16px !important;
+        padding: 10px 14px !important;
+        margin: 0 !important;
+        /* Maintain flex stretching on tablet */
+        flex: 1 1 auto !important;
+        min-width: 100px !important;
+        max-width: none !important;
+    }
+    
+    .expiry-buttons-container .btn-group .btn .hours-remaining {
+        font-size: 11px !important;
     }
     
     .strike-buttons-container {
-        gap: 0.5rem;
+        gap: 0.25rem;
+        padding: 0;
+    }
+    
+    .strike-buttons-container .btn-group .btn,
+    .strike-buttons-container .btn-group > .btn,
+    .strike-buttons-container .btn-group > .btn-outline-success,
+    .strike-buttons-container .btn-group > .btn-outline-danger {
+        font-size: 12px !important;
+        padding: 8px 6px !important;
+        margin: 0 !important;
+        min-width: 0 !important;
+        max-width: none !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        width: 100% !important;
+        border-radius: 0 !important;
+    }
+    
+    .strike-buttons-container .btn-group {
+        gap: 2px !important;
+        margin-bottom: 10px !important;
+        width: 100% !important;
+        /* Adjust grid for tablet */
+        grid-template-columns: repeat(auto-fit, 120px);
+        justify-content: center !important;
+        /* Avoid clipping any child button borders */
+        overflow: visible !important;
     }
     
     .strike-buttons-row {
