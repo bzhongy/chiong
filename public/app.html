@@ -1262,6 +1262,7 @@
                             if (typeof selectAsset === 'function') { selectAsset(null); didCallSelect = true; }
                             else if (window && typeof window.selectAsset === 'function') { window.selectAsset(null); didCallSelect = true; }
                         } catch(e) {}
+                        // Ensure core state is cleared even if function call failed
                         if (window && window.state) {
                             try {
                                 window.state.selectedAsset = null;

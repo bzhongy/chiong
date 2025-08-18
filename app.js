@@ -541,37 +541,14 @@ function populateStrikeButtons(expiry) {
             .map(order => parseFloat(formatUnits(order.order.strikes[0], PRICE_DECIMALS)))
     )).filter(strike => !isNaN(strike)).sort((a, b) => a - b);
     
-    // Create CALL strikes section
-    if (callStrikes.length > 0) {
-        const callLabel = $('<div class="strike-section-label mb-2"><strong>CALL Options</strong></div>');
-        container.append(callLabel);
-        
-        const callContainer = $('<div class="btn-group" role="group" aria-label="Call strikes"></div>');
-        callStrikes.forEach(strike => {
-            const button = $(`<button class="btn btn-outline-success" data-strike="${strike}">$${formatNumber(strike)}</button>`);
-            
-            // Mark as active if this strike is selected
-            if (state.selectedStrike === strike) {
-                button.addClass('active');
-            }
-            
-            button.on('click', function() {
-                selectStrike(strike);
-            });
-            
-            callContainer.append(button);
-        });
-        container.append(callContainer);
-    }
-    
     // Create PUT strikes section
     if (putStrikes.length > 0) {
-        const putLabel = $('<div class="strike-section-label mb-2"><strong>PUT Options</strong></div>');
+        const putLabel = $('<div class="strike-section-label mb-2">PUTS</div>');
         container.append(putLabel);
         
         const putContainer = $('<div class="btn-group" role="group" aria-label="Put strikes"></div>');
         putStrikes.forEach(strike => {
-            const button = $(`<button class="btn btn-outline-danger" data-strike="${strike}">$${formatNumber(strike)}</button>`);
+            const button = $(`<button class="btn btn-put" data-strike="${strike}">< $${formatNumber(strike)}</button>`);
             
             // Mark as active if this strike is selected
             if (state.selectedStrike === strike) {
@@ -585,6 +562,29 @@ function populateStrikeButtons(expiry) {
             putContainer.append(button);
         });
         container.append(putContainer);
+    }
+    
+    // Create CALL strikes section
+    if (callStrikes.length > 0) {
+        const callLabel = $('<div class="strike-section-label mb-2">CALLS</div>');
+        container.append(callLabel);
+        
+        const callContainer = $('<div class="btn-group" role="group" aria-label="Call strikes"></div>');
+        callStrikes.forEach(strike => {
+            const button = $(`<button class="btn btn-call" data-strike="${strike}">> $${formatNumber(strike)}</button>`);
+            
+            // Mark as active if this strike is selected
+            if (state.selectedStrike === strike) {
+                button.addClass('active');
+            }
+            
+            button.on('click', function() {
+                selectStrike(strike);
+            });
+            
+            callContainer.append(button);
+        });
+        container.append(callContainer);
     }
     
     // Show the strike buttons container

@@ -617,10 +617,10 @@ h4, h5, h6 {
 
 /* Asset instruction styling */
 .asset-instruction p {
-    font-size: 12px !important;
+    font-size: 20px !important;
     font-weight: 800 !important;
-    color: var(--text-black) !important;
-    margin: 0 !important;
+    color: rgba(0, 0, 0, 0.2) !important;
+    margin: 0 0 0rem 0 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.5px !important;
 }
@@ -4530,10 +4530,12 @@ datalist option::before {
 }
 
 .strike-section-label {
-    color: var(--text-primary);
-    font-size: 0.9rem;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 0.5rem;
+    font-size: 20px !important;
+    font-weight: 800 !important;
+    color: rgba(0, 0, 0, 0.2) !important;
+    margin: 0 0 0rem 0 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
 }
 
 .strike-buttons-row {
@@ -4622,7 +4624,77 @@ datalist option::before {
 
 /* Expiry buttons now use Bootstrap btn classes via asset-selector for consistency */
 
-/* Call vs Put strike button styling */
+/* STRIKE BUTTON STYLES - FORCE COLORS WITH MAXIMUM SPECIFICITY */
+.strike-buttons-container .btn-call,
+.strike-buttons-container .btn-group .btn-call,
+.strike-buttons-container button.btn-call,
+.btn-call {
+    background: #1FFFAB !important;
+    background-color: #1FFFAB !important;
+    border: 1px solid #000000 !important;
+    border-color: #000000 !important;
+    color: #000000 !important;
+    transition: all 0.2s ease !important;
+}
+
+.strike-buttons-container .btn-call:hover,
+.strike-buttons-container .btn-group .btn-call:hover,
+.strike-buttons-container button.btn-call:hover,
+.btn-call:hover {
+    background: #00FF88 !important;
+    background-color: #00FF88 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+.strike-buttons-container .btn-call.active,
+.strike-buttons-container .btn-group .btn-call.active,
+.strike-buttons-container button.btn-call.active,
+.btn-call.active {
+    background: #00CC6A !important;
+    background-color: #00CC6A !important;
+    animation: flash 0.3s ease !important;
+}
+
+.strike-buttons-container .btn-put,
+.strike-buttons-container .btn-group .btn-put,
+.strike-buttons-container button.btn-put,
+.btn-put {
+    background: #FF1F5A !important;
+    background-color: #FF1F5A !important;
+    border: 1px solid #000000 !important;
+    border-color: #000000 !important;
+    color: #000000 !important;
+    transition: all 0.2s ease !important;
+}
+
+.strike-buttons-container .btn-put:hover,
+.strike-buttons-container .btn-group .btn-put:hover,
+.strike-buttons-container button.btn-put:hover,
+.btn-put:hover {
+    background: #FF0040 !important;
+    background-color: #FF0040 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+.strike-buttons-container .btn-put.active,
+.strike-buttons-container .btn-group .btn-put.active,
+.strike-buttons-container button.btn-put.active,
+.btn-put.active {
+    background: #CC0033 !important;
+    background-color: #CC0033 !important;
+    animation: flash 0.3s ease !important;
+}
+
+/* Flash animation for clicked buttons */
+@keyframes flash {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+/* Legacy call/put strike styling for backward compatibility */
 .call-strike {
     border-color: rgba(0, 255, 0, 0.3);
 }
