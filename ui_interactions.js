@@ -97,6 +97,11 @@ function setupEventListeners() {
         
         updatePaymentAssetBalanceDisplay(asset);
         
+        // Update asset boxes with new data
+        if (typeof updateAssetBoxes === 'function') {
+            updateAssetBoxes();
+        }
+        
         // Update ETH wrapping interface visibility if WETH is selected
         if (asset === 'WETH') {
             updateETHBalance();
@@ -111,6 +116,36 @@ function setupEventListeners() {
                 await updateTradeButtonState();
             }
         }, 100);
+        
+        // Update visual state
+        updatePaymentAssetSelectionState();
+    });
+    
+    // Initialize payment asset selection state
+    updatePaymentAssetSelectionState();
+    
+    // Get More buttons for asset boxes
+    $(document).on('click', '.get-more-btn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const asset = $(this).data('asset');
+        console.log(`Get More ${asset} clicked - NEW CODE RUNNING!`);
+        
+        // Set the selected payment asset to the one they want to get more of
+        // This ensures the swap modal opens with the correct "To" asset
+        $(`input[name="payment-asset-selection"][value="${asset}"]`).prop('checked', true).trigger('change');
+        
+        // Open the swap modal
+        if (typeof openSwapModal === 'function') {
+            console.log('Opening swap modal for', asset);
+            openSwapModal();
+        } else {
+            console.error('openSwapModal function not found');
+            if (typeof showNotification === 'function') {
+                showNotification(`Error: Swap functionality not available`, 'error');
+            }
+        }
     });
     
     // Advanced view is now the default and only view
@@ -336,10 +371,9 @@ function animateTypewriter(text) {
     }, letters.length * 80 + 500);
 }
 
-// Animate spot price with typewriter effect
-function animateSpotPrice() {
-    const spotPriceElement = $('#spot-price-text');
-    spotPriceElement.show();
+// Add spot price text immediately (no animation)
+function addSpotPriceText() {
+    const buyingElement = $('#buying-text');
     
     // Get current price from state if available
     let currentPrice = '--';
@@ -347,40 +381,12 @@ function animateSpotPrice() {
         currentPrice = state.market_prices[state.selectedAsset].toFixed(2);
     }
     
-    const priceText = `Spot Price: $${currentPrice}`;
-    const letters = priceText.split('');
-    let currentText = '';
+    // Clean up any existing spot price content
+    let cleanHtml = buyingElement.html();
+    cleanHtml = cleanHtml.replace(/,\s*\$[\d,]+\.?\d*/g, ''); // Remove existing price
     
-    // Start with cursor
-    spotPriceElement.html('<span class="typing-cursor">|</span>');
-    
-    // Animate each letter
-    letters.forEach((letter, index) => {
-        setTimeout(() => {
-            currentText += letter;
-            
-            // Build styled text with different colors for label vs value
-            let styledText = '';
-            const labelEnd = currentText.indexOf(': $');
-            
-            if (labelEnd !== -1) {
-                // Split into label and value parts
-                const label = currentText.substring(0, labelEnd + 2); // "Spot Price: "
-                const value = currentText.substring(labelEnd + 2); // "$3245.67"
-                styledText = `<span class="spot-label">${label}</span><span class="spot-value">${value}</span>`;
-            } else {
-                // Still typing the label part
-                styledText = `<span class="spot-label">${currentText}</span>`;
-            }
-            
-            spotPriceElement.html(styledText + '<span class="typing-cursor">|</span>');
-        }, index * 60); // Slightly faster for price
-    });
-    
-    // Remove cursor after animation
-    setTimeout(() => {
-        spotPriceElement.html(spotPriceElement.html().replace('<span class="typing-cursor">|</span>', ''));
-    }, letters.length * 60 + 500);
+    // Add just the price immediately
+    buyingElement.html(cleanHtml + ', $' + currentPrice);
 }
 
 // Select an asset (ETH, BTC), update state, UI then refresh data
@@ -431,15 +437,18 @@ function selectAsset(asset) {
     $('#buying-text').show();
     $('.current-price-display').css('display', 'flex'); // Show current price display when asset is selected
     
+    // Hide payment and position size components when asset is selected (need strike first)
+    $('#payment-position-section').removeClass('show');
+    
     // Show expiry selector section when asset is selected
     $('#expiry-selector-section').show();
     
-    animateTypewriter(`Buying ${asset} Options`);
+    // Just show the asset name immediately
+    const buyingElement = $('#buying-text');
+    buyingElement.html(asset);
     
-    // Show spot price after buying text animation completes
-    setTimeout(() => {
-        animateSpotPrice();
-    }, `Buying ${asset} Options`.length * 80 + 800); // Wait for buying text + small buffer
+    // Add spot price immediately after
+    addSpotPriceText();
     
     // Enable trading interface elements
     $('#conviction-slider').prop('disabled', false);
@@ -833,8 +842,8 @@ async function selectOption(index) {
         }
         // For PUT options, keep USDC as default
         
-        // Update payment asset selection and trigger the change event
-        $(`input[name="payment-asset-selection"][value="${initialPaymentAsset}"]`).prop('checked', true).trigger('change');
+        // Don't auto-select payment asset - let user choose
+        // $(`input[name="payment-asset-selection"][value="${initialPaymentAsset}"]`).prop('checked', true).trigger('change');
         
         // Update advanced trade button state immediately
         const button = $('#adv-trade-btn');
@@ -2528,9 +2537,9 @@ async function selectBestPaymentAsset(order, requiredAmountUSD) {
         
         // Step 4: Update the UI to reflect the selected asset
         if (selectedAsset) {
-            // Update button selection instead of dropdown
-        $(`input[name="payment-asset-selection"][value="${selectedAsset}"]`).prop('checked', true);
-        updatePaymentAssetBalanceDisplay(selectedAsset);
+            // Don't auto-select payment asset - let user choose
+            // $(`input[name="payment-asset-selection"][value="${selectedAsset}"]`).prop('checked', true);
+            // updatePaymentAssetBalanceDisplay(selectedAsset);
             
             // Trigger update to show swap information if needed (preview update will be skipped due to isSelectingOption flag)
             updatePaymentAsset();
@@ -2543,9 +2552,9 @@ async function selectBestPaymentAsset(order, requiredAmountUSD) {
         // Fallback to preferred asset
         try {
             const requiredCollateral = CONFIG.getCollateralDetails(order.collateral);
-            // Update button selection instead of dropdown
-        $(`input[name="payment-asset-selection"][value="${requiredCollateral.name}"]`).prop('checked', true);
-        updatePaymentAssetBalanceDisplay(requiredCollateral.name);
+            // Don't auto-select payment asset - let user choose
+            // $(`input[name="payment-asset-selection"][value="${requiredCollateral.name}"]`).prop('checked', true);
+            // updatePaymentAssetBalanceDisplay(requiredCollateral.name);
             return requiredCollateral.name;
         } catch (fallbackError) {
             console.error("Error in fallback asset selection:", fallbackError);
@@ -3841,6 +3850,20 @@ async function refreshTokenAllowance(tokenAddress, tokenSymbol, spenderAddress, 
         
     } catch (error) {
         console.error(`Error refreshing ${spenderType} allowance for ${tokenSymbol}:`, error);
+    }
+}
+
+// Function to update payment asset selection visual state
+function updatePaymentAssetSelectionState() {
+    const paymentAssetBoxes = document.querySelector('.payment-asset-boxes');
+    if (!paymentAssetBoxes) return;
+    
+    const hasSelection = document.querySelector('input[name="payment-asset-selection"]:checked');
+    
+    if (hasSelection) {
+        paymentAssetBoxes.classList.remove('no-selection');
+    } else {
+        paymentAssetBoxes.classList.add('no-selection');
     }
 }
 

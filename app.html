@@ -236,6 +236,8 @@
                                 <div id="spot-price-text" style="display: none;">Spot Price: $--</div>
                                 <!-- Expiry that appears after expiry selection -->
                                 <div id="expiry-text" style="display: none;">Expiry: --</div>
+                                <!-- Strike price that appears after strike selection -->
+                                <div id="strike-text" style="display: none;">Strike: $--</div>
                             </div>
                         </div>
                         
@@ -299,6 +301,165 @@
                                 <span class="price-label">Spot Price:</span>
                                 <span class="price-value">$<span id="current-price">--</span></span>
                                 <span class="asset-symbol">/ <span id="asset-symbol">--</span></span>
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Payment and Position Size Section - Always Visible -->
+            <section id="payment-position-section" class="content-section">
+                <div class="container">
+                    <div class="row">
+                        <div class="col-12">
+                            <!-- Payment Asset Instruction -->
+                            <div class="asset-instruction mb-0">
+                                <p>SELECT A PAYMENT ASSET</p>
+                            </div>
+                            <!-- Payment Selection -->
+                            <div class="payment-selection mt-0">
+                                <div class="payment-asset-boxes">
+                                    <!-- USDC Asset Box -->
+                                    <div class="asset-box" id="usdc-asset-box">
+                                        <input type="radio" class="btn-check" name="payment-asset-selection" id="payment-usdc" value="USDC">
+                                        <label class="asset-box-label" for="payment-usdc">
+                                            <div class="asset-header">
+                                                <h6 class="asset-name">USDC</h6>
+                                            </div>
+                                            <div class="asset-details">
+                                                <div class="asset-balance">
+                                                    <small class="text-muted">
+                                                        <i class="bi bi-wallet2 me-1"></i>
+                                                        <span class="balance-text" id="usdc-balance">Loading...</span>
+                                                    </small>
+                                                </div>
+                                                                                                    <div class="asset-allowance">
+                                                        <small class="text-muted">
+                                                            <i class="bi bi-shield-check me-1"></i>
+                                                            <span id="usdc-allowance">--</span>
+                                                        </small>
+                                                    </div>
+                                                <div class="asset-actions">
+                                                    <button type="button" class="btn btn-outline-primary btn-sm get-more-btn" data-asset="USDC">
+                                                       Get More USDC
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    
+                                    <!-- WETH Asset Box -->
+                                    <div class="asset-box" id="weth-asset-box">
+                                        <input type="radio" class="btn-check" name="payment-asset-selection" id="payment-weth" value="WETH">
+                                        <label class="asset-box-label" for="payment-weth">
+                                            <div class="asset-header">
+                                                <h6 class="asset-name">WETH</h6>
+                                            </div>
+                                            <div class="asset-details">
+                                                <div class="asset-balance">
+                                                    <small class="text-muted">
+                                                        <i class="bi bi-wallet2 me-1"></i>
+                                                        <span class="balance-text" id="weth-balance">Loading...</span>
+                                                    </small>
+                                                </div>
+                                                <div class="asset-allowance">
+                                                        <small class="text-muted">
+                                                            <i class="bi bi-shield-check me-1"></i>
+                                                            <span id="weth-allowance">--</span>
+                                                        </small>
+                                                    </div>
+                                                <div class="asset-actions">
+                                                    <button type="button" class="btn btn-outline-primary btn-sm get-more-btn" data-asset="WETH">
+                                                       Get More WETH
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    
+                                    <!-- CBBTC Asset Box -->
+                                    <div class="asset-box" id="cbbtc-asset-box">
+                                        <input type="radio" class="btn-check" name="payment-asset-selection" id="payment-cbbtc" value="CBBTC">
+                                        <label class="asset-box-label" for="payment-cbbtc">
+                                            <div class="asset-header">
+                                                <h6 class="asset-name">CBBTC</h6>
+                                            </div>
+                                            <div class="asset-details">
+                                                <div class="asset-balance">
+                                                    <small class="text-muted">
+                                                        <i class="bi bi-wallet2 me-1"></i>
+                                                        <span class="balance-text" id="cbbtc-balance">Loading...</span>
+                                                    </small>
+                                                </div>
+                                                <div class="asset-allowance">
+                                                    <small class="text-muted">
+                                                        <i class="bi bi-shield-check me-1"></i>
+                                                        <span id="cbbtc-allowance">--</span>
+                                                    </small>
+                                                </div>
+                                                <div class="asset-actions">
+                                                    <button type="button" class="btn btn-outline-primary btn-sm get-more-btn" data-asset="CBBTC">
+                                                       Get More CBBTC
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </label>
+                                                                    </div>
+                            </div>
+                            
+
+                            
+                            <!-- Legacy balance displays (hidden but kept for compatibility) -->
+                                <div class="mt-2" id="payment-balance-display" style="display: none;">
+                                    <small class="text-muted">
+                                        <i class="bi bi-wallet2 me-1"></i>
+                                        <span class="balance-text">Loading balances...</span>
+                                    </small>
+                                </div>
+                                
+                                <div class="mt-1" id="payment-allowance-display" style="display: none;">
+                                    <small class="text-muted">
+                                        <i class="bi bi-shield-check"></i>
+                                        OptionBook Allowance: <span id="payment-allowance-amount">--</span>
+                                    </small>
+                                </div>
+                                
+                                <div class="mt-2" id="eth-balance-info" style="display: none;">
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle"></i>
+                                        ETH Balance: <span id="eth-balance-display-main">--</span> ETH
+                                        <span id="eth-usd-value" class="ms-2">($--)</span>
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <!-- Position Size Section -->
+                            <div class="position-size-section mt-4">
+                                <h5 class="card-title">Position Size:</h5>
+                                
+                                <!-- Quick Amount Buttons -->
+                                <div class="quick-amount-buttons mb-3">
+                                    <small class="text-muted mb-2 d-block">Quick amounts:</small>
+                                    <div class="btn-group btn-group-sm" role="group" aria-label="Quick position sizes">
+                                        <button type="button" class="btn btn-outline-secondary quick-amount-btn" data-percentage="1">1%</button>
+                                        <button type="button" class="btn btn-outline-secondary quick-amount-btn" data-percentage="25">25%</button>
+                                        <button type="button" class="btn btn-outline-secondary quick-amount-btn" data-percentage="50">50%</button>
+                                        <button type="button" class="btn btn-outline-secondary quick-amount-btn" data-percentage="75">75%</button>
+                                        <button type="button" class="btn btn-outline-secondary quick-amount-btn" data-percentage="100">100%</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="position-size-container">
+                                    <input type="range" class="form-range" id="position-size-slider" min="0" max="100" value="100" step="1">
+                                    <div class="position-size-labels">
+                                        <span class="size-label min">$10</span>
+                                        <span class="size-label max">$1000</span>
+                                    </div>
+                                    <div class="current-size-display">
+                                        <span id="current-size">100</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -474,81 +635,6 @@
                                     </div>
                                     
                                     <!-- Strike buttons moved to asset selector section for center positioning -->
-                                    
-                                    
-                                    
-                                    <div class="payment-selection mt-4">
-                                        <label for="payment-asset">Pay With:</label>
-                                        <div class="payment-asset-buttons">
-                                            <div class="btn-group" role="group" aria-label="Payment asset selection">
-                                                <input type="radio" class="btn-check" name="payment-asset-selection" id="payment-usdc" value="USDC" checked>
-                                                <label class="btn btn-outline-primary" for="payment-usdc">USDC</label>
-                                                
-                                                <input type="radio" class="btn-check" name="payment-asset-selection" id="payment-weth" value="WETH">
-                                                <label class="btn btn-outline-primary" for="payment-weth">WETH</label>
-                                                
-                                                <input type="radio" class="btn-check" name="payment-asset-selection" id="payment-cbbtc" value="CBBTC">
-                                                <label class="btn btn-outline-primary" for="payment-cbbtc">CBBTC</label>
-                                            </div>
-                                            
-                                            <!-- Swap Button -->
-                                            <div class="swap-button-container mt-2">
-                                                <button type="button" class="btn btn-outline-secondary btn-sm" id="swap-assets-btn">
-                                                    <i class="bi bi-arrow-repeat me-1"></i>Swap Assets
-                                                </button>
-                                            </div>
-                                            
-                                            <!-- Balance display below buttons -->
-                                            <div class="mt-2" id="payment-balance-display">
-                                                <small class="text-muted">
-                                                    <i class="bi bi-wallet2 me-1"></i>
-                                                    <span class="balance-text">Loading balances...</span>
-                                                </small>
-                                            </div>
-                                            
-                                            <!-- Allowance display below balance -->
-                                            <div class="mt-1" id="payment-allowance-display">
-                                                <small class="text-muted">
-                                                    <i class="bi bi-shield-check"></i>
-                                                    OptionBook Allowance: <span id="payment-allowance-amount">--</span>
-                                                </small>
-                                            </div>
-                                            
-                                            <!-- ETH Balance Display -->
-                                            <div class="mt-2" id="eth-balance-info">
-                                                <small class="text-muted">
-                                                    <i class="bi bi-info-circle"></i>
-                                                    ETH Balance: <span id="eth-balance-display-main">--</span> ETH
-                                                    <span id="eth-usd-value" class="ms-2">($--)</span>
-                                                </small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <h5 class="card-title mt-4">Position Size:</h5>
-                                    
-                                    <!-- Quick Amount Buttons -->
-                                    <div class="quick-amount-buttons mb-3">
-                                        <small class="text-muted mb-2 d-block">Quick amounts:</small>
-                                        <div class="btn-group btn-group-sm" role="group" aria-label="Quick position sizes">
-                                            <button type="button" class="btn btn-outline-secondary quick-amount-btn" data-percentage="1">1%</button>
-                                            <button type="button" class="btn btn-outline-secondary quick-amount-btn" data-percentage="25">25%</button>
-                                            <button type="button" class="btn btn-outline-secondary quick-amount-btn" data-percentage="50">50%</button>
-                                            <button type="button" class="btn btn-outline-secondary quick-amount-btn" data-percentage="75">75%</button>
-                                            <button type="button" class="btn btn-outline-secondary quick-amount-btn" data-percentage="100">100%</button>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="position-size-container">
-                                        <input type="range" class="form-range" id="position-size-slider" min="0" max="100" value="100" step="1">
-                                        <div class="position-size-labels">
-                                            <span class="size-label min">$10</span>
-                                            <span class="size-label max">$1000</span>
-                                        </div>
-                                        <div class="current-size-display">
-                                            <span id="current-size">100</span>
-                                        </div>
-                                    </div>
                                     
                                     <!-- Swap Modal -->
                                     <div class="modal fade" id="swapModal" tabindex="-1" aria-labelledby="swapModalLabel" aria-hidden="true">
@@ -1277,7 +1363,10 @@
                                 var radios = document.querySelectorAll('input[name="asset-selection"]');
                                 radios.forEach(function(r){ r.checked = false; });
                                 var assetSection = document.getElementById('asset-selector-section');
-                                if (assetSection) assetSection.classList.remove('hidden');
+                                if (assetSection) {
+                                    assetSection.classList.remove('hidden');
+                                    assetSection.classList.remove('asset-selected'); // Hide payment and position sections
+                                }
                                 var expirySection = document.getElementById('expiry-selector-section');
                                 if (expirySection) expirySection.style.display = 'none';
                                 var buyingText = document.getElementById('buying-text');
@@ -1295,6 +1384,7 @@
                                 // Hide strike buttons, show expiry buttons/instruction
                                 var strikeCont = document.getElementById('strike-buttons-container'); if (strikeCont) strikeCont.style.display = 'none';
                                 var expiryText = document.getElementById('expiry-text'); if (expiryText) expiryText.style.display = 'none';
+                                var strikeText = document.getElementById('strike-text'); if (strikeText) strikeText.style.display = 'none';
                                 var expiryBtns = document.getElementById('expiry-buttons-container'); if (expiryBtns) expiryBtns.style.display = '';
                                 var expiryInstr = document.getElementById('expiry-instruction'); if (expiryInstr) expiryInstr.style.display = '';
                                 // Clear selected rows
@@ -1332,6 +1422,15 @@
                     document.querySelectorAll('input[name="asset-selection"]').forEach(function(el){
                         el.addEventListener('change', function(){
                             showFloatingStartOver(isAssetSelected());
+                            // Show/hide payment and position size sections based on asset selection
+                            var assetSection = document.getElementById('asset-selector-section');
+                            if (assetSection) {
+                                if (isAssetSelected()) {
+                                    assetSection.classList.add('asset-selected');
+                                } else {
+                                    assetSection.classList.remove('asset-selected');
+                                }
+                            }
                         });
                     });
                     // Also observe the asset selector section class changes
@@ -1348,6 +1447,8 @@
                 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
             })();
         </script>
+
+
 
 </body>
 </html> 

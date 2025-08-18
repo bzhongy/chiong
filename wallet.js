@@ -567,6 +567,18 @@ async function connectWallet() {
             updateUIForConnectedState(result.address);
             state.connectedAddress = result.address;
             refreshData();
+            
+            // Update asset boxes after wallet connection
+            setTimeout(() => {
+                if (typeof updateAssetBoxes === 'function') {
+                    updateAssetBoxes();
+                }
+                // Also use the more robust method
+                if (typeof waitForAssetBoxesAndUpdate === 'function') {
+                    waitForAssetBoxesAndUpdate();
+                }
+            }, 1000); // Small delay to ensure data is loaded
+            
             console.log('Wallet connected successfully:', result.address);
         } else {
             throw new Error('Failed to connect wallet - no address returned');
@@ -598,6 +610,18 @@ async function connectWithDirectEthereum() {
             updateUIForConnectedState(address);
             state.connectedAddress = address;
             refreshData();
+            
+            // Update asset boxes after wallet connection
+            setTimeout(() => {
+                if (typeof updateAssetBoxes === 'function') {
+                    updateAssetBoxes();
+                }
+                // Also use the more robust method
+                if (typeof waitForAssetBoxesAndUpdate === 'function') {
+                    waitForAssetBoxesAndUpdate();
+                }
+            }, 1000); // Small delay to ensure data is loaded
+            
             console.log('Wallet connected via direct ethereum:', address);
             
             // Set up basic compatibility

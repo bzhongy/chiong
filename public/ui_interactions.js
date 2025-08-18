@@ -336,15 +336,14 @@ function animateTypewriter(text) {
         
         // Start spot price animation after a brief pause
         setTimeout(() => {
-            animateSpotPrice();
+            addSpotPriceText();
         }, 300);
     }, letters.length * 80 + 500);
 }
 
 // Animate spot price with typewriter effect
 function animateSpotPrice() {
-    const spotPriceElement = $('#spot-price-text');
-    spotPriceElement.show();
+    const buyingElement = $('#buying-text');
     
     // Get current price from state if available
     let currentPrice = '--';
@@ -352,14 +351,17 @@ function animateSpotPrice() {
         currentPrice = state.market_prices[state.selectedAsset].toFixed(2);
     }
     
-    const priceText = `Spot Price: $${currentPrice}`;
+    const priceText = `, Spot Price: $${currentPrice}`;
     const letters = priceText.split('');
     let currentText = '';
     
-    // Start with cursor
-    spotPriceElement.html('<span class="typing-cursor">|</span>');
+    // Clean up any existing cursors and spot price content
+    let cleanHtml = buyingElement.html();
+    cleanHtml = cleanHtml.replace(/<span class="typing-cursor">.*?<\/span>/g, '');
+    cleanHtml = cleanHtml.replace(/,\s*<span class="spot-label">.*?<\/span>(<span class="spot-value">.*?<\/span>)?/g, '');
+    cleanHtml = cleanHtml.replace(/,\s*Spot Price:[^,]*/g, '');
     
-    // Animate each letter
+    // Animate each letter appending to the existing buying text
     letters.forEach((letter, index) => {
         setTimeout(() => {
             currentText += letter;
@@ -369,23 +371,25 @@ function animateSpotPrice() {
             const labelEnd = currentText.indexOf(': $');
             
             if (labelEnd !== -1) {
-                // Split into label and value parts
-                const label = currentText.substring(0, labelEnd + 2); // "Spot Price: "
+                // Split into comma, label and value parts
+                const comma = currentText.substring(0, 2); // ", "
+                const label = currentText.substring(2, labelEnd + 2); // "Spot Price: "
                 const value = currentText.substring(labelEnd + 2); // "$3245.67"
-                styledText = `<span class="spot-label">${label}</span><span class="spot-value">${value}</span>`;
+                styledText = `${comma}<span class="spot-label">${label}</span><span class="spot-value">${value}</span>`;
             } else {
-                // Still typing the label part
-                styledText = `<span class="spot-label">${currentText}</span>`;
+                // Still typing the comma and label part
+                if (currentText.length <= 2) {
+                    styledText = currentText; // Just the comma and space
+                } else {
+                    const comma = currentText.substring(0, 2);
+                    const label = currentText.substring(2);
+                    styledText = `${comma}<span class="spot-label">${label}</span>`;
+                }
             }
             
-            spotPriceElement.html(styledText + '<span class="typing-cursor">|</span>');
-        }, index * 60); // Slightly faster for price
+            buyingElement.html(cleanHtml + styledText + '<span class="typing-cursor">|</span>');
+        }, index * 60);
     });
-    
-    // Remove cursor after animation
-    setTimeout(() => {
-        spotPriceElement.html(spotPriceElement.html().replace('<span class="typing-cursor">|</span>', ''));
-    }, letters.length * 60 + 500);
 }
 
 // Select an asset (ETH, BTC), update state, UI then refresh data
@@ -436,6 +440,9 @@ function selectAsset(asset) {
     
     // Show expiry selector section when asset is selected
     $('#expiry-selector-section').show();
+    
+    // Hide payment and position size components when asset is selected (need strike first)
+    $('#payment-position-section').removeClass('show');
     
     animateTypewriter(`Buying ${asset} Options`);
     

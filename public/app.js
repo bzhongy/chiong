@@ -591,35 +591,105 @@ function populateStrikeButtons(expiry) {
     container.show();
 }
 
-// Typing animation function for expiry text
+// Typing animation function for expiry text - appends to buying text
 function typeExpiryText(expiryDateString) {
-    const container = $('#expiry-text');
-    container.html('').show();
+    const buyingElement = $('#buying-text');
+    const expiryText = `, EXPIRY: ${expiryDateString}`;
+    const letters = expiryText.split('');
+    let currentText = '';
     
-    // Create the structure with spans for styling
-    const labelSpan = $('<span class="expiry-label">EXPIRY: </span>');
-    const valueSpan = $('<span class="expiry-value"></span>');
+    // Remove any existing cursor from buying element
+    buyingElement.find('.typing-cursor').remove();
     
-    container.append(labelSpan).append(valueSpan);
+    // Animate each letter appending to the existing buying text
+    letters.forEach((letter, index) => {
+        setTimeout(() => {
+            currentText += letter;
+            
+            // Build styled text with different colors for label vs value
+            let styledText = '';
+            const labelEnd = currentText.indexOf(': ');
+            
+            if (labelEnd !== -1) {
+                // Split into comma, label and value parts
+                const comma = currentText.substring(0, 2); // ", "
+                const label = currentText.substring(2, labelEnd + 2); // "EXPIRY: "
+                const value = currentText.substring(labelEnd + 2); // "Aug 19"
+                styledText = `${comma}<span class="expiry-label">${label}</span><span class="expiry-value">${value}</span>`;
+            } else {
+                // Still typing the comma and label part
+                if (currentText.length <= 2) {
+                    styledText = currentText; // Just the comma and space
+                } else {
+                    const comma = currentText.substring(0, 2);
+                    const label = currentText.substring(2);
+                    styledText = `${comma}<span class="expiry-label">${label}</span>`;
+                }
+            }
+            
+            // Replace any existing expiry part and add new content
+            let currentHtml = buyingElement.html();
+            // Remove any existing expiry content (pattern: ", EXPIRY: ...")
+            currentHtml = currentHtml.replace(/,\s*<span class="expiry-label">.*?<\/span>(<span class="expiry-value">.*?<\/span>)?/g, '');
+            currentHtml = currentHtml.replace(/,\s*EXPIRY:[^,]*/g, '');
+            
+            buyingElement.html(currentHtml + styledText + '<span class="typing-cursor">|</span>');
+        }, index * 100);
+    });
     
-    // Simple progressive text reveal
-    let displayText = '';
-    let index = 0;
+    // Keep cursor after animation (will be removed by next typing function or reset)
+}
+
+// Typing animation function for strike text - appends to buying text
+function typeStrikeText(strikePrice) {
+    const buyingElement = $('#buying-text');
     
-    const typeNextLetter = () => {
-        if (index < expiryDateString.length) {
-            displayText += expiryDateString[index];
-            valueSpan.text(displayText);
-            index++;
-            setTimeout(typeNextLetter, 100);
-        } else {
-            // Add typing cursor at the end
-            const cursor = $('<span class="typing-cursor">|</span>');
-            container.append(cursor);
-        }
-    };
+    // Format strike price with commas and dollar sign
+    const formattedStrike = '$' + strikePrice.toLocaleString();
+    const strikeText = `, STRIKE: ${formattedStrike}`;
+    const letters = strikeText.split('');
+    let currentText = '';
     
-    typeNextLetter();
+    // Remove any existing cursor from buying element
+    buyingElement.find('.typing-cursor').remove();
+    
+    // Animate each letter appending to the existing buying text
+    letters.forEach((letter, index) => {
+        setTimeout(() => {
+            currentText += letter;
+            
+            // Build styled text with different colors for label vs value
+            let styledText = '';
+            const labelEnd = currentText.indexOf(': $');
+            
+            if (labelEnd !== -1) {
+                // Split into comma, label and value parts
+                const comma = currentText.substring(0, 2); // ", "
+                const label = currentText.substring(2, labelEnd + 2); // "STRIKE: "
+                const value = currentText.substring(labelEnd + 2); // "$4,425"
+                styledText = `${comma}<span class="strike-label">${label}</span><span class="strike-value">${value}</span>`;
+            } else {
+                // Still typing the comma and label part
+                if (currentText.length <= 2) {
+                    styledText = currentText; // Just the comma and space
+                } else {
+                    const comma = currentText.substring(0, 2);
+                    const label = currentText.substring(2);
+                    styledText = `${comma}<span class="strike-label">${label}</span>`;
+                }
+            }
+            
+            // Replace any existing strike part and add new content
+            let currentHtml = buyingElement.html();
+            // Remove any existing strike content (pattern: ", STRIKE: $...")
+            currentHtml = currentHtml.replace(/,\s*<span class="strike-label">.*?<\/span>(<span class="strike-value">.*?<\/span>)?/g, '');
+            currentHtml = currentHtml.replace(/,\s*STRIKE:[^,]*/g, '');
+            
+            buyingElement.html(currentHtml + styledText + '<span class="typing-cursor">|</span>');
+        }, index * 100);
+    });
+    
+    // Keep cursor after animation (will be removed by next typing function or reset)
 }
 
 // Handle expiry selection
@@ -674,8 +744,24 @@ function selectStrike(strike) {
     // Update selected strike
     if (state.selectedStrike === strike) {
         state.selectedStrike = null; // Deselect if clicking same strike
+        // Remove strike text from buying element when deselected
+        const buyingElement = $('#buying-text');
+        buyingElement.find('.typing-cursor').remove();
+        let currentHtml = buyingElement.html();
+        currentHtml = currentHtml.replace(/,\s*<span class="strike-label">.*?<\/span>(<span class="strike-value">.*?<\/span>)?/g, '');
+        currentHtml = currentHtml.replace(/,\s*STRIKE:[^,]*/g, '');
+        buyingElement.html(currentHtml + '<span class="typing-cursor">|</span>');
+        
+        // Hide payment and position size components when strike is deselected
+        $('#payment-position-section').removeClass('show');
+        
     } else {
         state.selectedStrike = strike;
+        // Show strike with typing animation
+        typeStrikeText(strike);
+        
+        // Show payment and position size components when strike is selected
+        $('#payment-position-section').addClass('show');
     }
     
     // Update button states
@@ -743,9 +829,13 @@ function clearAllFilters() {
     $('.expiry-btn').removeClass('active');
     $('.strike-btn').removeClass('active');
     
-    // Hide strike buttons container and expiry text
+    // Hide strike buttons container, expiry text, and strike text
     $('#strike-buttons-container').hide();
     $('#expiry-text').hide();
+    $('#strike-text').hide();
+    
+    // Hide payment and position size components when filters are cleared
+    $('#payment-position-section').removeClass('show');
     
     // Show expiry buttons and instruction again
     $('#expiry-buttons-container').show();

@@ -314,6 +314,11 @@ async function refreshData(isInitialLoad = false) {
         } else {
             $('.expiry-warning').hide();
         }
+        
+        // Final asset box update after all data is loaded
+        if (typeof waitForAssetBoxesAndUpdate === 'function') {
+            waitForAssetBoxesAndUpdate();
+        }
     } catch (error) {
         console.error('Error refreshing data:', error);
     } finally {
@@ -591,35 +596,37 @@ function populateStrikeButtons(expiry) {
     container.show();
 }
 
-// Typing animation function for expiry text
-function typeExpiryText(expiryDateString) {
-    const container = $('#expiry-text');
-    container.html('').show();
+// Add expiry text immediately (no animation)
+function addExpiryText(expiryDateString) {
+    const buyingElement = $('#buying-text');
     
-    // Create the structure with spans for styling
-    const labelSpan = $('<span class="expiry-label">EXPIRY: </span>');
-    const valueSpan = $('<span class="expiry-value"></span>');
+    // Clean up any existing cursors and expiry content
+    let cleanHtml = buyingElement.html();
+    cleanHtml = cleanHtml.replace(/<span class="typing-cursor">.*?<\/span>/g, '');
+    cleanHtml = cleanHtml.replace(/,\s*<span class="expiry-label">.*?<\/span>(<span class="expiry-value">.*?<\/span>)?/g, '');
+    cleanHtml = cleanHtml.replace(/,\s*EXPIRY:[^,]*/g, '');
     
-    container.append(labelSpan).append(valueSpan);
+    // Add the expiry text immediately
+    const expiryText = `, <span class="expiry-label">EXPIRY: </span><span class="expiry-value">${expiryDateString}</span>`;
+    buyingElement.html(cleanHtml + expiryText);
+}
+
+// Add strike text immediately (no animation)
+function addStrikeText(strikePrice) {
+    const buyingElement = $('#buying-text');
     
-    // Simple progressive text reveal
-    let displayText = '';
-    let index = 0;
+    // Format strike price with commas and dollar sign
+    const formattedStrike = '$' + strikePrice.toLocaleString();
     
-    const typeNextLetter = () => {
-        if (index < expiryDateString.length) {
-            displayText += expiryDateString[index];
-            valueSpan.text(displayText);
-            index++;
-            setTimeout(typeNextLetter, 100);
-        } else {
-            // Add typing cursor at the end
-            const cursor = $('<span class="typing-cursor">|</span>');
-            container.append(cursor);
-        }
-    };
+    // Clean up any existing cursors and strike content
+    let cleanHtml = buyingElement.html();
+    cleanHtml = cleanHtml.replace(/<span class="typing-cursor">.*?<\/span>/g, '');
+    cleanHtml = cleanHtml.replace(/,\s*<span class="strike-label">.*?<\/span>(<span class="strike-value">.*?<\/span>)?/g, '');
+    cleanHtml = cleanHtml.replace(/,\s*STRIKE:[^,]*/g, '');
     
-    typeNextLetter();
+    // Add the strike text immediately
+    const strikeText = `, <span class="strike-label">STRIKE: </span><span class="strike-value">${formattedStrike}</span>`;
+    buyingElement.html(cleanHtml + strikeText);
 }
 
 // Handle expiry selection
@@ -637,6 +644,7 @@ function selectExpiry(expiry) {
         // Show expiry buttons and instruction again when deselected
         $('#expiry-buttons-container').show();
         $('#expiry-instruction').show();
+        // Components are now always visible - no need to hide them
     } else {
         state.selectedExpiry = expiry;
         populateStrikeButtons(expiry);
@@ -644,6 +652,8 @@ function selectExpiry(expiry) {
         // Hide expiry buttons and instruction once selected
         $('#expiry-buttons-container').hide();
         $('#expiry-instruction').hide();
+        
+        // Components are now always visible - no need to hide them
         
         // Show expiry with typing animation
         const expiryDate = new Date(expiry * 1000);
@@ -653,7 +663,13 @@ function selectExpiry(expiry) {
             timeZone: 'UTC'
         });
         
-        typeExpiryText(expiryDateString);
+        // Just show the expiry date immediately
+        const buyingElement = $('#buying-text');
+        let currentHtml = buyingElement.html();
+        // Remove existing expiry (anything after the price)
+        const parts = currentHtml.split(', ');
+        currentHtml = parts.slice(0, 2).join(', '); // Keep only asset and price
+        buyingElement.html(currentHtml + ', ' + expiryDateString.toUpperCase());
     }
     
     // Update button states
@@ -674,8 +690,39 @@ function selectStrike(strike) {
     // Update selected strike
     if (state.selectedStrike === strike) {
         state.selectedStrike = null; // Deselect if clicking same strike
+        // Remove strike price when deselected
+        const buyingElement = $('#buying-text');
+        let cleanHtml = buyingElement.html();
+        cleanHtml = cleanHtml.replace(/,\s*\$[\d,]+(?:\.\d+)?$/g, ''); // Remove last price (strike)
+        buyingElement.html(cleanHtml);
+        
+        // Show strike buttons again when deselected
+        $('#strike-buttons-container').show();
+        
+        // Hide payment and position size components when strike is deselected
+        $('#payment-position-section').removeClass('show');
+        
+        // Components remain permanently centered
     } else {
         state.selectedStrike = strike;
+        // Just show the strike price immediately
+        const buyingElement = $('#buying-text');
+        let currentHtml = buyingElement.html();
+        // Remove existing strike (last price if there are multiple)
+        const parts = currentHtml.split(', ');
+        if (parts.length > 3) {
+            currentHtml = parts.slice(0, 3).join(', '); // Keep asset, price, expiry
+        }
+        const formattedStrike = '$' + strike.toLocaleString();
+        buyingElement.html(currentHtml + ', ' + formattedStrike);
+        
+        // Hide strike buttons when strike is selected
+        $('#strike-buttons-container').hide();
+        
+        // Show payment and position size components when strike is selected
+        $('#payment-position-section').addClass('show');
+        
+        // Components are now permanently centered via CSS
     }
     
     // Update button states
@@ -743,9 +790,15 @@ function clearAllFilters() {
     $('.expiry-btn').removeClass('active');
     $('.strike-btn').removeClass('active');
     
-    // Hide strike buttons container and expiry text
+    // Hide strike buttons container, expiry text, and strike text
     $('#strike-buttons-container').hide();
     $('#expiry-text').hide();
+    $('#strike-text').hide();
+    
+    // Hide payment and position size components when filters are cleared
+    $('#payment-position-section').removeClass('show');
+    
+    // Components remain permanently centered
     
     // Show expiry buttons and instruction again
     $('#expiry-buttons-container').show();
@@ -1833,6 +1886,11 @@ async function updateLiquidityInfo() {
                                 }
                                 state.userOptionBookAllowances[tokenInfo.symbol] = formattedAmount;
                                 
+                                // Update asset boxes immediately when OptionBook allowance data arrives
+                                if (typeof updateAssetBoxes === 'function') {
+                                    updateAssetBoxes();
+                                }
+                                
                                 // OPTIMIZATION: Update main payment allowance display immediately when data arrives
                                 const selectedAsset = getSelectedPaymentAsset();
                                 if (selectedAsset === tokenInfo.symbol) {
@@ -1865,6 +1923,11 @@ async function updateLiquidityInfo() {
                                     }
                                     state.userKyberAllowances[tokenInfo.symbol] = formattedAmount;
                                     
+                                    // Update asset boxes immediately with new Kyber data
+                                    if (typeof updateAssetBoxes === 'function') {
+                                        updateAssetBoxes();
+                                    }
+                                    
                                     // Update Kyber allowance display
                                     const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
                                     if ($(kyberElement).length === 0) {
@@ -1889,6 +1952,11 @@ async function updateLiquidityInfo() {
                                 }
                                 state.userKyberAllowances[tokenInfo.symbol] = formattedAmount;
                                 
+                                // Update asset boxes immediately with new Kyber data
+                                if (typeof updateAssetBoxes === 'function') {
+                                    updateAssetBoxes();
+                                }
+                                
                                 // Update Kyber allowance display (create if doesn't exist)
                                 const kyberElement = `#${tokenInfo.symbol.toLowerCase()}-kyber-liquidity`;
                                 if ($(kyberElement).length === 0) {
@@ -1910,6 +1978,11 @@ async function updateLiquidityInfo() {
                             }
                         }
                     });
+
+                    // Final asset box update after all allowance data is processed
+                    if (typeof updateAssetBoxes === 'function') {
+                        updateAssetBoxes();
+                    }
 
                 } catch (error) {
                     console.error('Error in multicall:', error);
@@ -1942,6 +2015,11 @@ async function updateLiquidityInfo() {
                 }
             }
         }, 150); // Small delay to ensure UI updates are shown first
+        
+        // Update asset boxes with fresh allowance data
+        if (typeof updateAssetBoxes === 'function') {
+            updateAssetBoxes();
+        }
         
     } catch (error) {
         console.error('Error updating liquidity information:', error);
@@ -2050,6 +2128,11 @@ async function updateWalletBalance() {
                 // Update balance display for currently selected asset
                 updatePaymentAssetBalanceDisplay(currentSelection);
                 
+                // Update asset boxes with new balance data
+                if (typeof updateAssetBoxes === 'function') {
+                    updateAssetBoxes();
+                }
+                
                 // Check fund status after balance update (debounced)
                 if (typeof refreshFundStatus === 'function') {
                     refreshFundStatus();
@@ -2076,6 +2159,11 @@ async function updateWalletBalance() {
         
         // Update balance display for currently selected asset
         updatePaymentAssetBalanceDisplay(currentSelection);
+        
+        // Update asset boxes with new balance data
+        if (typeof updateAssetBoxes === 'function') {
+            updateAssetBoxes();
+        }
         
         // Check fund status after balance update (debounced)
         if (typeof refreshFundStatus === 'function') {
@@ -2247,31 +2335,72 @@ window.updateAllowanceDisplay = function(selectedAsset) {
     }
 }
 
-// Add debug function for checking stored allowances
-window.debugAllowances = function() {
-    console.log('=== DEBUG ALLOWANCES ===');
-    console.log('state.userKyberAllowances:', state.userKyberAllowances);
-    console.log('state.userOptionBookAllowances:', state.userOptionBookAllowances);
+// New function to update individual asset boxes
+window.updateAssetBoxes = function() {
+    const assets = ['USDC', 'WETH', 'CBBTC'];
     
-    // Check if the allowances are being stored correctly
-    if (state.userKyberAllowances) {
-        Object.entries(state.userKyberAllowances).forEach(([symbol, amount]) => {
-            console.log(`Kyber ${symbol}:`, amount, 'Type:', typeof amount);
-        });
-    }
-    
-    // Check the DOM elements
-    ['usdc', 'weth', 'cbbtc'].forEach(symbol => {
-        const kyberElement = document.getElementById(`${symbol}-kyber-liquidity`);
-        if (kyberElement) {
-            console.log(`${symbol} Kyber element:`, kyberElement.textContent);
-        } else {
-            console.log(`${symbol} Kyber element: not found`);
-        }
+    // Check if DOM elements exist first
+    const allElementsExist = assets.every(asset => {
+        const balanceElement = document.getElementById(`${asset.toLowerCase()}-balance`);
+        const allowanceElement = document.getElementById(`${asset.toLowerCase()}-allowance`);
+        return balanceElement && allowanceElement;
     });
     
-    console.log('========================');
-};
+    if (!allElementsExist) {
+        return;
+    }
+    
+    assets.forEach(asset => {
+        const balanceElement = document.getElementById(`${asset.toLowerCase()}-balance`);
+        const allowanceElement = document.getElementById(`${asset.toLowerCase()}-allowance`);
+        
+        if (balanceElement) {
+            const balance = state.paymentAssetBalances ? state.paymentAssetBalances[asset] : null;
+            
+            if (!balance || balance === 'Loading...' || balance === 'Error' || balance === 'Failed') {
+                if (balance === 'Loading...') {
+                    balanceElement.textContent = 'Loading...';
+                } else if (balance === 'Error' || balance === 'Failed') {
+                    balanceElement.textContent = 'Failed to load';
+                } else {
+                    balanceElement.textContent = 'Loading...';
+                }
+            } else if (parseFloat(balance) === 0) {
+                balanceElement.textContent = `0.00 ${asset}`;
+            } else {
+                // Get USD value if we have market prices
+                let usdValue = '';
+                if (state.market_prices && state.market_prices[asset]) {
+                    const price = state.market_prices[asset];
+                    const usdAmount = (parseFloat(balance) * price).toFixed(2);
+                    usdValue = ` ($${usdAmount})`;
+                }
+                balanceElement.textContent = `${balance} ${asset}${usdValue}`;
+            }
+        }
+        
+        if (allowanceElement) {
+            if (asset === 'ETH') {
+                allowanceElement.textContent = 'N/A (Native)';
+            } else if (state.userOptionBookAllowances && state.userOptionBookAllowances[asset]) {
+                allowanceElement.textContent = state.userOptionBookAllowances[asset];
+            } else if (state.userKyberAllowances && state.userKyberAllowances[asset]) {
+                // Use Kyber allowances as fallback
+                allowanceElement.textContent = state.userKyberAllowances[asset];
+            } else {
+                // Fallback to the liquidity info if user allowances not available yet
+                const liquidityElement = document.getElementById(`${asset.toLowerCase()}-liquidity`);
+                if (liquidityElement && liquidityElement.textContent !== '--' && liquidityElement.textContent !== 'Loading...') {
+                    allowanceElement.textContent = liquidityElement.textContent;
+                } else {
+                    allowanceElement.textContent = 'Loading...';
+                }
+            }
+        }
+    });
+}
+
+
 
 // Add manual refresh function for allowances
 window.refreshAllowances = async function() {
@@ -2287,6 +2416,56 @@ window.refreshAllowances = async function() {
     } else {
         showNotification('Allowance refresh function not available', 'error');
     }
+};
+
+
+
+// Add function to initialize asset boxes with default data
+window.initializeAssetBoxes = function() {
+    const assets = ['USDC', 'WETH', 'CBBTC'];
+    
+    assets.forEach(asset => {
+        const balanceElement = document.getElementById(`${asset.toLowerCase()}-balance`);
+        const allowanceElement = document.getElementById(`${asset.toLowerCase()}-allowance`);
+        
+        if (balanceElement) {
+            balanceElement.textContent = 'Connect wallet to view balance';
+        }
+        
+        if (allowanceElement) {
+            allowanceElement.textContent = 'Connect wallet to view allowance';
+        }
+    });
+};
+
+// Add function to wait for asset boxes to be ready and update them
+window.waitForAssetBoxesAndUpdate = function() {
+    const assets = ['USDC', 'WETH', 'CBBTC'];
+    const maxAttempts = 20;
+    let attempts = 0;
+    
+    const checkAndUpdate = () => {
+        attempts++;
+        
+        const allElementsExist = assets.every(asset => {
+            const balanceElement = document.getElementById(`${asset.toLowerCase()}-balance`);
+            const allowanceElement = document.getElementById(`${asset.toLowerCase()}-allowance`);
+            return balanceElement && allowanceElement;
+        });
+        
+        if (allElementsExist) {
+            if (typeof updateAssetBoxes === 'function') {
+                updateAssetBoxes();
+            }
+            return true;
+        } else if (attempts < maxAttempts) {
+            setTimeout(checkAndUpdate, 250);
+        }
+        
+        return false;
+    };
+    
+    checkAndUpdate();
 };
 
 // Initialize the application
@@ -2327,10 +2506,61 @@ async function initialize() {
             if (selectedAsset && typeof updateAllowanceDisplay === 'function') {
                 updateAllowanceDisplay(selectedAsset);
             }
+            
+            // Initialize asset boxes with default data first
+            if (typeof initializeAssetBoxes === 'function') {
+                initializeAssetBoxes();
+            }
+            
+            // Then try to update with current data
+            if (typeof updateAssetBoxes === 'function') {
+                updateAssetBoxes();
+            }
         } catch (error) {
             console.warn('Initial allowance display update failed:', error);
         }
     }, 100); // Small delay to ensure app is fully initialized
+    
+    // Additional attempt to update asset boxes after a longer delay to ensure DOM is ready
+    setTimeout(() => {
+        if (typeof updateAssetBoxes === 'function') {
+            updateAssetBoxes();
+        }
+    }, 2000); // Wait 2 seconds to ensure DOM is fully loaded
+    
+    // Use polling mechanism to wait for asset boxes to be ready
+    if (typeof waitForAssetBoxesAndUpdate === 'function') {
+        waitForAssetBoxesAndUpdate();
+    }
+    
+
+    
+    // Multiple initialization attempts with different timing
+    setTimeout(() => {
+        if (typeof waitForAssetBoxesAndUpdate === 'function') {
+            waitForAssetBoxesAndUpdate();
+        }
+    }, 1000); // After 1 second
+    
+    setTimeout(() => {
+        if (typeof waitForAssetBoxesAndUpdate === 'function') {
+            waitForAssetBoxesAndUpdate();
+        }
+    }, 3000); // After 3 seconds
+    
+    // Also set up a periodic check to ensure asset boxes stay updated
+    setInterval(() => {
+        if (typeof waitForAssetBoxesAndUpdate === 'function') {
+            waitForAssetBoxesAndUpdate();
+        }
+    }, 5000); // Check every 5 seconds
+    
+    // Update asset boxes when page becomes visible (user switches back to tab)
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && typeof waitForAssetBoxesAndUpdate === 'function') {
+            waitForAssetBoxesAndUpdate();
+        }
+    });
     
     // OPTIMIZATION: Preload balances and allowances in background for faster subsequent loads
     setTimeout(async () => {
@@ -2344,6 +2574,11 @@ async function initialize() {
                 // Preload liquidity info (allowances)
                 if (typeof updateLiquidityInfo === 'function') {
                     updateLiquidityInfo();
+                }
+                
+                // Update asset boxes with fresh data
+                if (typeof updateAssetBoxes === 'function') {
+                    updateAssetBoxes();
                 }
             }
         } catch (error) {
@@ -2401,6 +2636,8 @@ async function initialize() {
 
 }
 
+// Components are now permanently centered via CSS - no JavaScript positioning needed
+
 $(document).ready(() => {
     initialize();
     
@@ -2409,5 +2646,34 @@ $(document).ready(() => {
         if (typeof selectAsset === 'function') {
             selectAsset(null); // This will disable all trading interface elements
         }
+        
+        // Ensure payment and position size components are always visible
+        $('.payment-selection, .position-size-section').show().css({
+            'display': 'block !important',
+            'visibility': 'visible !important',
+            'background': '#f8f9fa !important',
+            'border': '2px solid #007bff !important',
+            'padding': '15px !important',
+            'margin': '10px 0 !important',
+            'border-radius': '8px !important'
+        });
+        
+        // Test the component movement function
+        setTimeout(() => {
+            console.log('Testing component visibility and movement...');
+            window.debugComponents();
+            // Uncomment the next line to automatically test movement on page load
+            // window.testMoveComponents();
+        }, 2000);
+        
+        // Set up a periodic check to ensure components stay visible
+        setInterval(() => {
+            $('.payment-selection, .position-size-section').show().css({
+                'display': 'block !important',
+                'visibility': 'visible !important'
+            });
+        }, 1000); // Check every second
+        
+        // Components are permanently centered via CSS
     }, 100);
 });

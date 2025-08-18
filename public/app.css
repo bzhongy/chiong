@@ -37,7 +37,7 @@ html {
 /* Ensure proper mobile container behavior */
 .container, .container-fluid {
     max-width: 100vw;
-    overflow-x: hidden;
+    overflow-x: visible;
 }
 
 /* Base Styles */
@@ -499,6 +499,105 @@ h4, h5, h6 {
     display: none !important;
 }
 
+/* ALWAYS SHOW payment and position size sections */
+.payment-selection,
+.position-size-section {
+    display: block !important;
+    visibility: visible !important;
+    padding: 15px !important;
+    margin: 10px 0 !important;
+}
+
+/* Payment and Position Size Section - Hidden by Default, Centered when Visible */
+#payment-position-section {
+    display: none !important;
+    visibility: hidden !important;
+    text-align: center !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 95vw !important;
+    margin-top: 10vw !important;
+    max-width: 95vw !important;
+    background: transparent !important;
+    border-radius: 8px !important;
+    /* padding: 8px !important; */
+    box-sizing: border-box !important;
+    font-size: 12px !important;
+    overflow: visible !important;
+    z-index: 10 !important;
+}
+
+#payment-position-section h3,
+#payment-position-section h4 {
+    font-size: 14px !important;
+    margin: 4px 0 !important;
+}
+
+#payment-position-section p,
+#payment-position-section span,
+#payment-position-section button {
+    font-size: 11px !important;
+    margin: 2px 0 !important;
+}
+
+#payment-position-section .quick-amount-btn,
+#payment-position-section .payment-option-btn {
+    padding: 6px 8px !important;
+    margin: 2px !important;
+    font-size: 11px !important;
+}
+
+#payment-position-section.show {
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* Mobile header clearance - adjust top positioning for payment section */
+@media (max-width: 768px) {
+    #payment-position-section {
+        top: 90% !important;
+        margin-top: 0 !important;
+    }
+}
+
+@media (max-width: 480px) {
+    #payment-position-section {
+        top: 90% !important;
+        margin-top: 0 !important;
+    }
+}
+
+@media (max-width: 360px) {
+    #payment-position-section {
+        top: 90% !important;
+        margin-top: 0 !important;
+    }
+}
+
+/* CSS classes for JavaScript-controlled landscape mode */
+body.mobile-landscape .brand-display {
+    margin-top: -40px !important;
+    padding-top: 0 !important;
+}
+
+body.mobile-landscape .brand-display h1 {
+    margin-top: -20px !important;
+    margin-bottom: 5px !important;
+}
+
+body.mobile-landscape #payment-position-section {
+    top: 65% !important;
+}
+
+body.mobile-landscape #strike-selector-section,
+body.mobile-landscape #expiry-selector-section {
+    margin-top: 30px !important;
+}
+
+
+
 /* Expiry Selector Section - same positioning as asset selector */
 #expiry-selector-section {
     margin-top: 0;
@@ -517,8 +616,8 @@ h4, h5, h6 {
 
 /* Buying text below CHIONG - plain text */
 #buying-text {
-    font-size: 16px !important;
-    font-weight: 800 !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
     font-family: 'Inter', -webkit-system, BlinkMacSystemFont, sans-serif !important;
     text-align: center !important;
     margin-top: 30px !important;
@@ -528,19 +627,20 @@ h4, h5, h6 {
 
 #buying-text .buying-word {
     color: rgba(0, 0, 0, 0.3) !important;
-    font-weight: 800 !important;
-    font-size: 16px !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
 }
 
 #buying-text .asset-options {
     color: #000000 !important;
-    font-weight: 800 !important;
-    font-size: 16px !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
 }
 
-/* Typewriter animation for buying text and expiry text */
+/* Typewriter animation for buying text, expiry text, and strike text */
 #buying-text .letter,
-#expiry-text .letter {
+#expiry-text .letter,
+#strike-text .letter {
     opacity: 0 !important;
     visibility: hidden;
     animation: typeWriter 0.1s ease-in-out forwards;
@@ -564,47 +664,45 @@ h4, h5, h6 {
     display: inline-block;
     color: rgba(0, 0, 0, 0.7);
     font-weight: normal;
-    font-size: 16px !important;
+    font-size: 14px !important;
     line-height: 1;
     animation: blink 1s infinite;
     margin-left: 1px;
 }
 
-/* Spot price text below buying text */
+/* Hide separate text elements since everything goes in buying-text now */
 #spot-price-text,
-#expiry-text {
-    font-size: 16px !important;
-    font-weight: 800 !important;
-    font-family: 'Inter', -webkit-system, BlinkMacSystemFont, sans-serif !important;
-    text-align: center !important;
-    margin-top: 0px !important;
-    color: rgba(0, 0, 0, 0.6) !important;
-    text-transform: uppercase !important;
+#expiry-text,
+#strike-text {
+    display: none !important;
 }
 
-/* Spot price and expiry label styling (same as buying word) */
+/* Spot price, expiry, and strike label styling (same as buying word) */
 #spot-price-text .spot-label,
-#expiry-text .expiry-label {
+#expiry-text .expiry-label,
+#strike-text .strike-label {
     color: rgba(0, 0, 0, 0.3) !important;
-    font-size: 16px !important;
-    font-weight: 800 !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
 }
 
-/* Spot price and expiry value styling (black) */
+/* Spot price, expiry, and strike value styling (black) */
 #spot-price-text .spot-value,
-#expiry-text .expiry-value {
+#expiry-text .expiry-value,
+#strike-text .strike-value {
     color: #000000 !important;
-    font-size: 16px !important;
-    font-weight: 800 !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
 }
 
-/* Spot price and expiry typing cursor */
+/* Spot price, expiry, and strike typing cursor */
 #spot-price-text .typing-cursor,
-#expiry-text .typing-cursor {
+#expiry-text .typing-cursor,
+#strike-text .typing-cursor {
     display: inline-block;
     color: rgba(0, 0, 0, 0.7);
     font-weight: normal;
-    font-size: 16px !important;
+    font-size: 14px !important;
     line-height: 1;
     animation: blink 1s infinite;
     margin-left: 1px;
@@ -617,6 +715,16 @@ h4, h5, h6 {
 
 /* Asset instruction styling */
 .asset-instruction p {
+    font-size: 20px !important;
+    font-weight: 800 !important;
+    color: rgba(0, 0, 0, 0.2) !important;
+    margin: 0 0 1rem 0 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* Override payment section font size for asset instruction */
+#payment-position-section .asset-instruction p {
     font-size: 20px !important;
     font-weight: 800 !important;
     color: rgba(0, 0, 0, 0.2) !important;
@@ -658,15 +766,7 @@ h4, h5, h6 {
     text-align: center;
 }
 
-/* Reduce opacity of instruction text and increase gap */
-.asset-instruction p {
-    font-size: 12px !important;
-    font-weight: 800 !important;
-    color: rgba(0, 0, 0, 0.5) !important;
-    margin: 0 0 1rem 0 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.5px !important;
-}
+
 
 /* Remove the container border and background - with responsive flex behavior */
 .asset-selector .btn-group {
@@ -963,6 +1063,12 @@ main {
         padding-right: 0.1rem;
     }
     
+    /* Remove all padding for payment sections to allow full width */
+    main #payment-position-section .container {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+    
     /* Further reduce margins on very small screens */
     main {
         padding: 0.5rem 0;
@@ -1151,6 +1257,12 @@ main .container {
     padding-right: 1rem;
 }
 
+/* Remove padding for payment sections to allow full width */
+#payment-position-section .container {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
 .content-section {
     margin-bottom: 3rem;
 }
@@ -1162,9 +1274,6 @@ main .container {
 /* Asset Header */
 .asset-header {
     background-color: var(--secondary);
-    padding: 1rem;
-    border-radius: 0.5rem;
-    margin-bottom: 1rem;
 }
 
 .asset-selector .btn {
@@ -1478,6 +1587,12 @@ main .container {
 }
 
 /* Payment Selection */
+.payment-selection {
+    position: relative !important;
+    z-index: 2 !important;
+    overflow: visible !important;
+}
+
 .payment-selection label {
     color: var(--text-secondary);
     font-size: 0.9rem;
@@ -1487,7 +1602,7 @@ main .container {
 /* Payment Asset Button Group */
 .payment-asset-buttons .btn-group {
     border-radius: 6px;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .payment-asset-buttons .btn-group .btn {
@@ -1542,6 +1657,252 @@ main .container {
 @media (max-width: 768px) {
     .payment-asset-buttons .btn-group .btn::after {
         display: none; /* Hide hover tooltips on mobile for better UX */
+    }
+}
+
+/* New Asset Boxes Styles */
+.payment-asset-boxes {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.asset-box {
+    flex: 1;
+    min-width: 200px;
+    max-width: 100%;
+    border: 1px solid #000000;
+    border-radius: 0;
+    padding: 0;
+    background: transparent;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Default unselected state */
+.asset-box {
+    background-color: transparent;
+    border-color: #000000;
+}
+
+/* Ensure unselected state overrides any previous selections */
+.asset-box:not(.selected) {
+    background-color: transparent !important;
+    border-color: #000000 !important;
+}
+
+
+
+.asset-box:hover {
+    background-color: #000000 !important;
+    border-color: #000000 !important;
+    color: #ffffff !important;
+    transform: scale(1.02);
+    transition: all 0.2s ease;
+    margin: -1px;
+    width: calc(100% + 2px);
+    height: calc(100% + 2px);
+}
+
+.asset-box:hover .asset-name,
+.asset-box:hover .balance-text,
+.asset-box:hover span,
+.asset-box:hover .get-more-btn {
+    color: #ffffff !important;
+}
+
+.asset-box .btn-check {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.asset-box-label {
+    cursor: pointer;
+    display: block;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+
+.asset-header {
+    text-align: center;
+    margin-bottom: 1rem;
+    background: transparent;
+}
+
+.asset-name {
+    margin: 0;
+    font-weight: 600;
+    font-size: 2.5rem !important;
+    color: var(--text-primary);
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+}
+
+.asset-details {
+    display: flex;
+    flex-direction: column;
+    /* gap: 0.75rem; */
+}
+
+.asset-balance,
+.asset-allowance {
+    text-align: center;
+}
+
+.asset-balance .balance-text,
+.asset-allowance span {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+}
+
+.asset-actions {
+    text-align: center;
+    margin-top: 0.5rem;
+}
+
+.get-more-btn {
+    width: 100%;
+    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0;
+    transition: all 0.2s ease;
+    background-color: #00b8d4 !important;
+    border: none !important;
+    color: #ffffff !important;
+    text-transform: uppercase !important;
+    font-weight: 600 !important;
+}
+
+.get-more-btn:hover {
+    background-color: #0099b3 !important;
+    border-color: transparent !important;
+    color: #ffffff !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 8px rgba(0, 184, 212, 0.3) !important;
+}
+
+/* Override get-more button styling when asset box is hovered or selected */
+.asset-box:hover .get-more-btn,
+.asset-box .btn-check:checked + .asset-box-label .get-more-btn {
+    background-color: transparent !important;
+    border-color: #ffffff !important;
+    color: #ffffff !important;
+}
+
+/* Get-more button hover effect when inside selected/hovered asset box */
+.asset-box:hover .get-more-btn:hover,
+.asset-box .btn-check:checked + .asset-box-label .get-more-btn:hover {
+    background-color: #ffffff !important;
+    border-color: #ffffff !important;
+    color: #000000 !important;
+}
+
+/* Selected state for asset boxes */
+.asset-box .btn-check:checked + .asset-box-label {
+    background-color: #000000 !important;
+    border-color: #000000 !important;
+    border-width: 2px !important;
+    color: #ffffff !important;
+    transform: scale(1.02);
+    transition: all 0.2s ease;
+    margin: -1px;
+    width: calc(100% + 2px);
+    height: calc(100% + 2px);
+}
+
+.asset-box .btn-check:checked + .asset-box-label .asset-name,
+.asset-box .btn-check:checked + .asset-box-label .balance-text,
+.asset-box .btn-check:checked + .asset-box-label span,
+.asset-box .btn-check:checked + .asset-box-label .get-more-btn {
+    color: #ffffff !important;
+}
+
+.asset-box .btn-check:checked + .asset-box-label .asset-name {
+    font-weight: 900 !important;
+    text-shadow: none;
+}
+
+/* Override any blue border styles that might be applied */
+.asset-box .btn-check:checked + .asset-box-label,
+.asset-box .btn-check:checked + .asset-box-label:hover,
+.asset-box .btn-check:checked + .asset-box-label:focus {
+    background-color: #000000 !important;
+    border-color: #000000 !important;
+    color: #ffffff !important;
+    outline: none !important;
+    box-shadow: none !important;
+    margin: -1px !important;
+    width: calc(100% + 2px) !important;
+    height: calc(100% + 2px) !important;
+}
+
+
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .payment-asset-boxes {
+        flex-direction: column;
+        gap: 0.75rem;
+        /* Keep the global width/margin treatment from the main rules */
+        margin-top: 1rem;
+    }
+    
+    .asset-box {
+        flex: none !important;
+        min-width: 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .asset-name {
+        font-size: 1rem;
+    }
+    
+    .get-more-btn {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.6rem;
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+    .payment-asset-boxes {
+        /* Keep the global width/margin treatment from the main rules */
+        margin-top: 0.75rem;
+    }
+    
+    .asset-box {
+        flex: none !important;
+        min-width: 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .asset-name {
+        font-size: 0.9rem;
+    }
+    
+    .asset-details {
+        gap: 0.5rem;
+    }
+    
+    .get-more-btn {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.5rem;
     }
 }
 
@@ -2154,6 +2515,12 @@ main .container {
         padding-right: 0.25rem;
     }
     
+    /* Remove all padding for payment sections to allow full width */
+    main #payment-position-section .container {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+    
     /* Reduce margins on mobile for better space utilization */
     .content-section {
         margin-bottom: 2rem;
@@ -2191,6 +2558,12 @@ main .container {
     main .container {
         padding-left: 0.1rem;
         padding-right: 0.1rem;
+    }
+    
+    /* Remove all padding for payment sections to allow full width */
+    main #payment-position-section .container {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
     }
     
     /* Further reduce margins on very small screens */
@@ -4122,12 +4495,24 @@ datalist option::before {
         padding-left: 0.75rem;
         padding-right: 0.75rem;
     }
+    
+    /* Remove all padding for payment sections to allow full width */
+    #payment-position-section .container {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
 }
 
 @media (max-width: 480px) {
     .content-section .container {
         padding-left: 0.5rem;
         padding-right: 0.5rem;
+    }
+    
+    /* Remove all padding for payment sections to allow full width */
+    #payment-position-section .container {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
     }
 }
 
@@ -4489,7 +4874,8 @@ datalist option::before {
 /* Global consistent edge margins for all button containers */
 .asset-selector,
 .expiry-buttons-container,
-.strike-buttons-container {
+.strike-buttons-container,
+.payment-asset-boxes {
     margin-left: clamp(8px, 2vw, 16px) !important;
     margin-right: clamp(8px, 2vw, 16px) !important;
     padding-left: 0 !important;
@@ -4497,9 +4883,16 @@ datalist option::before {
     box-sizing: border-box !important;
 }
 
-/* Asset selector and expiry buttons stretch to fill available width */
+/* Payment asset boxes z-index and positioning */
+.payment-asset-boxes {
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+/* Asset selector, expiry buttons, and payment boxes stretch to fill available width */
 .asset-selector,
-.expiry-buttons-container {
+.expiry-buttons-container,
+.payment-asset-boxes {
     width: calc(100vw - clamp(16px, 4vw, 32px)) !important;
     max-width: calc(100vw - clamp(16px, 4vw, 32px)) !important;
 }
