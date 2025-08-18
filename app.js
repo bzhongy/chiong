@@ -546,9 +546,9 @@ function populateStrikeButtons(expiry) {
         const callLabel = $('<div class="strike-section-label mb-2"><strong>CALL Options</strong></div>');
         container.append(callLabel);
         
-        const callContainer = $('<div class="strike-buttons-row mb-3"></div>');
+        const callContainer = $('<div class="btn-group" role="group" aria-label="Call strikes"></div>');
         callStrikes.forEach(strike => {
-            const button = $(`<button class="strike-btn call-strike" data-strike="${strike}">$${formatNumber(strike)}</button>`);
+            const button = $(`<button class="btn btn-outline-success" data-strike="${strike}">$${formatNumber(strike)}</button>`);
             
             // Mark as active if this strike is selected
             if (state.selectedStrike === strike) {
@@ -569,9 +569,9 @@ function populateStrikeButtons(expiry) {
         const putLabel = $('<div class="strike-section-label mb-2"><strong>PUT Options</strong></div>');
         container.append(putLabel);
         
-        const putContainer = $('<div class="strike-buttons-row mb-3"></div>');
+        const putContainer = $('<div class="btn-group" role="group" aria-label="Put strikes"></div>');
         putStrikes.forEach(strike => {
-            const button = $(`<button class="strike-btn put-strike" data-strike="${strike}">$${formatNumber(strike)}</button>`);
+            const button = $(`<button class="btn btn-outline-danger" data-strike="${strike}">$${formatNumber(strike)}</button>`);
             
             // Mark as active if this strike is selected
             if (state.selectedStrike === strike) {
@@ -634,9 +634,16 @@ function selectExpiry(expiry) {
         $('.strike-btn').removeClass('active');
         // Hide expiry text when deselected
         $('#expiry-text').hide();
+        // Show expiry buttons and instruction again when deselected
+        $('#expiry-buttons-container').show();
+        $('#expiry-instruction').show();
     } else {
         state.selectedExpiry = expiry;
         populateStrikeButtons(expiry);
+        
+        // Hide expiry buttons and instruction once selected
+        $('#expiry-buttons-container').hide();
+        $('#expiry-instruction').hide();
         
         // Show expiry with typing animation
         const expiryDate = new Date(expiry * 1000);
@@ -736,8 +743,13 @@ function clearAllFilters() {
     $('.expiry-btn').removeClass('active');
     $('.strike-btn').removeClass('active');
     
-    // Hide strike buttons container
+    // Hide strike buttons container and expiry text
     $('#strike-buttons-container').hide();
+    $('#expiry-text').hide();
+    
+    // Show expiry buttons and instruction again
+    $('#expiry-buttons-container').show();
+    $('#expiry-instruction').show();
     
     // Refresh the table
     populateOptionsTable();

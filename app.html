@@ -310,13 +310,18 @@
                 <div class="container">
                     <div class="row">
                         <div class="col-12 mb-4">
-                            <div class="asset-instruction mb-0">
+                            <div class="asset-instruction mb-0" id="expiry-instruction">
                                 <p>SELECT EXPIRY TIME</p>
                             </div>
                             <div class="asset-selector">
                                 <!-- Expiry Selection Buttons -->
                                 <div class="expiry-buttons-container mb-3" id="expiry-buttons-container">
                                     <!-- Expiry buttons will be populated here dynamically -->
+                                </div>
+                                
+                                <!-- Strike Selection Buttons -->
+                                <div class="strike-buttons-container mb-3" id="strike-buttons-container" style="display: none;">
+                                    <!-- Strike buttons will be populated here dynamically -->
                                 </div>
                             </div>
                         </div>
@@ -468,10 +473,7 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- Strike Selection Buttons -->
-                                    <div class="strike-buttons-container mb-3" id="strike-buttons-container" style="display: none;">
-                                        <!-- Strike buttons will be populated here dynamically -->
-                                    </div>
+                                    <!-- Strike buttons moved to asset selector section for center positioning -->
                                     
                                     <!-- Start Over Button -->
                                     <div class="start-over-container mb-3">
